@@ -300,6 +300,7 @@ p {
 }
 
 .transport-panel,
+.production-rig,
 .player-console,
 .live-strip,
 .track-card {
@@ -320,6 +321,47 @@ p {
   gap: 18px;
   width: min(640px, 100%);
   padding: 18px;
+}
+
+.production-rig {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(160px, 0.65fr);
+  gap: 10px;
+  width: min(640px, 100%);
+  padding: 10px;
+}
+
+.production-rig a,
+.production-rig div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.production-rig span {
+  grid-column: 1 / -1;
+  color: #8eacba;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.production-rig strong {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.94rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.production-rig svg {
+  color: var(--cyan);
 }
 
 .now-playing {
@@ -486,7 +528,7 @@ p {
   position: relative;
   z-index: 12;
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
+  grid-template-columns: 1.35fr repeat(3, 1fr);
   gap: 10px;
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto 80px;
@@ -702,8 +744,13 @@ p {
   }
 
   .transport-panel,
+  .production-rig,
   .player-console {
     padding: 12px;
+  }
+
+  .production-rig {
+    grid-template-columns: 1fr;
   }
 
   .now-playing strong {
@@ -759,4 +806,3 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
-

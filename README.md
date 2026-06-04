@@ -1,6 +1,6 @@
 # Re-Master Freddy
 
-A dark liquid-glass 3D music website for `remaster.freddybremseth.com`, powered by the Re-Master Freddy YouTube channel.
+A dark liquid-glass 3D music website for `remaster.freddybremseth.com`, powered by the Re-Master Freddy YouTube channel and the `realtyflow.chatgenius.pro` production engine.
 
 ## Stack
 
@@ -17,6 +17,13 @@ The site uses the channel `https://www.youtube.com/@remaster-freddy`.
 - Uploads playlist: `UUPAj3RNC2S_Nv7QV4-oYoIw`
 
 Browsers block autoplay with sound until the visitor interacts with the page, so playback starts muted and the `Unmute` button unlocks audio.
+
+## Production
+
+Production is controlled by `https://realtyflow.chatgenius.pro`.
+
+- Release cadence: 5 new songs per week
+- The website pulls fresh channel tracks from YouTube and presents them as the public music layer.
 
 ## Run
 
@@ -36,4 +43,3 @@ Deploy the project to Vercel and assign the custom domain:
 ```text
 remaster.freddybremseth.com
 ```
-

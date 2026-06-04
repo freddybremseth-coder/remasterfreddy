@@ -56,6 +56,8 @@ const heroImages = [
 ];
 
 const visualBars = Array.from({ length: 30 }, (_, index) => index);
+const PRODUCTION_URL = "https://realtyflow.chatgenius.pro";
+const RELEASE_CADENCE = "5 new songs / week";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -240,6 +242,7 @@ function App() {
         <nav aria-label="Primary">
           <a href="#tracks">Tracks</a>
           <a href="#synth">Synth</a>
+          <a href="#production">Production</a>
           <a href="#gallery">Studio</a>
         </nav>
         <a className="header-action" href={CHANNEL_URL} target="_blank" rel="noreferrer" title="Open YouTube channel">
@@ -257,8 +260,8 @@ function App() {
           </div>
           <h1>RE-MASTER FREDDY</h1>
           <p className="hero-lede">
-            Dark industrial music, cyber vocals, raw EDM edits and liquid-glass visuals pulled into one channel-driven
-            3D experience.
+            Dark industrial music, cyber vocals, raw EDM edits and liquid-glass visuals pulled into one 3D channel
+            experience. Production runs through realtyflow.chatgenius.pro with five new songs every week.
           </p>
 
           <div className="transport-panel" id="synth">
@@ -296,6 +299,18 @@ function App() {
                 {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 <span>{isMuted ? "Unmute" : "Mute"}</span>
               </button>
+            </div>
+          </div>
+
+          <div className="production-rig" id="production">
+            <a href={PRODUCTION_URL} target="_blank" rel="noreferrer">
+              <span>Production engine</span>
+              <strong>realtyflow.chatgenius.pro</strong>
+              <ExternalLink size={17} />
+            </a>
+            <div>
+              <span>Release cadence</span>
+              <strong>{RELEASE_CADENCE}</strong>
             </div>
           </div>
         </div>
@@ -342,6 +357,11 @@ function App() {
           <span>Mode</span>
           <strong>{isPlaying ? "Reactive" : "Idle pulse"}</strong>
         </div>
+        <div>
+          <Radio size={18} />
+          <span>Production</span>
+          <strong>5 / week</strong>
+        </div>
       </section>
 
       <section className="tracks-section" id="tracks">
@@ -382,4 +402,3 @@ function App() {
 }
 
 export default App;
-
