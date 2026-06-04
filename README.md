@@ -32,6 +32,12 @@ npm install
 npm run dev
 ```
 
+Local preview runs on:
+
+```text
+http://localhost:5174/
+```
+
 ## Build
 
 ```bash
