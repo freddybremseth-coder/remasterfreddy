@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Youtube } from "lucide-react";
-import { AdminSong, loadSongs, startSongPipeline } from "./lib/admin-api";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
+import { AdminSong, loadSongs, startSongPipeline, uploadSong } from "./lib/admin-api";
 import "./admin-studio.css";
 
 interface PipelineEvent {
@@ -16,6 +16,11 @@ export default function AdminStudio() {
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
+  const [mp3File, setMp3File] = useState<File | null>(null);
+  const [mp3Title, setMp3Title] = useState("");
+  const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
 
   async function refreshSongs() {
     setLoading(true);
@@ -38,6 +43,38 @@ export default function AdminStudio() {
     [songs],
   );
 
+  function selectMp3(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    setMp3File(file);
+    setUploadMessage("");
+    if (file) {
+      setMp3Title(file.name.replace(/\.mp3$/i, "").replace(/[-_]+/g, " ").trim());
+    }
+  }
+
+  async function handleUpload() {
+    if (!mp3File || !mp3Title.trim()) {
+      setError("Velg en MP3-fil og skriv inn tittel.");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+    setUploadMessage("");
+    try {
+      await uploadSong(mp3File, mp3Title, mp3Artist);
+      setUploadMessage("Sangen er lastet opp og lagt i publiseringskøen.");
+      setMp3File(null);
+      setMp3Title("");
+      setMp3Artist("Re-Master Freddy");
+      await refreshSongs();
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "MP3-opplastingen feilet.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function runPipeline(song: AdminSong) {
     setProcessingId(song.id);
     setPipelineEvent({ status: "running", steps: [] });
@@ -59,6 +96,34 @@ export default function AdminStudio() {
 
   return (
     <section className="admin-card admin-studio">
+      <div className="admin-upload-panel">
+        <div>
+          <p className="admin-eyebrow">Ny sang</p>
+          <h2>Last opp MP3</h2>
+          <p>Filen lastes direkte til Supabase med en kortvarig, signert opplastingsadresse.</p>
+        </div>
+        <div className="admin-upload-grid">
+          <label className="admin-file-field">
+            <span>MP3-fil</span>
+            <input type="file" accept="audio/mpeg,.mp3" onChange={selectMp3} />
+            <strong>{mp3File?.name || "Velg fil"}</strong>
+          </label>
+          <label>
+            <span>Tittel</span>
+            <input value={mp3Title} onChange={(event) => setMp3Title(event.target.value)} placeholder="Sangtittel" />
+          </label>
+          <label>
+            <span>Artist</span>
+            <input value={mp3Artist} onChange={(event) => setMp3Artist(event.target.value)} />
+          </label>
+          <button className="admin-primary admin-upload-button" onClick={handleUpload} disabled={uploading || !mp3File || !mp3Title.trim()}>
+            {uploading ? <Loader2 className="admin-spinner" size={17} /> : <Upload size={17} />}
+            Last opp sang
+          </button>
+        </div>
+        {uploadMessage && <div className="admin-success"><CheckCircle2 size={17} />{uploadMessage}</div>}
+      </div>
+
       <div className="admin-studio-header">
         <div>
           <p className="admin-eyebrow">Publiseringskø</p>
