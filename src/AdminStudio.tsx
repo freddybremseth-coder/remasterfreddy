@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import PipelineAssets from "./PipelineAssets";
+import PipelinePublishSettings from "./PipelinePublishSettings";
 import { AdminSong, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -21,6 +22,7 @@ export default function AdminStudio() {
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
     multilingualDescription: true,
+    autoSchedule: false,
   });
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
@@ -131,6 +133,7 @@ export default function AdminStudio() {
       </div>
 
       <PipelineAssets value={pipelineOptions} onChange={setPipelineOptions} />
+      <PipelinePublishSettings value={pipelineOptions} onChange={setPipelineOptions} />
 
       <div className="admin-studio-header">
         <div>
