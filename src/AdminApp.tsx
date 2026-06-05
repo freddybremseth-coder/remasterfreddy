@@ -1,15 +1,24 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Youtube } from "lucide-react";
+import { ArrowLeft, BarChart3, Image, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck } from "lucide-react";
+import AdminAnalytics from "./AdminAnalytics";
+import AdminAssets from "./AdminAssets";
 import AdminStudio from "./AdminStudio";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
 import "./admin.css";
-
-const CURRENT_STUDIO_URL = "https://realtyflow.chatgenius.pro/neural-beat";
+import "./admin-tabs.css";
 
 type AdminState = "loading" | "signed-out" | "authorized" | "forbidden";
+type AdminTab = "publishing" | "assets" | "analytics";
+
+const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof Music2 }> = [
+  { id: "publishing", label: "Publisering", description: "MP3 og YouTube-pipeline", icon: Music2 },
+  { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
+  { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
+];
 
 export default function AdminApp() {
   const [state, setState] = useState<AdminState>("loading");
+  const [activeTab, setActiveTab] = useState<AdminTab>("publishing");
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -71,7 +80,7 @@ export default function AdminApp() {
           <div className="admin-brand-mark"><LockKeyhole size={27} /></div>
           <p className="admin-eyebrow">Re-Master Freddy</p>
           <h1>Admin login</h1>
-          <p>Logg inn for å administrere musikk, videopipeline og YouTube-publisering.</p>
+          <p>Logg inn for å administrere musikk, visuelle ressurser og YouTube-publisering.</p>
           <form onSubmit={handleLogin}>
             <label>
               E-post
@@ -112,39 +121,32 @@ export default function AdminApp() {
         <div className="admin-intro">
           <p className="admin-eyebrow">Kontrollsenter</p>
           <h1>Musikkproduksjon og YouTube</h1>
-          <p>Dette er det nye hjemmet for Neural Beat-funksjonene under merkevaren Re-Master Freddy.</p>
+          <p>Publisering, visuelle ressurser og kanalresultater samlet under merkevaren Re-Master Freddy.</p>
         </div>
 
-        <AdminStudio />
+        <nav className="admin-tabs" aria-label="Re-Master Freddy adminmoduler">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>
+                <Icon size={20} />
+                <span><strong>{tab.label}</strong><small>{tab.description}</small></span>
+              </button>
+            );
+          })}
+        </nav>
 
-        <div className="admin-grid admin-support-grid">
-          <article className="admin-card admin-feature-card">
-            <div className="admin-icon"><Youtube size={25} /></div>
-            <div>
-              <span className="admin-status">Migreringsbro aktiv</span>
-              <h2>Dagens komplette studio</h2>
-              <p>Bruk dette som reserve mens bildebank og avansert analyse flyttes inn i Re-Master Freddy.</p>
-            </div>
-            <a className="admin-primary" href={CURRENT_STUDIO_URL} target="_blank" rel="noreferrer">
-              Åpne RealtyFlow-studio <ExternalLink size={17} />
-            </a>
-          </article>
-
-          <article className="admin-card admin-feature-card">
-            <div className="admin-icon"><Music2 size={25} /></div>
-            <div>
-              <span className="admin-status admin-status-progress">Neste migreringsdel</span>
-              <h2>Bildebank og analyse</h2>
-              <p>Logo, thumbnails, egne bilder, kanalstatistikk og anbefalinger flyttes videre uten å eksponere serverhemmeligheter.</p>
-            </div>
-          </article>
+        <div className="admin-tab-content">
+          {activeTab === "publishing" && <AdminStudio />}
+          {activeTab === "assets" && <AdminAssets />}
+          {activeTab === "analytics" && <AdminAnalytics />}
         </div>
 
         <section className="admin-card admin-note">
           <ShieldCheck size={22} />
           <div>
             <h3>Sikker tilgang</h3>
-            <p>Adminområdet og det nye API-laget kontrollerer Supabase-økten og godtar bare {ADMIN_EMAIL}.</p>
+            <p>Adminområdet og alle Re-Master API-ruter kontrollerer Supabase-økten og godtar bare {ADMIN_EMAIL}.</p>
           </div>
         </section>
       </section>
