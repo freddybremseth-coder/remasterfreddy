@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Image, Loader2, RefreshCw } from "lucide-react";
 import { AdminImage, ImageKind, loadImageBank } from "./lib/admin-api";
 import "./admin-assets.css";
+import "./admin-assets-responsive.css";
 
 const filters: Array<{ id: "all" | ImageKind; label: string }> = [
   { id: "all", label: "Alle" },
