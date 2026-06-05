@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Image, Loader2, RefreshCw } from "lucide-react";
+import AssetCard from "./AssetCard";
+import AssetUpload from "./AssetUpload";
 import { AdminImage, ImageKind, loadImageBank } from "./lib/admin-api";
 import "./admin-assets.css";
 import "./admin-assets-responsive.css";
+import "./admin-assets-actions.css";
 
 const filters: Array<{ id: "all" | ImageKind; label: string }> = [
   { id: "all", label: "Alle" },
@@ -33,13 +36,19 @@ export default function AdminAssets() {
     refresh(filter);
   }, [filter]);
 
+  function handleUploaded(image: AdminImage) {
+    if (filter === "all" || filter === image.kind) {
+      setImages((items) => [image, ...items]);
+    }
+  }
+
   return (
     <section className="admin-card assets-panel">
       <div className="assets-header">
         <div>
           <p className="admin-eyebrow">Visuelle ressurser</p>
           <h2>Bildebank</h2>
-          <p>Gjenbruk bilder, logoer og thumbnails i Re-Master Freddy-pipelinen.</p>
+          <p>Last opp og gjenbruk bilder, logoer og thumbnails i Re-Master Freddy-pipelinen.</p>
         </div>
         <button className="admin-secondary" onClick={() => refresh()} disabled={loading}>
           {loading ? <Loader2 className="admin-spinner" size={16} /> : <RefreshCw size={16} />}
@@ -47,12 +56,15 @@ export default function AdminAssets() {
         </button>
       </div>
 
-      <div className="assets-filters">
-        {filters.map((item) => (
-          <button key={item.id} className={filter === item.id ? "active" : ""} onClick={() => setFilter(item.id)}>
-            {item.label}
-          </button>
-        ))}
+      <div className="assets-toolbar">
+        <div className="assets-filters">
+          {filters.map((item) => (
+            <button key={item.id} className={filter === item.id ? "active" : ""} onClick={() => setFilter(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <AssetUpload onUploaded={handleUploaded} />
       </div>
 
       {error && <div className="admin-error assets-message">{error}</div>}
@@ -64,16 +76,7 @@ export default function AdminAssets() {
           <div className="admin-empty"><Image size={24} /> Ingen bilder i denne kategorien.</div>
         ) : (
           images.map((image) => (
-            <article className="asset-card" key={image.id}>
-              <div className="asset-preview">
-                <img src={image.thumbnail_url || image.url} alt={image.name || image.kind} loading="lazy" />
-                <span>{image.kind}</span>
-              </div>
-              <div className="asset-meta">
-                <strong>{image.name || "Uten navn"}</strong>
-                <small>Brukt {image.use_count || 0} ganger</small>
-              </div>
-            </article>
+            <AssetCard key={image.id} image={image} onDeleted={(id) => setImages((items) => items.filter((item) => item.id !== id))} />
           ))
         )}
       </div>
