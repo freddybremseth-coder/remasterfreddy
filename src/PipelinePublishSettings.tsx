@@ -23,6 +23,12 @@ function toLocalDateTime(iso?: string) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
+function defaultCustomPublishTime() {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
+  return date.toISOString();
+}
+
 export default function PipelinePublishSettings({ value, onChange }: PipelinePublishSettingsProps) {
   const mode = getMode(value);
 
@@ -32,7 +38,11 @@ export default function PipelinePublishSettings({ value, onChange }: PipelinePub
     } else if (nextMode === "auto") {
       onChange({ ...value, autoSchedule: true, customPublishAt: undefined });
     } else {
-      onChange({ ...value, autoSchedule: false });
+      onChange({
+        ...value,
+        autoSchedule: false,
+        customPublishAt: value.customPublishAt || defaultCustomPublishTime(),
+      });
     }
   }
 
