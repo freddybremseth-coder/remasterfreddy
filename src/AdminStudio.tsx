@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
-import { AdminSong, loadSongs, startSongPipeline, uploadSong } from "./lib/admin-api";
+import PipelineAssets from "./PipelineAssets";
+import { AdminSong, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
 import "./admin-studio.css";
 import "./admin-upload.css";
 
@@ -17,6 +18,10 @@ export default function AdminStudio() {
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
+  const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
+    customImageUrls: [],
+    multilingualDescription: true,
+  });
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
@@ -82,7 +87,7 @@ export default function AdminStudio() {
     setError("");
 
     try {
-      await startSongPipeline(song.id, (event) => {
+      await startSongPipeline(song.id, pipelineOptions, (event) => {
         if (event.type !== "heartbeat") setPipelineEvent(event);
       });
       await refreshSongs();
@@ -124,6 +129,8 @@ export default function AdminStudio() {
         </div>
         {uploadMessage && <div className="admin-success"><CheckCircle2 size={17} />{uploadMessage}</div>}
       </div>
+
+      <PipelineAssets value={pipelineOptions} onChange={setPipelineOptions} />
 
       <div className="admin-studio-header">
         <div>
