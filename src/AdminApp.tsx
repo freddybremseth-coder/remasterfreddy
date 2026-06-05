@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Youtube } from "lucide-react";
+import AdminStudio from "./AdminStudio";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
 import "./admin.css";
 
@@ -114,25 +115,27 @@ export default function AdminApp() {
           <p>Dette er det nye hjemmet for Neural Beat-funksjonene under merkevaren Re-Master Freddy.</p>
         </div>
 
-        <div className="admin-grid">
+        <AdminStudio />
+
+        <div className="admin-grid admin-support-grid">
           <article className="admin-card admin-feature-card">
             <div className="admin-icon"><Youtube size={25} /></div>
             <div>
-              <span className="admin-status">Tilgjengelig</span>
-              <h2>YouTube-publisering</h2>
-              <p>Last opp MP3, generer metadata og bilder, render video og publiser til Re-Master Freddy-kanalen.</p>
+              <span className="admin-status">Migreringsbro aktiv</span>
+              <h2>Dagens komplette studio</h2>
+              <p>Bruk dette som reserve mens bildebank, opplasting og avansert analyse flyttes inn i Re-Master Freddy.</p>
             </div>
             <a className="admin-primary" href={CURRENT_STUDIO_URL} target="_blank" rel="noreferrer">
-              Åpne publiseringsstudio <ExternalLink size={17} />
+              Åpne RealtyFlow-studio <ExternalLink size={17} />
             </a>
           </article>
 
           <article className="admin-card admin-feature-card">
             <div className="admin-icon"><Music2 size={25} /></div>
             <div>
-              <span className="admin-status admin-status-progress">Migrering pågår</span>
-              <h2>Re-Master pipeline</h2>
-              <p>Selve serverpipelinen flyttes hit i neste steg. Den blir ikke lagt i offentlig frontend, fordi FFmpeg- og YouTube-tokenene må beskyttes.</p>
+              <span className="admin-status admin-status-progress">Neste migreringsdel</span>
+              <h2>Opplasting og bildebank</h2>
+              <p>MP3-opplasting, logo, thumbnails, egne bilder, analyse og anbefalinger flyttes videre uten å eksponere serverhemmeligheter.</p>
             </div>
           </article>
         </div>
@@ -141,7 +144,7 @@ export default function AdminApp() {
           <ShieldCheck size={22} />
           <div>
             <h3>Sikker tilgang</h3>
-            <p>Adminområdet krever Supabase-innlogging og godtar bare {ADMIN_EMAIL}. Server-API-et får en egen tilgangskontroll i migreringens neste del.</p>
+            <p>Adminområdet og det nye API-laget kontrollerer Supabase-økten og godtar bare {ADMIN_EMAIL}.</p>
           </div>
         </section>
       </section>
