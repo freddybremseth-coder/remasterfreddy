@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Youtube } from "lucide-react";
-import { ADMIN_EMAIL, isSupabaseConfigured, supabase } from "./lib/supabase";
+import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
 import "./admin.css";
 
 const CURRENT_STUDIO_URL = "https://realtyflow.chatgenius.pro/neural-beat";
@@ -15,54 +15,32 @@ export default function AdminApp() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!supabase) {
-      setState("signed-out");
-      return;
-    }
-
-    supabase.auth.getSession().then(({ data }) => {
-      const sessionEmail = data.session?.user.email?.toLowerCase();
-      if (!sessionEmail) setState("signed-out");
-      else if (sessionEmail === ADMIN_EMAIL) setState("authorized");
-      else setState("forbidden");
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const sessionEmail = session?.user.email?.toLowerCase();
-      if (!sessionEmail) setState("signed-out");
-      else if (sessionEmail === ADMIN_EMAIL) setState("authorized");
-      else setState("forbidden");
-    });
-
-    return () => listener.subscription.unsubscribe();
+    getAdminSession()
+      .then((session) => {
+        if (!session) setState("signed-out");
+        else if (session.email.toLowerCase() === ADMIN_EMAIL) setState("authorized");
+        else setState("forbidden");
+      })
+      .catch(() => setState("signed-out"));
   }, []);
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
     setError("");
-
-    if (!supabase || !isSupabaseConfigured) {
-      setError("Supabase er ikke konfigurert for denne nettsiden ennå.");
-      return;
-    }
-
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
-      setError("Denne e-postadressen har ikke administratortilgang.");
-      return;
-    }
-
     setSubmitting(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    setSubmitting(false);
 
-    if (signInError) setError(signInError.message);
+    try {
+      const session = await signInAdmin(email, password);
+      setState(session.email === ADMIN_EMAIL ? "authorized" : "forbidden");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Innloggingen feilet.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  async function handleLogout() {
-    await supabase?.auth.signOut();
+  function handleLogout() {
+    signOutAdmin();
     setPassword("");
     setState("signed-out");
   }
