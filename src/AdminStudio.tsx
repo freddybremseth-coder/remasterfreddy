@@ -2,7 +2,9 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import PipelineAssets from "./PipelineAssets";
 import PipelinePublishSettings from "./PipelinePublishSettings";
+import YouTubeHealthCard from "./YouTubeHealthCard";
 import { AdminSong, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
+import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
 
@@ -19,6 +21,7 @@ export default function AdminStudio() {
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
+  const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
     multilingualDescription: true,
@@ -84,6 +87,11 @@ export default function AdminStudio() {
   }
 
   async function runPipeline(song: AdminSong) {
+    if (!youtubeHealth?.connected) {
+      setError("Videopipelinen kan ikke startes før Re-Master Freddy er koblet til riktig YouTube-kanal.");
+      return;
+    }
+
     setProcessingId(song.id);
     setPipelineEvent({ status: "running", steps: [] });
     setError("");
@@ -104,6 +112,8 @@ export default function AdminStudio() {
 
   return (
     <section className="admin-card admin-studio">
+      <YouTubeHealthCard onHealthChange={setYouTubeHealth} />
+
       <div className="admin-upload-panel">
         <div>
           <p className="admin-eyebrow">Ny sang</p>
@@ -187,6 +197,12 @@ export default function AdminStudio() {
         ) : (
           songs.map((song) => {
             const canProcess = Boolean(song.audioUrl && !song.youtubeUrl);
+            const disabledReason = !youtubeHealth?.connected
+              ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
+              : !canProcess
+                ? "Sangen mangler lyd eller er allerede publisert."
+                : undefined;
+
             return (
               <article className="admin-song-row" key={song.id}>
                 <div className="admin-song-icon">
@@ -209,8 +225,9 @@ export default function AdminStudio() {
                 </div>
                 <button
                   className="admin-primary admin-run-button"
-                  disabled={!canProcess || processingId !== null}
+                  disabled={!canProcess || processingId !== null || !youtubeHealth?.connected}
                   onClick={() => runPipeline(song)}
+                  title={disabledReason}
                 >
                   {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
                   Lag video
