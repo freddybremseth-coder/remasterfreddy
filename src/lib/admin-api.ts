@@ -26,6 +26,15 @@ export interface AdminImage {
   created_at?: string;
 }
 
+export interface PipelineOptions {
+  customImageUrls?: string[];
+  logoUrl?: string;
+  customThumbnailUrl?: string;
+  autoSchedule?: boolean;
+  customPublishAt?: string;
+  multilingualDescription?: boolean;
+}
+
 export interface ChannelVideo {
   id: string;
   title: string;
@@ -79,6 +88,13 @@ export interface ChannelAnalytics {
   }>;
 }
 
+interface SignedUpload {
+  uploadUrl: string;
+  publicUrl: string;
+  token: string;
+  method: "signed";
+}
+
 async function adminFetch(path: string, init: RequestInit = {}) {
   const session = await getAdminSession();
   if (!session) throw new Error("Adminøkten er utløpt. Logg inn på nytt.");
@@ -93,17 +109,33 @@ async function adminFetch(path: string, init: RequestInit = {}) {
   });
 }
 
-async function createSignedUpload(fileName: string) {
+async function createSignedUpload(fileName: string): Promise<SignedUpload> {
   const response = await adminFetch("/api/neural-beat-upload", {
     method: "POST",
     body: JSON.stringify({ fileName }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Kunne ikke opprette sikker opplastingsadresse.");
-  if (data.method !== "signed" || !data.uploadUrl || !data.publicUrl) {
-    throw new Error("Opplastingen ble stoppet fordi sikker signert adresse mangler.");
+  if (data.method !== "signed" || !data.uploadUrl || !data.publicUrl || !data.token) {
+    throw new Error("Opplastingen ble stoppet fordi sikker signert adresse eller token mangler.");
   }
-  return data as { uploadUrl: string; publicUrl: string; method: "signed" };
+  return data as SignedUpload;
+}
+
+async function putSignedFile(signed: SignedUpload, file: File, contentType: string) {
+  const uploadResponse = await fetch(signed.uploadUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${signed.token}`,
+      "Content-Type": contentType,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    const details = await uploadResponse.text().catch(() => "");
+    throw new Error(details || "Opplastingen til Supabase feilet.");
+  }
 }
 
 export async function loadSongs(): Promise<AdminSong[]> {
@@ -118,14 +150,11 @@ export async function uploadSong(file: File, title: string, artist: string): Pro
   if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
 
   const signed = await createSignedUpload(file.name);
-  const uploadResponse = await fetch(signed.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": "audio/mpeg" },
-    body: file,
-  });
-  if (!uploadResponse.ok) {
-    const details = await uploadResponse.text().catch(() => "");
-    throw new Error(`MP3-opplastingen feilet${details ? `: ${details}` : "."}`);
+  try {
+    await putSignedFile(signed, file, "audio/mpeg");
+  } catch (uploadError) {
+    const message = uploadError instanceof Error ? uploadError.message : "Ukjent feil";
+    throw new Error(`MP3-opplastingen feilet: ${message}`);
   }
 
   const registerResponse = await adminFetch("/api/neural-beat", {
@@ -147,12 +176,12 @@ export async function uploadSong(file: File, title: string, artist: string): Pro
 export async function uploadImageAsset(file: File, kind: ImageKind): Promise<AdminImage> {
   if (!file.type.startsWith("image/")) throw new Error("Velg en gyldig bildefil.");
   const signed = await createSignedUpload(`${kind}-${file.name}`);
-  const uploadResponse = await fetch(signed.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type || "image/png" },
-    body: file,
-  });
-  if (!uploadResponse.ok) throw new Error("Bildeopplastingen feilet.");
+  try {
+    await putSignedFile(signed, file, file.type || "image/png");
+  } catch (uploadError) {
+    const message = uploadError instanceof Error ? uploadError.message : "Ukjent feil";
+    throw new Error(`Bildeopplastingen feilet: ${message}`);
+  }
 
   const saveResponse = await adminFetch("/api/neural-beat-image-bank", {
     method: "POST",
@@ -193,11 +222,23 @@ export async function loadChannelAnalytics(): Promise<ChannelAnalytics> {
   return data as ChannelAnalytics;
 }
 
-export async function startSongPipeline(recordId: string, onEvent: (event: any) => void) {
+export async function startSongPipeline(
+  recordId: string,
+  options: PipelineOptions,
+  onEvent: (event: any) => void,
+) {
   const response = await adminFetch("/api/neural-beat", {
     method: "POST",
     headers: { Accept: "text/event-stream" },
-    body: JSON.stringify({ recordId, multilingualDescription: true }),
+    body: JSON.stringify({
+      recordId,
+      customImageUrls: options.customImageUrls || [],
+      logoUrl: options.logoUrl || undefined,
+      customThumbnailUrl: options.customThumbnailUrl || undefined,
+      autoSchedule: Boolean(options.autoSchedule),
+      customPublishAt: options.customPublishAt || undefined,
+      multilingualDescription: options.multilingualDescription !== false,
+    }),
   });
 
   if (!response.ok) {
