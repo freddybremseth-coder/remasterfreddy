@@ -14,7 +14,7 @@ async function adminFetch(path: string, init: RequestInit = {}) {
   const session = await getAdminSession();
   if (!session) throw new Error("Adminøkten er utløpt. Logg inn på nytt.");
 
-  const response = await fetch(path, {
+  return fetch(path, {
     ...init,
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
@@ -22,8 +22,6 @@ async function adminFetch(path: string, init: RequestInit = {}) {
       ...(init.headers || {}),
     },
   });
-
-  return response;
 }
 
 export async function loadSongs(): Promise<AdminSong[]> {
@@ -31,6 +29,46 @@ export async function loadSongs(): Promise<AdminSong[]> {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke hente sangene.");
   return Array.isArray(data.songs) ? data.songs : [];
+}
+
+export async function uploadSong(file: File, title: string, artist: string): Promise<AdminSong> {
+  if (!file || !title.trim()) throw new Error("Velg en MP3-fil og skriv inn tittel.");
+  if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
+
+  const signResponse = await adminFetch("/api/neural-beat-upload", {
+    method: "POST",
+    body: JSON.stringify({ fileName: file.name }),
+  });
+  const signed = await signResponse.json().catch(() => ({}));
+  if (!signResponse.ok) throw new Error(signed.error || "Kunne ikke opprette sikker opplastingsadresse.");
+  if (signed.method !== "signed") throw new Error("Opplastingen ble stoppet fordi sikker signert adresse mangler.");
+
+  const uploadResponse = await fetch(String(signed.uploadUrl), {
+    method: "PUT",
+    headers: {
+      "Content-Type": "audio/mpeg",
+    },
+    body: file,
+  });
+  if (!uploadResponse.ok) {
+    const details = await uploadResponse.text().catch(() => "");
+    throw new Error(`MP3-opplastingen feilet${details ? `: ${details}` : "."}`);
+  }
+
+  const registerResponse = await adminFetch("/api/neural-beat", {
+    method: "PUT",
+    body: JSON.stringify({
+      title: title.trim(),
+      artist: artist.trim() || "Re-Master Freddy",
+      audioUrl: signed.publicUrl,
+    }),
+  });
+  const registered = await registerResponse.json().catch(() => ({}));
+  if (!registerResponse.ok || !registered.success) {
+    throw new Error(registered.error || "MP3-en ble lastet opp, men sangen kunne ikke registreres.");
+  }
+
+  return registered.song as AdminSong;
 }
 
 export async function startSongPipeline(recordId: string, onEvent: (event: any) => void) {
