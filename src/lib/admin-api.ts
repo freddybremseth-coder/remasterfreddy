@@ -26,6 +26,15 @@ export interface AdminImage {
   created_at?: string;
 }
 
+export interface PipelineOptions {
+  customImageUrls?: string[];
+  logoUrl?: string;
+  customThumbnailUrl?: string;
+  autoSchedule?: boolean;
+  customPublishAt?: string;
+  multilingualDescription?: boolean;
+}
+
 export interface ChannelVideo {
   id: string;
   title: string;
@@ -193,11 +202,23 @@ export async function loadChannelAnalytics(): Promise<ChannelAnalytics> {
   return data as ChannelAnalytics;
 }
 
-export async function startSongPipeline(recordId: string, onEvent: (event: any) => void) {
+export async function startSongPipeline(
+  recordId: string,
+  options: PipelineOptions,
+  onEvent: (event: any) => void,
+) {
   const response = await adminFetch("/api/neural-beat", {
     method: "POST",
     headers: { Accept: "text/event-stream" },
-    body: JSON.stringify({ recordId, multilingualDescription: true }),
+    body: JSON.stringify({
+      recordId,
+      customImageUrls: options.customImageUrls || [],
+      logoUrl: options.logoUrl || undefined,
+      customThumbnailUrl: options.customThumbnailUrl || undefined,
+      autoSchedule: Boolean(options.autoSchedule),
+      customPublishAt: options.customPublishAt || undefined,
+      multilingualDescription: options.multilingualDescription !== false,
+    }),
   });
 
   if (!response.ok) {
