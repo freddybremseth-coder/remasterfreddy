@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import { AdminSong, loadSongs, startSongPipeline, uploadSong } from "./lib/admin-api";
 import "./admin-studio.css";
+import "./admin-upload.css";
 
 interface PipelineEvent {
   status?: string;
