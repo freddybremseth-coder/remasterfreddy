@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, RefreshCw, Target } from "lucide-react";
+import AutopilotControl from "./AutopilotControl";
 import RecommendationCard from "./RecommendationCard";
 import RecommendationHistory from "./RecommendationHistory";
 import { loadRecommendations } from "./lib/recommendations";
@@ -53,6 +54,8 @@ export default function AdminRecommendations() {
           {error}
         </div>
       )}
+
+      <AutopilotControl />
 
       <div className="recommendations-summary">
         <article>
