@@ -17,6 +17,32 @@ export interface AutopilotSettingsResponse {
   warning?: string;
 }
 
+export interface AutopilotRunItem {
+  id?: string | null;
+  title?: string | null;
+  priority?: string | null;
+  actionType?: string | null;
+  status?: string | null;
+  reason?: string | null;
+  existingStatus?: string | null;
+  historyId?: string | null;
+  error?: string | null;
+}
+
+export interface AutopilotRunResult {
+  mode: AutopilotMode;
+  analyzedCount: number;
+  eligibleCount?: number;
+  savedCount: number;
+  wouldSaveCount?: number;
+  skippedCount: number;
+  metadataRequiresApprovalCount?: number;
+  metadataRequiresApproval: AutopilotRunItem[];
+  results: AutopilotRunItem[];
+  errors: AutopilotRunItem[];
+  message?: string;
+}
+
 const DEFAULT_SETTINGS: AutopilotSettings = {
   mode: "off",
   allowMetadataUpdates: false,
@@ -49,11 +75,11 @@ function normalizeSettings(value: unknown): AutopilotSettings {
   };
 }
 
-async function autopilotFetch(init: RequestInit = {}) {
+async function autopilotFetch(path: string, init: RequestInit = {}) {
   const session = await getAdminSession();
   if (!session) throw new Error("Adminøkten er utløpt. Logg inn på nytt.");
 
-  return fetch("/api/neural-beat-autopilot-settings", {
+  return fetch(path, {
     ...init,
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
@@ -65,7 +91,7 @@ async function autopilotFetch(init: RequestInit = {}) {
 }
 
 export async function loadAutopilotSettings(): Promise<AutopilotSettings> {
-  const response = await autopilotFetch({ method: "GET" });
+  const response = await autopilotFetch("/api/neural-beat-autopilot-settings", { method: "GET" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || data.message || "Kunne ikke hente autopilot-innstillingene.");
@@ -79,7 +105,7 @@ export async function saveAutopilotSettings(
   maxActionsPerRun: number,
 ): Promise<AutopilotSettingsResponse> {
   const safeMode = normalizeMode(mode);
-  const response = await autopilotFetch({
+  const response = await autopilotFetch("/api/neural-beat-autopilot-settings", {
     method: "PUT",
     body: JSON.stringify({
       mode: safeMode,
@@ -97,4 +123,26 @@ export async function saveAutopilotSettings(
     ...data,
     settings: normalizeSettings(data.settings),
   } as AutopilotSettingsResponse;
+}
+
+export async function runAutopilot(): Promise<AutopilotRunResult> {
+  const response = await autopilotFetch("/api/neural-beat-autopilot-run", { method: "POST" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || data.message || "Autopilot-kjøringen feilet.");
+  }
+
+  return {
+    ...data,
+    mode: normalizeMode(data.mode),
+    analyzedCount: Number(data.analyzedCount || 0),
+    eligibleCount: Number(data.eligibleCount || 0),
+    savedCount: Number(data.savedCount || 0),
+    wouldSaveCount: Number(data.wouldSaveCount || 0),
+    skippedCount: Number(data.skippedCount || 0),
+    metadataRequiresApprovalCount: Number(data.metadataRequiresApprovalCount || 0),
+    metadataRequiresApproval: Array.isArray(data.metadataRequiresApproval) ? data.metadataRequiresApproval : [],
+    results: Array.isArray(data.results) ? data.results : [],
+    errors: Array.isArray(data.errors) ? data.errors : [],
+  } as AutopilotRunResult;
 }
