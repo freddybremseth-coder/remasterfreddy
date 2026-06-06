@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, RefreshCw, Target } from "lucide-react";
 import RecommendationCard from "./RecommendationCard";
-import { loadRecommendations, RecommendationBundle } from "./lib/recommendations";
+import RecommendationHistory from "./RecommendationHistory";
+import { loadRecommendations } from "./lib/recommendations";
+import type { RecommendationBundle } from "./lib/recommendations";
 import "./admin-recommendations.css";
 
 export default function AdminRecommendations() {
@@ -95,10 +97,16 @@ export default function AdminRecommendations() {
           <div className="admin-empty"><CheckCircle2 size={24} /> Ingen nye anbefalinger.</div>
         ) : (
           recommendations.map((recommendation) => (
-            <RecommendationCard key={recommendation.id} recommendation={recommendation} />
+            <RecommendationCard
+              key={recommendation.id}
+              recommendation={recommendation}
+              onExecuted={refresh}
+            />
           ))
         )}
       </div>
+
+      <RecommendationHistory items={bundle?.actionHistory || []} />
     </section>
   );
 }

@@ -1,13 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, ExternalLink, Loader2, PlayCircle } from "lucide-react";
-import {
-  executeRecommendation,
-  Recommendation,
-  RecommendationExecution,
-} from "./lib/recommendations";
+import { executeRecommendation } from "./lib/recommendations";
+import type { Recommendation, RecommendationExecution } from "./lib/recommendations";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
+  onExecuted?: () => void | Promise<void>;
 }
 
 function statusLabel(status?: RecommendationExecution["status"]) {
@@ -21,11 +19,15 @@ function statusLabel(status?: RecommendationExecution["status"]) {
   }
 }
 
-export default function RecommendationCard({ recommendation }: RecommendationCardProps) {
+export default function RecommendationCard({ recommendation, onExecuted }: RecommendationCardProps) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [execution, setExecution] = useState<RecommendationExecution | null>(recommendation.execution || null);
+
+  useEffect(() => {
+    setExecution(recommendation.execution || null);
+  }, [recommendation.execution]);
 
   const locked = Boolean(execution && ["planned", "ready", "published", "completed"].includes(execution.status));
 
@@ -50,6 +52,7 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
           executedAt: response.history.executed_at,
         });
       }
+      await onExecuted?.();
     } catch (executionError) {
       setError(executionError instanceof Error ? executionError.message : "Tiltaket kunne ikke utføres.");
     } finally {
