@@ -1,17 +1,36 @@
 import { useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, PlayCircle } from "lucide-react";
-import { executeRecommendation, Recommendation } from "./lib/recommendations";
+import { CheckCircle2, Clock3, ExternalLink, Loader2, PlayCircle } from "lucide-react";
+import {
+  executeRecommendation,
+  Recommendation,
+  RecommendationExecution,
+} from "./lib/recommendations";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
+}
+
+function statusLabel(status?: RecommendationExecution["status"]) {
+  switch (status) {
+    case "planned": return "Planlagt";
+    case "ready": return "Klar";
+    case "published": return "Publisert";
+    case "completed": return "Fullført";
+    case "failed": return "Feilet";
+    default: return "Ikke utført";
+  }
 }
 
 export default function RecommendationCard({ recommendation }: RecommendationCardProps) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
+  const [execution, setExecution] = useState<RecommendationExecution | null>(recommendation.execution || null);
+
+  const locked = Boolean(execution && ["planned", "ready", "published", "completed"].includes(execution.status));
 
   async function execute() {
+    if (locked) return;
     const confirmed = window.confirm(
       `Utføre tiltaket «${recommendation.title}»?\n\n${recommendation.description}`,
     );
@@ -21,8 +40,16 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
     setResult("");
     setError("");
     try {
-      const response = await executeRecommendation(recommendation.action);
+      const response = await executeRecommendation(recommendation);
       setResult(response.message || response.plan || "Tiltaket er utført.");
+      if (response.history) {
+        setExecution({
+          historyId: response.history.id,
+          status: response.history.status,
+          reviewedAt: response.history.reviewed_at,
+          executedAt: response.history.executed_at,
+        });
+      }
     } catch (executionError) {
       setError(executionError instanceof Error ? executionError.message : "Tiltaket kunne ikke utføres.");
     } finally {
@@ -33,13 +60,21 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
   const metadataAction = recommendation.action.type === "update_metadata";
 
   return (
-    <article className="recommendation-card">
+    <article className={`recommendation-card ${locked ? "recommendation-locked" : ""}`}>
       <div className="recommendation-card-header">
         <div>
           <span className={`recommendation-priority priority-${recommendation.priority}`}>{recommendation.priority}</span>
           <h3>{recommendation.title}</h3>
         </div>
-        <span className="recommendation-effort">{recommendation.effort}</span>
+        <div className="recommendation-status-stack">
+          <span className="recommendation-effort">{recommendation.effort}</span>
+          <span className={`recommendation-execution status-${execution?.status || "new"}`}>
+            {execution?.status === "completed" || execution?.status === "published"
+              ? <CheckCircle2 size={13} />
+              : <Clock3 size={13} />}
+            {statusLabel(execution?.status)}
+          </span>
+        </div>
       </div>
 
       <p>{recommendation.description}</p>
@@ -53,6 +88,9 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
           {recommendation.action.newTitle && (
             <div><small>Ny tittel</small><strong>{recommendation.action.newTitle}</strong></div>
           )}
+          {recommendation.action.newDescription && (
+            <div><small>Ny beskrivelse</small><span>{recommendation.action.newDescription}</span></div>
+          )}
           {recommendation.action.newTags && recommendation.action.newTags.length > 0 && (
             <div><small>Nye tags</small><span>{recommendation.action.newTags.join(", ")}</span></div>
           )}
@@ -64,12 +102,28 @@ export default function RecommendationCard({ recommendation }: RecommendationCar
         </div>
       )}
 
+      {execution?.executedAt && (
+        <small className="recommendation-timestamp">
+          Utført {new Date(execution.executedAt).toLocaleString("nb-NO")}
+        </small>
+      )}
+      {!execution?.executedAt && execution?.reviewedAt && (
+        <small className="recommendation-timestamp">
+          Godkjent {new Date(execution.reviewedAt).toLocaleString("nb-NO")}
+        </small>
+      )}
+
       {result && <div className="recommendation-result"><CheckCircle2 size={16} />{result}</div>}
       {error && <div className="admin-error recommendation-error">{error}</div>}
 
-      <button className="admin-primary recommendation-run" type="button" onClick={execute} disabled={running}>
-        {running ? <Loader2 className="admin-spinner" size={16} /> : <PlayCircle size={16} />}
-        Utfør etter godkjenning
+      <button
+        className="admin-primary recommendation-run"
+        type="button"
+        onClick={execute}
+        disabled={running || locked}
+      >
+        {running ? <Loader2 className="admin-spinner" size={16} /> : locked ? <CheckCircle2 size={16} /> : <PlayCircle size={16} />}
+        {locked ? statusLabel(execution?.status) : "Utfør etter godkjenning"}
       </button>
     </article>
   );
