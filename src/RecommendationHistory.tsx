@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock3, History, XCircle } from "lucide-react";
-import { RecommendationActionHistory } from "./lib/recommendations";
+import type { RecommendationActionHistory } from "./lib/recommendations";
 import "./recommendation-history.css";
 
 interface RecommendationHistoryProps {
