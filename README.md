@@ -67,6 +67,11 @@ The following server functions remain in RealtyFlow until the next migration sta
 
 The old module should not be removed from RealtyFlow until the Re-Master Freddy pipeline has been tested in production.
 
+Operational docs:
+
+- [Production E2E checklist](docs/production-e2e-checklist.md)
+- [Domain and OAuth notes](docs/domain-and-oauth.md)
+
 ## Run
 
 ```bash
