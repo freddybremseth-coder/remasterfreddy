@@ -1,4 +1,4 @@
-import { requireAdmin } from "./_admin";
+import { requireAdmin } from "./_admin.js";
 
 const allowedMethods = new Set(["GET", "POST", "DELETE", "PATCH"]);
 
