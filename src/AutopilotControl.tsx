@@ -152,7 +152,7 @@ export default function AutopilotControl() {
           </button>
 
           <div className="autopilot-run">
-            <button className="admin-secondary" type="button" onClick={run} disabled={running || saving}>
+            <button className="admin-secondary" type="button" onClick={run} disabled={running || saving || mode === "off"}>
               {running ? <Loader2 className="admin-spinner" size={16} /> : <PlayCircle size={16} />}
               Kjør sikker autopilot
             </button>
