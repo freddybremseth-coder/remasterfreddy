@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Bot, Eye, Loader2, Save, ShieldCheck } from "lucide-react";
+import { Bot, Eye, Loader2, PlayCircle, Save, ShieldCheck } from "lucide-react";
 import {
   loadAutopilotSettings,
+  runAutopilot,
   saveAutopilotSettings,
   type AutopilotMode,
+  type AutopilotRunResult,
   type AutopilotSettings,
 } from "./lib/autopilot-settings";
 import "./autopilot-control.css";
@@ -36,6 +38,8 @@ export default function AutopilotControl() {
   const [maxActions, setMaxActions] = useState(3);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<AutopilotRunResult | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -61,11 +65,27 @@ export default function AutopilotControl() {
       setSettings(result.settings);
       setMode(result.settings.mode);
       setMaxActions(result.settings.maxActionsPerRun);
+      setRunResult(null);
       setMessage(result.message || "Autopilot-innstillingene er lagret.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Kunne ikke lagre autopilot-innstillingene.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function run() {
+    setRunning(true);
+    setMessage("");
+    setError("");
+    try {
+      const result = await runAutopilot();
+      setRunResult(result);
+      setMessage(result.message || "Autopilot-kjøringen er fullført.");
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : "Autopilot-kjøringen feilet.");
+    } finally {
+      setRunning(false);
     }
   }
 
@@ -130,6 +150,35 @@ export default function AutopilotControl() {
             {saving ? <Loader2 className="admin-spinner" size={16} /> : <Save size={16} />}
             Lagre autopilot-innstillinger
           </button>
+
+          <div className="autopilot-run">
+            <button className="admin-secondary" type="button" onClick={run} disabled={running || saving}>
+              {running ? <Loader2 className="admin-spinner" size={16} /> : <PlayCircle size={16} />}
+              Kjør sikker autopilot
+            </button>
+
+            {runResult && (
+              <div className="autopilot-run-result">
+                <div className="autopilot-run-stats">
+                  <span><strong>{runResult.analyzedCount}</strong><small>Analysert</small></span>
+                  <span><strong>{runResult.mode === "preview" ? runResult.wouldSaveCount || 0 : runResult.savedCount}</strong><small>{runResult.mode === "preview" ? "Ville lagret" : "Lagret"}</small></span>
+                  <span><strong>{runResult.skippedCount}</strong><small>Hoppet over</small></span>
+                  <span><strong>{runResult.metadataRequiresApprovalCount || runResult.metadataRequiresApproval.length}</strong><small>Metadata</small></span>
+                </div>
+
+                {runResult.results.length > 0 && (
+                  <ul className="autopilot-run-list">
+                    {runResult.results.slice(0, 5).map((item, index) => (
+                      <li key={`${item.id || item.actionType || "run"}-${index}`}>
+                        <strong>{item.title || item.actionType || "Tiltak"}</strong>
+                        <small>{item.status}{item.reason ? ` · ${item.reason}` : ""}</small>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </section>
