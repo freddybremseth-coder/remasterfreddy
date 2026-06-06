@@ -1,4 +1,4 @@
-import { requireAdmin } from "./_admin";
+import { requireAdmin } from "./_admin.js";
 
 function upstreamUrl() {
   const base = process.env.REALTYFLOW_API_URL || "https://realtyflow.chatgenius.pro";
