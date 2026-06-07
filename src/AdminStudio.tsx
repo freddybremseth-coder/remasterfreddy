@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, Refresh
 import PipelineAssets from "./PipelineAssets";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -15,7 +15,12 @@ interface PipelineEvent {
   output?: { youtubeUrl?: string };
 }
 
-export default function AdminStudio() {
+interface AdminStudioProps {
+  assetRefreshToken: number;
+  onOpenImageBank: (kind: ImageKind) => void;
+}
+
+export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: AdminStudioProps) {
   const [songs, setSongs] = useState<AdminSong[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -142,7 +147,12 @@ export default function AdminStudio() {
         {uploadMessage && <div className="admin-success"><CheckCircle2 size={17} />{uploadMessage}</div>}
       </div>
 
-      <PipelineAssets value={pipelineOptions} onChange={setPipelineOptions} />
+      <PipelineAssets
+        value={pipelineOptions}
+        onChange={setPipelineOptions}
+        refreshToken={assetRefreshToken}
+        onOpenImageBank={onOpenImageBank}
+      />
       <PipelinePublishSettings value={pipelineOptions} onChange={setPipelineOptions} />
 
       <div className="admin-studio-header">

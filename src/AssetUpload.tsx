@@ -1,16 +1,23 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { AdminImage, ImageKind, uploadImageAsset } from "./lib/admin-api";
 
 interface AssetUploadProps {
   onUploaded: (image: AdminImage) => void;
+  presetKind?: ImageKind;
 }
 
-export default function AssetUpload({ onUploaded }: AssetUploadProps) {
-  const [kind, setKind] = useState<ImageKind>("image");
+export default function AssetUpload({ onUploaded, presetKind = "image" }: AssetUploadProps) {
+  const [kind, setKind] = useState<ImageKind>(presetKind);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setKind(presetKind);
+    setMessage("");
+    setError("");
+  }, [presetKind]);
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

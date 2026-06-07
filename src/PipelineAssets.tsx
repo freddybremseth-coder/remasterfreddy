@@ -1,14 +1,46 @@
 import { useEffect, useState } from "react";
-import { Image, Loader2, RefreshCw } from "lucide-react";
-import { AdminImage, loadImageBank, PipelineOptions } from "./lib/admin-api";
+import { Image, Images, Loader2, RefreshCw, Upload } from "lucide-react";
+import { AdminImage, ImageKind, loadImageBank, PipelineOptions } from "./lib/admin-api";
 import "./pipeline-assets.css";
 
 interface PipelineAssetsProps {
   value: PipelineOptions;
   onChange: (value: PipelineOptions) => void;
+  refreshToken?: number;
+  onOpenImageBank: (kind: ImageKind) => void;
 }
 
-export default function PipelineAssets({ value, onChange }: PipelineAssetsProps) {
+function assetPreview(item?: AdminImage) {
+  if (!item) return null;
+  return (
+    <div className="pipeline-selected-preview">
+      <img src={item.thumbnail_url || item.url} alt={item.name || item.kind} loading="lazy" />
+      <span>{item.name || (item.kind === "logo" ? "Logo" : "Thumbnail")}</span>
+    </div>
+  );
+}
+
+function EmptyAssetState({
+  icon,
+  message,
+  action,
+  onClick,
+}: {
+  icon: "image" | "upload";
+  message: string;
+  action: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="pipeline-empty">
+      {icon === "image" ? <Image size={18} /> : <Upload size={18} />}
+      <span>{message}</span>
+      <button className="admin-secondary" type="button" onClick={onClick}>{action}</button>
+    </div>
+  );
+}
+
+export default function PipelineAssets({ value, onChange, refreshToken = 0, onOpenImageBank }: PipelineAssetsProps) {
   const [images, setImages] = useState<AdminImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,12 +59,14 @@ export default function PipelineAssets({ value, onChange }: PipelineAssetsProps)
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refreshToken]);
 
   const selectedImages = new Set(value.customImageUrls || []);
   const logos = images.filter((item) => item.kind === "logo");
   const thumbnails = images.filter((item) => item.kind === "thumbnail");
   const slides = images.filter((item) => item.kind === "image");
+  const selectedLogo = logos.find((item) => item.url === value.logoUrl);
+  const selectedThumbnail = thumbnails.find((item) => item.url === value.customThumbnailUrl);
 
   function toggleSlide(url: string) {
     const next = new Set(selectedImages);
@@ -54,28 +88,64 @@ export default function PipelineAssets({ value, onChange }: PipelineAssetsProps)
         </button>
       </div>
 
+      <div className="pipeline-asset-counts" aria-label="Tilgjengelige visuelle ressurser">
+        <span><Images size={14} /> {slides.length} slideshow-bilder</span>
+        <span><Image size={14} /> {logos.length} logoer</span>
+        <span><Image size={14} /> {thumbnails.length} thumbnails</span>
+      </div>
+
       {error && <div className="admin-error">{error}</div>}
 
       <div className="pipeline-asset-selects">
-        <label>
-          <span>Logo</span>
-          <select value={value.logoUrl || ""} onChange={(event) => onChange({ ...value, logoUrl: event.target.value || undefined })}>
-            <option value="">Ingen egen logo</option>
-            {logos.map((item) => <option key={item.id} value={item.url}>{item.name || "Logo"}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Thumbnail</span>
-          <select value={value.customThumbnailUrl || ""} onChange={(event) => onChange({ ...value, customThumbnailUrl: event.target.value || undefined })}>
-            <option value="">AI-generert thumbnail</option>
-            {thumbnails.map((item) => <option key={item.id} value={item.url}>{item.name || "Thumbnail"}</option>)}
-          </select>
-        </label>
+        <div className="pipeline-asset-field">
+          <label>
+            <span>Logo</span>
+            <select value={value.logoUrl || ""} onChange={(event) => onChange({ ...value, logoUrl: event.target.value || undefined })}>
+              <option value="">Ingen egen logo</option>
+              {logos.map((item) => <option key={item.id} value={item.url}>{item.name || "Logo"}</option>)}
+            </select>
+          </label>
+          {selectedLogo ? assetPreview(selectedLogo) : logos.length === 0 ? (
+            <EmptyAssetState
+              icon="upload"
+              message="Ingen logoer er lastet opp"
+              action="Gå til Bildebank og last opp logo"
+              onClick={() => onOpenImageBank("logo")}
+            />
+          ) : (
+            <small className="pipeline-default-note">Standardvalg: Ingen egen logo</small>
+          )}
+        </div>
+
+        <div className="pipeline-asset-field">
+          <label>
+            <span>Thumbnail</span>
+            <select value={value.customThumbnailUrl || ""} onChange={(event) => onChange({ ...value, customThumbnailUrl: event.target.value || undefined })}>
+              <option value="">AI-generert thumbnail</option>
+              {thumbnails.map((item) => <option key={item.id} value={item.url}>{item.name || "Thumbnail"}</option>)}
+            </select>
+          </label>
+          {selectedThumbnail ? assetPreview(selectedThumbnail) : thumbnails.length === 0 ? (
+            <EmptyAssetState
+              icon="upload"
+              message="Ingen egne thumbnails er lastet opp"
+              action="Gå til Bildebank og last opp thumbnail"
+              onClick={() => onOpenImageBank("thumbnail")}
+            />
+          ) : (
+            <small className="pipeline-default-note">Standardvalg: AI-generert thumbnail</small>
+          )}
+        </div>
       </div>
 
       <div className="pipeline-slide-grid">
         {slides.length === 0 ? (
-          <div className="pipeline-empty"><Image size={18} /> Ingen slideshow-bilder i bildebanken.</div>
+          <EmptyAssetState
+            icon="image"
+            message="Ingen slideshow-bilder er lastet opp"
+            action="Gå til Bildebank og last opp bilder"
+            onClick={() => onOpenImageBank("image")}
+          />
         ) : (
           slides.map((item) => (
             <button key={item.id} type="button" className={selectedImages.has(item.url) ? "selected" : ""} onClick={() => toggleSlide(item.url)}>
