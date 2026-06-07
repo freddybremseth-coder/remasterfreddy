@@ -4,6 +4,7 @@ import AdminAnalytics from "./AdminAnalytics";
 import AdminAssets from "./AdminAssets";
 import AdminRecommendations from "./AdminRecommendations";
 import AdminStudio from "./AdminStudio";
+import { ImageKind } from "./lib/admin-api";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
 import "./admin.css";
 import "./admin-tabs.css";
@@ -25,6 +26,8 @@ export default function AdminApp() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [assetIntent, setAssetIntent] = useState<{ kind: ImageKind; id: number } | null>(null);
+  const [assetRefreshToken, setAssetRefreshToken] = useState(0);
 
   useEffect(() => {
     getAdminSession()
@@ -55,6 +58,15 @@ export default function AdminApp() {
     signOutAdmin();
     setPassword("");
     setState("signed-out");
+  }
+
+  function openImageBank(kind: ImageKind) {
+    setAssetIntent({ kind, id: Date.now() });
+    setActiveTab("assets");
+  }
+
+  function markImageBankChanged() {
+    setAssetRefreshToken((token) => token + 1);
   }
 
   if (state === "loading") {
@@ -139,8 +151,18 @@ export default function AdminApp() {
         </nav>
 
         <div className="admin-tab-content">
-          {activeTab === "publishing" && <AdminStudio />}
-          {activeTab === "assets" && <AdminAssets />}
+          {activeTab === "publishing" && (
+            <AdminStudio
+              assetRefreshToken={assetRefreshToken}
+              onOpenImageBank={openImageBank}
+            />
+          )}
+          {activeTab === "assets" && (
+            <AdminAssets
+              intent={assetIntent}
+              onImageBankChanged={markImageBankChanged}
+            />
+          )}
           {activeTab === "analytics" && <AdminAnalytics />}
           {activeTab === "recommendations" && <AdminRecommendations />}
         </div>

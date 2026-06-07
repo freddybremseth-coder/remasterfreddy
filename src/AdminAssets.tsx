@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image, Loader2, RefreshCw } from "lucide-react";
 import AssetCard from "./AssetCard";
 import AssetUpload from "./AssetUpload";
@@ -14,11 +14,18 @@ const filters: Array<{ id: "all" | ImageKind; label: string }> = [
   { id: "thumbnail", label: "Thumbnails" },
 ];
 
-export default function AdminAssets() {
+interface AdminAssetsProps {
+  intent?: { kind: ImageKind; id: number } | null;
+  onImageBankChanged?: () => void;
+}
+
+export default function AdminAssets({ intent, onImageBankChanged }: AdminAssetsProps) {
   const [images, setImages] = useState<AdminImage[]>([]);
   const [filter, setFilter] = useState<"all" | ImageKind>("all");
+  const [uploadKind, setUploadKind] = useState<ImageKind>("image");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const uploadRef = useRef<HTMLDivElement | null>(null);
 
   async function refresh(kind: "all" | ImageKind = filter) {
     setLoading(true);
@@ -36,10 +43,29 @@ export default function AdminAssets() {
     refresh(filter);
   }, [filter]);
 
+  useEffect(() => {
+    if (!intent) return;
+    setFilter(intent.kind);
+    setUploadKind(intent.kind);
+    window.requestAnimationFrame(() => {
+      uploadRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [intent?.id]);
+
   function handleUploaded(image: AdminImage) {
-    if (filter === "all" || filter === image.kind) {
-      setImages((items) => [image, ...items]);
+    setUploadKind(image.kind);
+    if (filter !== "all" && filter !== image.kind) {
+      setFilter(image.kind);
+      setImages([image]);
+    } else {
+      setImages((items) => [image, ...items.filter((item) => item.id !== image.id)]);
     }
+    onImageBankChanged?.();
+  }
+
+  function handleDeleted(id: string) {
+    setImages((items) => items.filter((item) => item.id !== id));
+    onImageBankChanged?.();
   }
 
   return (
@@ -59,12 +85,21 @@ export default function AdminAssets() {
       <div className="assets-toolbar">
         <div className="assets-filters">
           {filters.map((item) => (
-            <button key={item.id} className={filter === item.id ? "active" : ""} onClick={() => setFilter(item.id)}>
+            <button
+              key={item.id}
+              className={filter === item.id ? "active" : ""}
+              onClick={() => {
+                setFilter(item.id);
+                if (item.id !== "all") setUploadKind(item.id);
+              }}
+            >
               {item.label}
             </button>
           ))}
         </div>
-        <AssetUpload onUploaded={handleUploaded} />
+        <div ref={uploadRef}>
+          <AssetUpload onUploaded={handleUploaded} presetKind={uploadKind} />
+        </div>
       </div>
 
       {error && <div className="admin-error assets-message">{error}</div>}
@@ -76,7 +111,7 @@ export default function AdminAssets() {
           <div className="admin-empty"><Image size={24} /> Ingen bilder i denne kategorien.</div>
         ) : (
           images.map((image) => (
-            <AssetCard key={image.id} image={image} onDeleted={(id) => setImages((items) => items.filter((item) => item.id !== id))} />
+            <AssetCard key={image.id} image={image} onDeleted={handleDeleted} />
           ))
         )}
       </div>
