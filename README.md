@@ -91,6 +91,14 @@ http://localhost:5174/
 npm run build
 ```
 
+## Test
+
+```bash
+npm test
+```
+
+The test suite uses Vitest, React Testing Library, and jsdom for focused admin UI coverage.
+
 Deploy the project to Vercel and assign the custom domain:
 
 ```text
