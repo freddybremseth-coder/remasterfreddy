@@ -29,7 +29,11 @@ function queryValue(value: unknown) {
 }
 
 export function getJobId(request: any) {
-  const id = queryValue(request.query?.id);
+  return normalizeJobId(request.query?.id);
+}
+
+export function normalizeJobId(value: unknown) {
+  const id = queryValue(value);
   return JOB_ID_PATTERN.test(id) ? id : "";
 }
 

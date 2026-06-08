@@ -183,22 +183,22 @@ export async function loadProductionJobs(filters: JobFilters = {}): Promise<Prod
   const params = new URLSearchParams({ limit: String(filters.limit || 50) });
   if (filters.status) params.set("status", filters.status);
   if (filters.songId?.trim()) params.set("songId", filters.songId.trim());
-  const data = await jobFetch(`/api/neural-beat-jobs?${params.toString()}`, { method: "GET" });
+  const data = await jobFetch(`/api/neural-beat/jobs?${params.toString()}`, { method: "GET" });
   return Array.isArray(data.jobs) ? data.jobs : [];
 }
 
 export async function loadProductionJob(id: string): Promise<ProductionJob> {
-  const data = await jobFetch(`/api/neural-beat-job?id=${encodeURIComponent(id)}`, { method: "GET" });
+  const data = await jobFetch(`/api/neural-beat/jobs/${encodeURIComponent(id)}`, { method: "GET" });
   return data.job as ProductionJob;
 }
 
 export async function loadProductionJobEvents(id: string, limit = 100): Promise<ProductionJobEvent[]> {
-  const data = await jobFetch(`/api/neural-beat-job-events?id=${encodeURIComponent(id)}&limit=${limit}`, { method: "GET" });
+  const data = await jobFetch(`/api/neural-beat/jobs/${encodeURIComponent(id)}/events?limit=${limit}`, { method: "GET" });
   return Array.isArray(data.events) ? data.events : [];
 }
 
 export async function retryProductionJob(id: string): Promise<ProductionJob> {
-  const data = await jobFetch(`/api/neural-beat-job-retry?id=${encodeURIComponent(id)}`, {
+  const data = await jobFetch(`/api/neural-beat/jobs/${encodeURIComponent(id)}/retry`, {
     method: "POST",
     body: JSON.stringify({}),
   });
@@ -206,7 +206,7 @@ export async function retryProductionJob(id: string): Promise<ProductionJob> {
 }
 
 export async function cancelProductionJob(id: string, reason: string): Promise<CancelJobResult> {
-  const data = await jobFetch(`/api/neural-beat-job-cancel?id=${encodeURIComponent(id)}`, {
+  const data = await jobFetch(`/api/neural-beat/jobs/${encodeURIComponent(id)}/cancel`, {
     method: "POST",
     body: JSON.stringify({ reason }),
   });
