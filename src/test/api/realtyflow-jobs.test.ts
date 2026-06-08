@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getCancelBody, getEventsQuery, getJobsQuery, proxyJobRequest } from "./_realtyflow-jobs";
+import { getCancelBody, getEventsQuery, getJobsQuery, proxyJobRequest } from "../../../api/_realtyflow-jobs";
 
 function responseMock() {
   return {
