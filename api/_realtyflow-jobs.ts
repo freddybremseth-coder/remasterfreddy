@@ -45,7 +45,7 @@ export function getForwardedQuery(request: any, allowedKeys: string[]) {
 
 function clampInteger(value: string, min: number, max: number, fallback: number) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) return String(fallback);
   return String(Math.min(max, Math.max(min, parsed)));
 }
 
