@@ -27,6 +27,7 @@ import {
   loadProductionJobEvents,
   loadProductionJobs,
   retryProductionJob,
+  sanitizeDiagnostics,
   shortJobId,
   type JobApiError,
   type JobStatus,
@@ -68,7 +69,7 @@ function sortJobs(jobs: ProductionJob[]) {
 }
 
 function safeDetails(details: Record<string, unknown>) {
-  return JSON.stringify(details || {}, null, 2);
+  return JSON.stringify(sanitizeDiagnostics(details || {}), null, 2);
 }
 
 interface AdminJobsProps {

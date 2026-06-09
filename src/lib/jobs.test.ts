@@ -4,6 +4,7 @@ import {
   JOB_STATUS_LABELS,
   PIPELINE_STEP_LABELS,
   loadProductionJobs,
+  sanitizeDiagnostics,
 } from "./jobs";
 
 vi.mock("./supabase", () => ({
@@ -75,8 +76,28 @@ describe("production job API client", () => {
   it("keeps Norwegian status and pipeline-step labels available", () => {
     expect(JOB_STATUS_LABELS.queued).toBe("I kø");
     expect(JOB_STATUS_LABELS.running).toBe("Kjører");
+    expect(JOB_STATUS_LABELS.waiting_retry).toBe("Venter på nytt forsøk");
+    expect(JOB_STATUS_LABELS.cancelled).toBe("Kansellert");
     expect(JOB_STATUS_LABELS.completed).toBe("Ferdig");
     expect(PIPELINE_STEP_LABELS.download_audio).toBe("Henter lydfil");
     expect(PIPELINE_STEP_LABELS.upload_youtube).toBe("Laster opp til YouTube");
+  });
+
+  it("redacts sensitive diagnostic details before UI rendering", () => {
+    const sanitized = sanitizeDiagnostics({
+      safe: "visible",
+      lease_token: "secret-lease-token",
+      nested: {
+        inputConfig: { raw: true },
+        message: "Bearer secret-token",
+        connection: "postgres://user:password@example/db",
+      },
+    });
+
+    const serialized = JSON.stringify(sanitized);
+    expect(serialized).toContain("visible");
+    expect(serialized).not.toMatch(/secret-lease-token|secret-token|postgres:\/\/|raw/i);
+    expect(serialized).toContain("[REDACTED]");
+    expect(serialized).toContain("[REDACTED_CONNECTION_STRING]");
   });
 });

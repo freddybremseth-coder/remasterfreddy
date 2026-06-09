@@ -83,10 +83,10 @@ export interface CancelJobResult {
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   queued: "I kø",
   running: "Kjører",
-  waiting_retry: "Venter på retry",
+  waiting_retry: "Venter på nytt forsøk",
   completed: "Ferdig",
   failed: "Feilet",
-  cancelled: "Avbrutt",
+  cancelled: "Kansellert",
 };
 
 export const PIPELINE_STEP_LABELS: Record<PipelineStep, string> = {
@@ -144,6 +144,49 @@ export function formatDateTime(value?: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+const SENSITIVE_DETAIL_KEYS = new Set([
+  "access_token",
+  "accessToken",
+  "authorization",
+  "connection_string",
+  "connectionString",
+  "idempotency_key",
+  "idempotencyKey",
+  "input_config",
+  "inputConfig",
+  "lease_owner",
+  "leaseOwner",
+  "lease_token",
+  "leaseToken",
+  "migration_secret",
+  "migrationSecret",
+  "oauth_token",
+  "oauthToken",
+  "refresh_token",
+  "refreshToken",
+  "service_role",
+  "serviceRole",
+  "signed_url",
+  "signedUrl",
+]);
+
+export function sanitizeDiagnostics(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((entry) => sanitizeDiagnostics(entry));
+  if (!value || typeof value !== "object") {
+    if (typeof value !== "string") return value;
+    return value
+      .replace(/postgres:\/\/[^\s"']+/gi, "[REDACTED_CONNECTION_STRING]")
+      .replace(/bearer\s+[a-z0-9._-]+/gi, "Bearer [REDACTED]")
+      .replace(/(service_role|migration secret|oauth token|access token|refresh token|lease token)/gi, "[REDACTED]");
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    sanitized[key] = SENSITIVE_DETAIL_KEYS.has(key) ? "[REDACTED]" : sanitizeDiagnostics(entry);
+  }
+  return sanitized;
 }
 
 function sanitizeMessage(value: unknown, fallback: string) {

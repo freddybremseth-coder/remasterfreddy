@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getCancelBody, getEventsQuery, getJobsQuery, proxyJobRequest } from "../../../api/_realtyflow-jobs";
+import { getCancelBody, getEventsQuery, getJobsQuery, proxyJobRequest, sanitizeJobPayload } from "../../../api/_realtyflow-jobs";
 
 function responseMock() {
   return {
@@ -132,6 +132,26 @@ describe("Re-Master job proxy helpers", () => {
     expect(upstreamInit.headers["x-remaster-migration-secret"]).toBe("server-only-secret");
     expect(String(response.payload)).not.toContain("server-only-secret");
     expect(response.headers["x-correlation-id"]).toBe("rf_test_0123456789abcdef01234567");
+  });
+
+  it("redacts sensitive fields from successful upstream job payloads", () => {
+    const sanitized = sanitizeJobPayload({
+      job: {
+        id: "9d4feb61-fdcd-4492-857b-64c5d88ab919",
+        lease_token: "secret-lease-token",
+        input_config: { raw: true },
+        nested: {
+          connectionString: "postgres://user:password@example/db",
+          message: "Bearer secret-token",
+          note: "connection failed for postgres://user:password@example/db",
+        },
+      },
+    });
+
+    const serialized = JSON.stringify(sanitized);
+    expect(serialized).toContain("9d4feb61-fdcd-4492-857b-64c5d88ab919");
+    expect(serialized).not.toMatch(/secret-lease-token|input_config|raw|postgres:\/\/|secret-token/i);
+    expect(serialized).toContain("[REDACTED_CONNECTION_STRING]");
   });
 
   it("maps schema-not-ready without returning raw Postgres details", async () => {

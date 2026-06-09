@@ -19,6 +19,53 @@ const SAFE_ERROR_CODES = new Set([
   "INTERNAL_ERROR",
 ]);
 
+const SENSITIVE_KEYS = new Set([
+  "access_token",
+  "accessToken",
+  "authorization",
+  "connection_string",
+  "connectionString",
+  "idempotency_key",
+  "idempotencyKey",
+  "input_config",
+  "inputConfig",
+  "lease_owner",
+  "leaseOwner",
+  "lease_token",
+  "leaseToken",
+  "migration_secret",
+  "migrationSecret",
+  "oauth_token",
+  "oauthToken",
+  "refresh_token",
+  "refreshToken",
+  "service_role",
+  "serviceRole",
+  "signed_url",
+  "signedUrl",
+]);
+
+function redactString(value: string) {
+  return value
+    .replace(/postgres:\/\/[^\s"']+/gi, "[REDACTED_CONNECTION_STRING]")
+    .replace(/bearer\s+[a-z0-9._-]+/gi, "Bearer [REDACTED]")
+    .replace(/(service_role|migration secret|oauth token|access token|refresh token|lease token)/gi, "[REDACTED]");
+}
+
+export function sanitizeJobPayload(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((entry) => sanitizeJobPayload(entry));
+  if (!value || typeof value !== "object") {
+    return typeof value === "string" ? redactString(value) : value;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (SENSITIVE_KEYS.has(key)) continue;
+    sanitized[key] = sanitizeJobPayload(entry);
+  }
+  return sanitized;
+}
+
 function realtyFlowBase() {
   return (process.env.REALTYFLOW_API_URL || "https://realtyflow.chatgenius.pro").replace(/\/$/, "");
 }
@@ -199,7 +246,11 @@ export async function proxyJobRequest(
     response.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
     response.setHeader("Cache-Control", "no-store");
     if (correlationId) response.setHeader("x-correlation-id", correlationId);
-    response.send(text || "{}");
+    if (data && typeof data === "object") {
+      response.json(sanitizeJobPayload(data));
+      return;
+    }
+    response.send(text ? redactString(text) : "{}");
   } catch {
     sendSafeError(response, 502, "INTERNAL_ERROR");
   }
