@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, BarChart3, BrainCircuit, Image, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BarChart3, BrainCircuit, Image, ListChecks, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck } from "lucide-react";
 import AdminAnalytics from "./AdminAnalytics";
 import AdminAssets from "./AdminAssets";
+import AdminJobs from "./AdminJobs";
 import AdminRecommendations from "./AdminRecommendations";
 import AdminStudio from "./AdminStudio";
 import { ImageKind } from "./lib/admin-api";
@@ -10,11 +11,12 @@ import "./admin.css";
 import "./admin-tabs.css";
 
 type AdminState = "loading" | "signed-out" | "authorized" | "forbidden";
-type AdminTab = "publishing" | "assets" | "analytics" | "recommendations";
+type AdminTab = "publishing" | "assets" | "jobs" | "analytics" | "recommendations";
 
 const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof Music2 }> = [
   { id: "publishing", label: "Publisering", description: "MP3 og YouTube-pipeline", icon: Music2 },
   { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
+  { id: "jobs", label: "Produksjonsjobber", description: "Status og eventhistorikk", icon: ListChecks },
   { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
   { id: "recommendations", label: "Anbefalinger", description: "Godkjenn AI-foreslåtte tiltak", icon: BrainCircuit },
 ];
@@ -163,6 +165,7 @@ export default function AdminApp() {
               onImageBankChanged={markImageBankChanged}
             />
           )}
+          {activeTab === "jobs" && <AdminJobs />}
           {activeTab === "analytics" && <AdminAnalytics />}
           {activeTab === "recommendations" && <AdminRecommendations />}
         </div>
