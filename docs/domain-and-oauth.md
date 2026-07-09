@@ -2,13 +2,13 @@
 
 ## Production URL
 
-The currently working production URL is:
+The fallback Vercel production URL is:
 
 ```text
 https://remasterfreddy.vercel.app
 ```
 
-The intended custom domain is:
+The custom production domain is:
 
 ```text
 remaster.freddybremseth.com
@@ -80,16 +80,16 @@ Expected reconnect flow:
 1. Re-Master admin calls its protected `/api/youtube-health` function.
 2. Re-Master proxies to RealtyFlow `/api/youtube/status?brandId=remasterfreddy`.
 3. RealtyFlow returns a reconnect URL for `/api/oauth/google`.
-4. The reconnect URL must include `return_to=https://remasterfreddy.vercel.app/admin` unless an explicit `REMASTER_ADMIN_URL` environment variable overrides it.
-5. After Google consent or channel selection, the user should return to Re-Master admin.
+4. The reconnect URL must include `return_to=/oauth/remaster-return`.
+5. After Google consent or channel selection, RealtyFlow redirects through `/oauth/remaster-return` to Re-Master admin.
 
-If the custom domain becomes active, set this server environment variable in RealtyFlow:
+Set this server environment variable in RealtyFlow if the default return URL must be overridden:
 
 ```text
 REMASTER_ADMIN_URL=https://remaster.freddybremseth.com/admin
 ```
 
-Until then, keep the default:
+Legacy fallback URL:
 
 ```text
 https://remasterfreddy.vercel.app/admin
