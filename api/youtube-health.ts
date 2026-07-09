@@ -5,6 +5,27 @@ function upstreamUrl() {
   return `${base.replace(/\/$/, "")}/api/youtube/status?brandId=remasterfreddy`;
 }
 
+export function normalizeReconnectUrl(value: unknown) {
+  if (typeof value !== "string") return value;
+
+  try {
+    const url = new URL(value);
+    const brand = url.searchParams.get("brand_id") || url.searchParams.get("brand") || "";
+    const normalizedBrand = brand.toLowerCase().replace(/[-_.\s]/g, "");
+
+    if (
+      url.pathname === "/api/oauth/google" &&
+      (normalizedBrand === "remasterfreddy" || normalizedBrand === "neuralbeat")
+    ) {
+      url.searchParams.set("return_to", "/oauth/remaster-return");
+    }
+
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 export default async function handler(request: any, response: any) {
   const admin = await requireAdmin(request, response);
   if (!admin) return;
@@ -29,6 +50,12 @@ export default async function handler(request: any, response: any) {
   });
 
   const data = await upstream.json().catch(() => ({}));
+  if (data && typeof data === "object" && "reconnectUrl" in data) {
+    (data as Record<string, unknown>).reconnectUrl = normalizeReconnectUrl(
+      (data as Record<string, unknown>).reconnectUrl,
+    );
+  }
+
   response.setHeader("Cache-Control", "no-store");
   response.status(upstream.status).json(data);
 }
