@@ -30,7 +30,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
     multilingualDescription: true,
-    autoSchedule: false,
+    // Publiser på beste tidspunkt som standard — kan slås av per kjøring.
+    autoSchedule: true,
   });
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
