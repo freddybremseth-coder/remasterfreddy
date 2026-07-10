@@ -83,14 +83,14 @@ Expected reconnect flow:
 4. The reconnect URL must include `return_to=https://remasterfreddy.vercel.app/admin` unless an explicit `REMASTER_ADMIN_URL` environment variable overrides it.
 5. After Google consent or channel selection, the user should return to Re-Master admin.
 
-If the custom domain becomes active, set this server environment variable in RealtyFlow:
+Status 2026-07-10: the custom domain is active (DNS resolves via Vercel and the
+site responds). The RealtyFlow default was updated in
+`src/lib/remaster/oauth-return.ts` so OAuth now returns to:
 
 ```text
-REMASTER_ADMIN_URL=https://remaster.freddybremseth.com/admin
+https://remaster.freddybremseth.com/admin
 ```
 
-Until then, keep the default:
-
-```text
-https://remasterfreddy.vercel.app/admin
-```
+The `REMASTER_ADMIN_URL` environment variable is no longer required; set it in
+RealtyFlow only to override the default (for example back to
+`https://remasterfreddy.vercel.app/admin` if the custom domain stops resolving).
