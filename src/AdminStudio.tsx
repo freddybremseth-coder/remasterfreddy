@@ -193,6 +193,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               {pipelineEvent.steps.map((step) => (
                 <span key={step.name} data-status={step.status}>
                   {step.name}: {step.status}
+                  {step.status === "failed" && step.error ? ` — ${step.error}` : ""}
                 </span>
               ))}
             </div>
