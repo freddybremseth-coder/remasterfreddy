@@ -1,6 +1,27 @@
 # Re-Master Freddy
 
-A dark liquid-glass 3D music website for `remaster.freddybremseth.com`, powered by the Re-Master Freddy YouTube channel and the `realtyflow.chatgenius.pro` production engine during the migration period.
+**Re-Master Freddy is an AI-assisted EDM / house music channel engine that turns songs into YouTube-ready visual music experiences — automatically.**
+
+🎧 **Listen:** [remaster.freddybremseth.com](https://remaster.freddybremseth.com) · ▶️ **YouTube:** [Re-Master Freddy](https://www.youtube.com/channel/UCPAj3RNC2S_Nv7QV4-oYoIw)
+
+## What it does
+
+Upload an MP3 — the engine does the rest:
+
+- Analyzes the song with AI (genre, mood, energy, visual style)
+- Generates cinematic summer visuals (people, beaches, boats, festivals, DJs)
+- Renders a Full HD video with logo watermark and branded thumbnails (3 A/B variants)
+- Writes CTR-optimized titles, SEO descriptions with chapters, tags and multilingual metadata
+- Uploads to YouTube at the optimal publish time, adds it to smart playlists
+- Cuts 3 vertical Shorts per song from the strongest sections (chorus detection) with links back to the full track
+- Publishes a weekly long-form genre mix with a full tracklist
+
+## Growth system
+
+- Automatic thumbnail A/B testing (rotates variants, keeps the winner by views/hour)
+- Bulk library cleanup: regenerate titles + thumbnails for older videos with one-click approval
+- Weekly trending-tag refresh, engagement tracking and AI channel recommendations
+- Structured data (MusicGroup/WebSite JSON-LD) for AI search visibility (GEO/AEO)
 
 ## Stack
 
@@ -27,11 +48,7 @@ The public site contains an Admin entry that opens:
 /admin
 ```
 
-Only this Supabase Auth user is accepted:
-
-```text
-freddy.bremseth@gmail.com
-```
+Only the configured Supabase Auth admin user is accepted (see `ADMIN_EMAIL` in `api/_admin.ts`).
 
 Required Vercel environment variables:
 

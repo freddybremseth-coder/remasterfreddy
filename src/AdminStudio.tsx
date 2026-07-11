@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
+import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
@@ -249,6 +250,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           })
         )}
       </div>
+
+      <LibraryCleanup />
     </section>
   );
 }

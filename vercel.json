@@ -1,1 +1,10 @@
-{"rewrites":[{"source":"/admin","destination":"/index.html"},{"source":"/admin/(.*)","destination":"/index.html"}]}
+{
+  "rewrites": [
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/admin/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/neural-beat-library-cleanup.ts": { "maxDuration": 300 },
+    "api/neural-beat.ts": { "maxDuration": 300 }
+  }
+}

@@ -56,8 +56,8 @@ const heroImages = [
 ];
 
 const visualBars = Array.from({ length: 30 }, (_, index) => index);
-const PRODUCTION_URL = "https://realtyflow.chatgenius.pro";
-const RELEASE_CADENCE = "5 new songs / week";
+const SUBSCRIBE_URL = "https://www.youtube.com/channel/UCPAj3RNC2S_Nv7QV4-oYoIw?sub_confirmation=1";
+const RELEASE_CADENCE = "New music every day";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -260,8 +260,8 @@ function App() {
           </div>
           <h1>RE-MASTER FREDDY</h1>
           <p className="hero-lede">
-            Dark industrial music, cyber vocals, raw EDM edits and liquid-glass visuals pulled into one 3D channel
-            experience. Production runs through realtyflow.chatgenius.pro with five new songs every week.
+            Summer house, night-drive EDM and chill electronic beats — new tracks every day.
+            Press play and let the channel run: Ibiza sunsets, beach clubs and late-night city drives in one stream.
           </p>
 
           <div className="transport-panel" id="synth">
@@ -303,9 +303,9 @@ function App() {
           </div>
 
           <div className="production-rig" id="production">
-            <a href={PRODUCTION_URL} target="_blank" rel="noreferrer">
-              <span>Production engine</span>
-              <strong>realtyflow.chatgenius.pro</strong>
+            <a href={SUBSCRIBE_URL} target="_blank" rel="noreferrer">
+              <span>Free front-row seat</span>
+              <strong>Subscribe on YouTube</strong>
               <ExternalLink size={17} />
             </a>
             <div>
