@@ -19,25 +19,53 @@ export default async function handler(request: any, response: any) {
     return;
   }
 
+  const migrationSecret = process.env.REALTYFLOW_MIGRATION_SECRET;
+  if (!migrationSecret) {
+    response.status(503).json({ error: "Re-Master Mix proxy is not configured." });
+    return;
+  }
+
   const headers: Record<string, string> = {
     Accept: "application/json",
     "Content-Type": "application/json",
     "X-ReMaster-Admin": admin.email,
+    "X-ReMaster-Migration-Secret": migrationSecret,
   };
 
-  const migrationSecret = process.env.REALTYFLOW_MIGRATION_SECRET;
-  if (migrationSecret) headers["X-ReMaster-Migration-Secret"] = migrationSecret;
+  try {
+    const upstream = await fetch(getUpstreamUrl(request), {
+      method,
+      headers,
+      body: method === "GET" ? undefined : JSON.stringify(request.body || {}),
+      cache: "no-store",
+      redirect: "manual",
+    });
 
-  const upstream = await fetch(getUpstreamUrl(request), {
-    method,
-    headers,
-    body: method === "GET" ? undefined : JSON.stringify(request.body || {}),
-    cache: "no-store",
-  });
+    if (upstream.status >= 300 && upstream.status < 400) {
+      response.status(502).json({
+        error: "RealtyFlow redirected the Mix API to authentication. Proxy access is not enabled for this route.",
+      });
+      return;
+    }
 
-  const body = await upstream.text();
-  response.status(upstream.status);
-  response.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json");
-  response.setHeader("Cache-Control", "no-store");
-  response.send(body);
+    const body = await upstream.text();
+    let data: any = null;
+    try {
+      data = body ? JSON.parse(body) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!data || typeof data !== "object") {
+      response.status(502).json({ error: "RealtyFlow Mix API returned an invalid non-JSON response." });
+      return;
+    }
+
+    response.status(upstream.status);
+    response.setHeader("Content-Type", "application/json");
+    response.setHeader("Cache-Control", "no-store");
+    response.json(data);
+  } catch {
+    response.status(502).json({ error: "Could not reach the RealtyFlow Mix API." });
+  }
 }
