@@ -3,7 +3,7 @@ import { ArrowLeft, BarChart3, BrainCircuit, Image, ListChecks, Loader2, LockKey
 import AdminAnalytics from "./AdminAnalytics";
 import AdminAssets from "./AdminAssets";
 import AdminJobs from "./AdminJobs";
-import AdminMixStudio from "./AdminMixStudio";
+import AdminMixStudioProduction from "./AdminMixStudioProduction";
 import AdminRecommendations from "./AdminRecommendations";
 import AdminStudio from "./AdminStudio";
 import { ImageKind } from "./lib/admin-api";
@@ -161,7 +161,7 @@ export default function AdminApp() {
               onOpenImageBank={openImageBank}
             />
           )}
-          {activeTab === "mixes" && <AdminMixStudio />}
+          {activeTab === "mixes" && <AdminMixStudioProduction />}
           {activeTab === "assets" && (
             <AdminAssets
               intent={assetIntent}
