@@ -49,6 +49,16 @@ export interface MixJob {
   updated_at: string;
 }
 
+export interface MixProductionStart {
+  success: boolean;
+  started: boolean;
+  recoveryScheduled?: boolean;
+  workflowRunId?: string;
+  mix: MixJob;
+  message?: string;
+  warning?: string;
+}
+
 async function mixFetch(path: string, init: RequestInit = {}) {
   const session = await getAdminSession();
   if (!session) throw new Error("Adminøkten er utløpt. Logg inn på nytt.");
@@ -69,6 +79,9 @@ async function jsonOrError(response: Response) {
     if (data.code === "MIX_SCHEMA_NOT_READY") {
       throw new Error("Mix Studio-databasen er ikke installert i RealtyFlow ennå.");
     }
+    if (data.code === "MIX_PRODUCTION_MAX_30_MIN") {
+      throw new Error("Produksjonstesten støtter foreløpig 30 minutter. Lengre mixer kan lagres som utkast.");
+    }
     throw new Error(data.error || "Mix Studio API-kallet feilet.");
   }
   return data;
@@ -77,7 +90,7 @@ async function jsonOrError(response: Response) {
 export async function createMixDraft(input: MixDraftInput): Promise<MixJob> {
   const response = await mixFetch("/api/neural-beat-mixes", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, queue: false }),
   });
   const data = await jsonOrError(response);
   if (!data.mix) throw new Error("Mix-utkastet ble lagret, men serveren returnerte ingen jobb.");
@@ -98,6 +111,16 @@ export async function queueMixJob(id: string): Promise<MixJob> {
   const data = await jsonOrError(response);
   if (!data.mix) throw new Error("Mixen ble køet, men serveren returnerte ingen jobb.");
   return data.mix as MixJob;
+}
+
+export async function startMixProduction(id: string): Promise<MixProductionStart> {
+  const response = await mixFetch("/api/neural-beat-mixes-production", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+  const data = await jsonOrError(response);
+  if (!data.mix) throw new Error("Produksjonsjobben startet, men serveren returnerte ingen mix.");
+  return data as MixProductionStart;
 }
 
 export async function cancelMixJob(id: string): Promise<MixJob> {
