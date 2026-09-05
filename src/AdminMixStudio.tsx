@@ -89,7 +89,7 @@ const styleProfiles: Record<
 const DEFAULT_DRAFT: MixDraft = {
   title: "Mediterranean Sunset Deep House Mix #001 — Costa Blanca Luxury Vibes",
   style: "mediterranean-sunset",
-  targetMinutes: 120,
+  targetMinutes: 30,
   crossfadeSeconds: 8,
   playlist: styleProfiles["mediterranean-sunset"].playlist,
   zenEcoHomesEnabled: true,
@@ -408,8 +408,9 @@ export default function AdminMixStudio() {
       <div className="mix-next-step">
         <Sparkles size={18} />
         <p>
-          Neste backend-trinn kobler dette utkastet til en egen langkjørende Mix Worker som henter ZenEcoHomes-bilder,
-          bygger crossfade-lyd, animerer bildene, legger inn sponsorsegmenter, genererer chapters/SEO og publiserer til YouTube.
+          Produksjonsmotoren er aktiv. Lagre utkastet, og bruk produksjonskortet under for å starte Mix Worker som henter
+          ZenEcoHomes-bilder, bygger crossfade-lyd, animerer bildene, legger inn sponsorsegmenter, genererer chapters/SEO
+          og publiserer den første 30-minutters testen til YouTube.
         </p>
       </div>
     </section>
