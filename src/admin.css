@@ -43,7 +43,8 @@
 
 .admin-brand,
 .admin-header-actions,
-.admin-header-actions button {
+.admin-header-actions button,
+.admin-header-actions a {
   display: flex;
   align-items: center;
 }
@@ -77,7 +78,8 @@
   gap: 14px;
 }
 
-.admin-header-actions button {
+.admin-header-actions button,
+.admin-header-actions a {
   gap: 7px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 10px;
@@ -85,6 +87,15 @@
   background: rgba(15, 23, 42, 0.78);
   color: #e2e8f0;
   cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-header-actions a {
+  border-color: rgba(192, 132, 252, 0.42);
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.28), rgba(8, 145, 178, 0.18));
+  color: #fff;
 }
 
 .admin-content {
@@ -287,15 +298,45 @@
   }
 
   .admin-header {
-    align-items: flex-start;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .admin-brand {
+    width: 100%;
+  }
+
+  .admin-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
   }
 
   .admin-header-actions span {
     display: none;
   }
 
+  .admin-header-actions a {
+    min-height: 44px;
+    justify-content: center;
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .admin-header-actions button {
+    min-height: 42px;
+    justify-content: center;
+    grid-column: 2;
+  }
+
   .admin-content {
-    padding-top: 46px;
+    padding-top: 32px;
   }
 
   .admin-login-card {
