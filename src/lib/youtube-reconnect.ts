@@ -1,5 +1,5 @@
 export const REALTYFLOW_YOUTUBE_RECONNECT_URL =
-  "https://realtyflow.chatgenius.com/api/oauth/google?brand_id=remasterfreddy&service=youtube&return_to=%2Foauth%2Fremaster-return";
+  "https://realtyflow.chatgenius.pro/api/oauth/google?brand_id=remasterfreddy&service=youtube&return_to=%2Foauth%2Fremaster-return";
 
 export function isYoutubeReconnectError(input?: string | null) {
   const value = (input || "").toLowerCase();
