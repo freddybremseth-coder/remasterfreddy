@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, BarChart3, BrainCircuit, Image, ListChecks, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Waves } from "lucide-react";
+import { ArrowLeft, BarChart3, BrainCircuit, ExternalLink, Image, ListChecks, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Waves } from "lucide-react";
 import AdminAnalytics from "./AdminAnalytics";
 import AdminAssets from "./AdminAssets";
 import AdminJobs from "./AdminJobs";
@@ -8,6 +8,7 @@ import AdminRecommendations from "./AdminRecommendations";
 import AdminStudio from "./AdminStudio";
 import { ImageKind } from "./lib/admin-api";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
+import { REALTYFLOW_YOUTUBE_RECONNECT_URL } from "./lib/youtube-reconnect";
 import "./admin.css";
 import "./admin-tabs.css";
 
@@ -130,6 +131,9 @@ export default function AdminApp() {
           <span><strong>Re-Master Freddy</strong><small>Admin & YouTube Studio</small></span>
         </a>
         <div className="admin-header-actions">
+          <a className="admin-secondary" href={REALTYFLOW_YOUTUBE_RECONNECT_URL}>
+            Koble YouTube til på nytt <ExternalLink size={15} />
+          </a>
           <span>{ADMIN_EMAIL}</span>
           <button onClick={handleLogout}><LogOut size={16} /> Logg ut</button>
         </div>
