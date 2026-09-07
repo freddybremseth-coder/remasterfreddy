@@ -8,6 +8,10 @@ import {
   type MixDraftInput,
   type MixJob,
 } from "./lib/mix-api";
+import {
+  isYoutubeReconnectError,
+  REALTYFLOW_YOUTUBE_RECONNECT_URL,
+} from "./lib/youtube-reconnect";
 
 const DRAFT_KEY = "remaster-mediterranean-mix-draft-v1";
 
@@ -26,6 +30,11 @@ export default function AdminMixStudioProduction() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const reconnectRequired =
+    job?.error_code === "YOUTUBE_RECONNECT_REQUIRED" ||
+    isYoutubeReconnectError(job?.error_message) ||
+    isYoutubeReconnectError(error);
 
   const refreshJob = useCallback(async () => {
     if (!job) return;
@@ -104,7 +113,22 @@ export default function AdminMixStudioProduction() {
           )}
         </div>
 
-        {error && <div className="admin-error">{error}</div>}
+        {reconnectRequired && (
+          <div className="admin-error">
+            <div>
+              <strong>YouTube må kobles til på nytt.</strong>{" "}
+              Google har utløpt eller tilbakekalt Re-Master Freddy-tokenet. Ingen ny rendering er nødvendig.
+            </div>
+            <a
+              className="admin-primary"
+              href={REALTYFLOW_YOUTUBE_RECONNECT_URL}
+            >
+              Koble YouTube til på nytt <ExternalLink size={15} />
+            </a>
+          </div>
+        )}
+
+        {error && !reconnectRequired && <div className="admin-error">{error}</div>}
         {message && <div className="admin-success"><Check size={16} /> {message}</div>}
 
         {job && (
@@ -112,7 +136,7 @@ export default function AdminMixStudioProduction() {
             <strong>Status: {job.status}</strong>
             <span>{job.pipeline_step || "venter"}</span>
             <span>{job.progress || 0}%</span>
-            {job.error_message && <span>{job.error_message}</span>}
+            {job.error_message && !reconnectRequired && <span>{job.error_message}</span>}
             {job.youtube_url && (
               <a href={job.youtube_url} target="_blank" rel="noreferrer">
                 Åpne på YouTube <ExternalLink size={13} />
@@ -127,6 +151,9 @@ export default function AdminMixStudioProduction() {
             <span>Lengre mixer kan lagres som utkast og aktiveres når segmentert long-form-render er ferdig.</span>
           </div>
           <div className="mix-actions">
+            <a className="admin-secondary" href={REALTYFLOW_YOUTUBE_RECONNECT_URL}>
+              YouTube-tilkobling <ExternalLink size={15} />
+            </a>
             <button className="admin-secondary" onClick={saveServerDraft} disabled={busy}>
               {busy ? <Loader2 className="admin-spinner" size={17} /> : <Check size={17} />}
               Lagre på server
