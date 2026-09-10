@@ -1,10 +1,10 @@
 import { getAdminSession } from "./supabase";
 
-export type AutopilotMode = "off" | "preview" | "plan_non_destructive";
+export type AutopilotMode = "off" | "preview" | "plan_non_destructive" | "execute_guarded";
 
 export interface AutopilotSettings {
   mode: AutopilotMode;
-  allowMetadataUpdates: false;
+  allowMetadataUpdates: boolean;
   allowNonDestructivePlans: boolean;
   maxActionsPerRun: number;
   updatedAt?: string;
@@ -34,6 +34,7 @@ export interface AutopilotRunResult {
   analyzedCount: number;
   eligibleCount?: number;
   savedCount: number;
+  executedCount?: number;
   wouldSaveCount?: number;
   skippedCount: number;
   metadataRequiresApprovalCount?: number;
@@ -51,7 +52,7 @@ const DEFAULT_SETTINGS: AutopilotSettings = {
 };
 
 function normalizeMode(value: unknown): AutopilotMode {
-  if (value === "preview" || value === "plan_non_destructive") return value;
+  if (value === "preview" || value === "plan_non_destructive" || value === "execute_guarded") return value;
   return "off";
 }
 
@@ -64,11 +65,10 @@ function normalizeMaxActions(value: unknown) {
 function normalizeSettings(value: unknown): AutopilotSettings {
   const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const mode = normalizeMode(raw.mode);
-
   return {
     mode,
-    allowMetadataUpdates: false,
-    allowNonDestructivePlans: mode === "plan_non_destructive" && raw.allowNonDestructivePlans !== false,
+    allowMetadataUpdates: mode === "execute_guarded" && raw.allowMetadataUpdates !== false,
+    allowNonDestructivePlans: (mode === "plan_non_destructive" || mode === "execute_guarded") && raw.allowNonDestructivePlans !== false,
     maxActionsPerRun: normalizeMaxActions(raw.maxActionsPerRun),
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined,
     updatedBy: typeof raw.updatedBy === "string" ? raw.updatedBy : undefined,
@@ -93,44 +93,30 @@ async function autopilotFetch(path: string, init: RequestInit = {}) {
 export async function loadAutopilotSettings(): Promise<AutopilotSettings> {
   const response = await autopilotFetch("/api/neural-beat-autopilot-settings", { method: "GET" });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || data.message || "Kunne ikke hente autopilot-innstillingene.");
-  }
-
+  if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke hente autopilot-innstillingene.");
   return normalizeSettings(data.settings);
 }
 
-export async function saveAutopilotSettings(
-  mode: AutopilotMode,
-  maxActionsPerRun: number,
-): Promise<AutopilotSettingsResponse> {
+export async function saveAutopilotSettings(mode: AutopilotMode, maxActionsPerRun: number): Promise<AutopilotSettingsResponse> {
   const safeMode = normalizeMode(mode);
   const response = await autopilotFetch("/api/neural-beat-autopilot-settings", {
     method: "PUT",
     body: JSON.stringify({
       mode: safeMode,
-      allowMetadataUpdates: false,
-      allowNonDestructivePlans: safeMode === "plan_non_destructive",
+      allowMetadataUpdates: safeMode === "execute_guarded",
+      allowNonDestructivePlans: safeMode === "plan_non_destructive" || safeMode === "execute_guarded",
       maxActionsPerRun: normalizeMaxActions(maxActionsPerRun),
     }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || data.message || "Kunne ikke lagre autopilot-innstillingene.");
-  }
-
-  return {
-    ...data,
-    settings: normalizeSettings(data.settings),
-  } as AutopilotSettingsResponse;
+  if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke lagre autopilot-innstillingene.");
+  return { ...data, settings: normalizeSettings(data.settings) } as AutopilotSettingsResponse;
 }
 
 export async function runAutopilot(): Promise<AutopilotRunResult> {
   const response = await autopilotFetch("/api/neural-beat-autopilot-run", { method: "POST" });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || data.message || "Autopilot-kjøringen feilet.");
-  }
+  if (!response.ok) throw new Error(data.error || data.message || "Autopilot-kjøringen feilet.");
 
   return {
     ...data,
@@ -138,6 +124,7 @@ export async function runAutopilot(): Promise<AutopilotRunResult> {
     analyzedCount: Number(data.analyzedCount || 0),
     eligibleCount: Number(data.eligibleCount || 0),
     savedCount: Number(data.savedCount || 0),
+    executedCount: Number(data.executedCount || 0),
     wouldSaveCount: Number(data.wouldSaveCount || 0),
     skippedCount: Number(data.skippedCount || 0),
     metadataRequiresApprovalCount: Number(data.metadataRequiresApprovalCount || 0),
