@@ -312,6 +312,11 @@ function App() {
               <span>Release cadence</span>
               <strong>{RELEASE_CADENCE}</strong>
             </div>
+            <a href="https://www.freddybremseth.com/" target="_blank" rel="noreferrer">
+              <span>Creator</span>
+              <strong>Freddy Bremseth</strong>
+              <ExternalLink size={17} />
+            </a>
           </div>
         </div>
 
