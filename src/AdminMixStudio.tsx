@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AdminSong, loadSongs } from "./lib/admin-api";
 import MixPromotionPicker, {type PromotionDraft} from "./MixPromotionPicker";
+import MixArtThumbnailPreview from "./MixArtThumbnailPreview";
 import "./admin-mix-studio.css";
 
 type MixStyle =
@@ -33,6 +34,8 @@ type MixDraft = {
   playlist: string;
   zenEcoHomesEnabled: boolean;
   promotionBrand: PromotionDraft["promotionBrand"];
+  thumbnailStyle: "automatic"|"art-lounge"|"standard";
+  thumbnailTitle: string;
   artStyles: string[];
   artCollections: string[];
   artIds: string[];
@@ -103,6 +106,8 @@ const DEFAULT_DRAFT: MixDraft = {
   playlist: styleProfiles["mediterranean-sunset"].playlist,
   zenEcoHomesEnabled: true,
   promotionBrand: "zeneco",
+  thumbnailStyle: "automatic",
+  thumbnailTitle: "",
   artStyles: [], artCollections: [], artIds: [],
   bookSeries: [], bookLanguages: [], bookIds: [],
   visualRegion: "any",
@@ -345,6 +350,59 @@ export default function AdminMixStudio() {
           ...(nextBrand ? {zenEcoHomesEnabled: nextBrand === "zeneco"} : {}),
         });
       }} />
+
+      {draft.promotionBrand === "art" && (
+        <div className="mix-section mix-art-thumbnail-section">
+          <div className="mix-section-heading">
+            <div>
+              <p className="admin-eyebrow">YouTube thumbnail</p>
+              <h3>Art Lounge — i samme stil som kunst og musikk</h3>
+              <p>
+                Når kunst er valgt, brukes Art Lounge-stilen som standard. Tittelen skrives på
+                thumbnailen fra videoens navn, spillelistens navn eller din egen tekst — aldri en
+                fast «Art Lounge 2026»-tittel. Thumbnailen lages med publiserte kunstforhåndsvisninger.
+              </p>
+            </div>
+          </div>
+          <div className="mix-grid">
+            <label>
+              <span>Thumbnail-stil</span>
+              <select value={draft.thumbnailStyle}
+                onChange={event=>patchDraft({thumbnailStyle:event.target.value as MixDraft["thumbnailStyle"]})}>
+                <option value="automatic">Automatisk: Art Lounge</option>
+                <option value="art-lounge">Art Lounge — kunstgalleri, blått og gull</option>
+                <option value="standard">YouTubes standardbilde</option>
+              </select>
+            </label>
+            <label>
+              <span>Tittel på thumbnail</span>
+              <input maxLength={110} value={draft.thumbnailTitle}
+                placeholder={draft.title || "Videoens tittel"}
+                onChange={event=>patchDraft({thumbnailTitle:event.target.value})} />
+              <small>Tomt felt bruker videoens tittel automatisk.</small>
+            </label>
+          </div>
+          <div className="mix-actions">
+            <button type="button" className="admin-secondary" onClick={()=>patchDraft({thumbnailTitle:draft.playlist})}>
+              Bruk spillelistens tittel
+            </button>
+            <button type="button" className="admin-secondary" onClick={()=>patchDraft({thumbnailTitle:""})}>
+              Bruk videoens tittel automatisk
+            </button>
+          </div>
+          <MixArtThumbnailPreview
+            title={draft.thumbnailTitle.trim() || draft.title}
+            enabled={draft.thumbnailStyle !== "standard"}
+            selectedIds={draft.artIds}
+            selectedStyles={draft.artStyles}
+            selectedCollections={draft.artCollections}
+          />
+          <small>
+            YouTube bruker videominiatyrbildene i spillelisten. Playlist-cover kan ikke settes
+            separat gjennom denne video-pipelinen; velg spillelistens tittel her for samme uttrykk.
+          </small>
+        </div>
+      )}
 
       {draft.promotionBrand === "zeneco" && (
       <div className="mix-section mix-sponsor-section">
