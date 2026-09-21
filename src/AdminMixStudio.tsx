@@ -36,6 +36,7 @@ type MixDraft = {
   promotionBrand: PromotionDraft["promotionBrand"];
   thumbnailStyle: "automatic"|"art-lounge"|"standard";
   thumbnailTitle: string;
+  commentStyle: "short"|"detailed";
   artStyles: string[];
   artCollections: string[];
   artIds: string[];
@@ -108,6 +109,7 @@ const DEFAULT_DRAFT: MixDraft = {
   promotionBrand: "zeneco",
   thumbnailStyle: "automatic",
   thumbnailTitle: "",
+  commentStyle: "detailed",
   artStyles: [], artCollections: [], artIds: [],
   bookSeries: [], bookLanguages: [], bookIds: [],
   visualRegion: "any",
@@ -350,6 +352,61 @@ export default function AdminMixStudio() {
           ...(nextBrand ? {zenEcoHomesEnabled: nextBrand === "zeneco"} : {}),
         });
       }} />
+
+      <div className="mix-section mix-partner-comment-section">
+        <div className="mix-section-heading">
+          <div>
+            <p className="admin-eyebrow">YouTube-kommentar</p>
+            <h3>Fortell seeren hva som vises, og hvor det finnes</h3>
+            <p>
+              Når videoen er publisert, legges én kommentar automatisk under videoen.
+              Den viser riktig nettsted og, for kunst og bøker, direkte lenker til verkene
+              eller bøkene som faktisk ble valgt til videoen. Eiendomsvideoer lenker til
+              Zen Eco Homes og beskriver valgt område; de lover ikke at en bolig fortsatt er til salgs.
+            </p>
+          </div>
+        </div>
+        <div className="mix-grid">
+          <label>
+            <span>Kommentarens lengde</span>
+            <select value={draft.commentStyle}
+              onChange={event=>patchDraft({commentStyle:event.target.value as MixDraft["commentStyle"]})}>
+              <option value="detailed">Detaljert – med aktuelle bilder/boklenker</option>
+              <option value="short">Kort – nettsted og utvalgte lenker</option>
+            </select>
+          </label>
+        </div>
+        <div className="mix-comment-preview">
+          <strong>Eksempel på den automatiske kommentaren</strong>
+          <p>{
+            draft.promotionBrand==="art" ? "🎨 This music mix features artwork by Freddy Bremseth."
+            : draft.promotionBrand==="books" ? "📚 The visuals in this music mix feature published books and book covers by Freddy Bremseth."
+            : draft.promotionBrand==="zeneco" ? "🏡 The visuals in this music mix feature homes and property inspiration from Zen Eco Homes."
+            : "🎧 Music by Re-Master Freddy."
+          }</p>
+          <p><a target="_blank" rel="noreferrer" href={
+            draft.promotionBrand==="art"?"https://art.freddybremseth.com/"
+            :draft.promotionBrand==="books"?"https://books.freddybremseth.com/"
+            :draft.promotionBrand==="zeneco"?"https://zenecohomes.com/"
+            :"https://remaster.freddybremseth.com/"
+          }>{
+            draft.promotionBrand==="art"?"art.freddybremseth.com"
+            :draft.promotionBrand==="books"?"books.freddybremseth.com"
+            :draft.promotionBrand==="zeneco"?"zenecohomes.com"
+            :"remaster.freddybremseth.com"
+          }</a></p>
+          {draft.commentStyle==="detailed"&&draft.promotionBrand==="zeneco"&&
+            <p>Selected region: {draft.visualRegion==="north"?"Costa Blanca North"
+              :draft.visualRegion==="south"?"Costa Blanca South"
+              :draft.visualRegion==="inland"?"inland Alicante"
+              :draft.visualRegion==="costa-calida"?"Costa Calida"
+              :"Costa Blanca and surrounding areas"}. Listing availability may change.</p>}
+          {draft.promotionBrand==="art"&&<small>Den ferdige kommentaren får opptil {draft.commentStyle==="detailed"?6:2} direkte lenker til kunstverk som faktisk vises.</small>}
+          {draft.promotionBrand==="books"&&<small>Den ferdige kommentaren får opptil {draft.commentStyle==="detailed"?6:2} direkte lenker til bøker som faktisk vises.</small>}
+          <p>🎧 Music by Re-Master Freddy: https://remaster.freddybremseth.com/</p>
+          <small>Lenkene til enkeltverk settes inn etter endelig bildeutvalg. Kommentar publiseres kun hvis YouTube tillater kommentarer på videoen. Festing øverst i kommentarfeltet må gjøres manuelt i YouTube Studio.</small>
+        </div>
+      </div>
 
       {draft.promotionBrand === "art" && (
         <div className="mix-section mix-art-thumbnail-section">
