@@ -37,6 +37,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
+  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance">("");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
@@ -80,11 +81,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
     setUploadMessage("");
     try {
-      await uploadSong(mp3File, mp3Title, mp3Artist);
+      await uploadSong(mp3File, mp3Title, mp3Artist, mp3Genre);
       setUploadMessage("Sangen er lastet opp og lagt i publiseringskøen.");
       setMp3File(null);
       setMp3Title("");
       setMp3Artist("Re-Master Freddy");
+      setMp3Genre("");
       await refreshSongs();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "MP3-opplastingen feilet.");
@@ -140,6 +142,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           <label>
             <span>Artist</span>
             <input value={mp3Artist} onChange={(event) => setMp3Artist(event.target.value)} />
+          </label>
+          <label>
+            <span>Musikkategori og videostil</span>
+            <select aria-label="Musikkategori og videostil" value={mp3Genre} onChange={(event) => setMp3Genre(event.target.value as typeof mp3Genre)}>
+              <option value="">Automatisk analyse (standard video)</option>
+              <option value="meditation">Meditation – Freddy Bremseth Art</option>
+              <option value="relaxing">Relaxing – Freddy Bremseth Art</option>
+              <option value="alternative">Alternative – Freddy Bremseth Art</option>
+              <option value="dance">Dance / EDM – vanlig musikkvideo</option>
+            </select>
           </label>
           <button className="admin-primary admin-upload-button" onClick={handleUpload} disabled={uploading || !mp3File || !mp3Title.trim()}>
             {uploading ? <Loader2 className="admin-spinner" size={17} /> : <Upload size={17} />}
