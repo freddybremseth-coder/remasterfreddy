@@ -14,5 +14,6 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - run: node scripts/check-api-syntax.mjs
       - run: npm run build
       - run: npm test
