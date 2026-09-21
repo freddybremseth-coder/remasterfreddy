@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import AdminApp from "./AdminApp";
 import AdminEntry from "./AdminEntry";
+import MusicArtGallery from "./MusicArtGallery";
 import "./styles.css";
 
 function trackSearchDiscovery() {
@@ -47,7 +48,9 @@ function PublicSite() {
   );
 }
 
-const page = window.location.pathname === "/admin" ? <AdminApp /> : <PublicSite />;
+const songGalleryMatch = window.location.pathname.match(/^\/gallery\/([0-9a-f-]{36})\/?$/i);
+const page = window.location.pathname === "/admin" ? <AdminApp /> :
+  songGalleryMatch ? <MusicArtGallery songId={songGalleryMatch[1]} /> : <PublicSite />;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>{page}</React.StrictMode>,
