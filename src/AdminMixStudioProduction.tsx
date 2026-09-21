@@ -32,6 +32,7 @@ export function mixStepLabel(step: string): string {
     preparing_youtube_upload: "Klargjør opplasting til YouTube",
     completed: "Ferdig publisert",
     failed: "Produksjonen feilet",
+    render_stalled_needs_review: "Renderingen stoppet. Nytt forsøk krever feilsøking.",
   };
   return labels[step] || step.replace(/_/g, " ");
 }
@@ -120,6 +121,19 @@ export default function AdminMixStudioProduction() {
         return;
       }
       const draft = readSavedDraft();
+      const identicalStalled = jobs.find(item=>
+        item.error_code === "MIX_RENDER_STALLED_NEEDS_REVIEW" &&
+        item.status === "failed" && !item.youtube_url &&
+        item.title.trim().toLowerCase() === draft.title.trim().toLowerCase() &&
+        item.target_minutes === draft.targetMinutes &&
+        item.input_snapshot?.visualPlan?.brand === draft.promotionBrand &&
+        item.track_ids.length === draft.selectedSongIds.length &&
+        item.track_ids.every((trackId,index)=>trackId===draft.selectedSongIds[index])
+      );
+      if (identicalStalled) {
+        applyJob(identicalStalled);
+        throw new Error("Denne miksen stoppet allerede under rendering. Ingen ny kopi blir laget før feilen er rettet.");
+      }
       if (draft.targetMinutes !== 30) {
         throw new Error("Velg 30 minutter og lagre utkastet først. 60–180 minutter er foreløpig planleggingsmodus.");
       }
@@ -136,6 +150,7 @@ export default function AdminMixStudioProduction() {
   }
 
   const running = job?.status === "running" || job?.status === "queued";
+  const renderNeedsReview = job?.error_code === "MIX_RENDER_STALLED_NEEDS_REVIEW";
   const heartbeatTime = job?.heartbeat_at || job?.updated_at || null;
   const lastHeartbeatMs = heartbeatTime ? Date.parse(heartbeatTime) : Number.NaN;
   const stale = job?.status === "running" && Number.isFinite(lastHeartbeatMs)
@@ -214,8 +229,11 @@ export default function AdminMixStudioProduction() {
               <div className="admin-error" role="alert">
                 <AlertCircle size={16}/>
                 Ingen ny status fra produksjonsmotoren på over åtte minutter. Jobben kan fremdeles
-                kjøre eller være under gjenoppretting. Ikke start en ny kopi; bruk «Hent ny status».
+                kjøre eller være under gjenoppretting. Ikke start en ny kopi; bruk «Oppdater status».
               </div>
+            )}
+            {renderNeedsReview && (
+              <div className="admin-error" role="alert">Renderingen av denne miksen stoppet gjentatte ganger. Automatisk omstart er deaktivert. Valgte sanger og kunstverk er bevart; ikke start en kopi før videomotoren er kontrollert.</div>
             )}
             {job.status === "failed" && job.error_message && (
               <div className="admin-error" role="alert">{job.error_message}</div>
