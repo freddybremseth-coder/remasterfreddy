@@ -274,12 +274,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                           Se Short <ExternalLink size={14} />
                         </a>
                       )}
-                      {song.metadata?.artVisualMode && !song.metadata?.shortsUrl && (
+                      {!song.metadata?.shortsUrl && (
                         <button
                           className="admin-secondary"
                           disabled={Boolean(shortsProcessingId) || !youtubeHealth?.connected || song.metadata?.shortsStatus === "needs-reconciliation"}
                           onClick={() => retryArtShort(song)}
-                          title={song.metadata?.shortsError || "Lag Short av en publisert kunstsang uten å laste opp fullversjonen igjen"}
+                          title={song.metadata?.shortsError || "Lag Short av den publiserte sangen uten å laste opp fullversjonen igjen"}
                         >
                           {shortsProcessingId === song.id ? <Loader2 className="admin-spinner" size={15} /> : <Play size={15} />}
                           {song.metadata?.shortsStatus === "needs-reconciliation" ? "Kontroller YouTube først" : "Lag manglende Short"}
