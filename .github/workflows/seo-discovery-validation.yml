@@ -1,0 +1,26 @@
+name: Re-Master Freddy search attribution validation
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'public/search-discovery.js'
+      - 'tests/search-discovery.test.mjs'
+      - '.github/workflows/seo-discovery-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'public/search-discovery.js'
+      - 'tests/search-discovery.test.mjs'
+      - '.github/workflows/seo-discovery-validation.yml'
+jobs:
+  public-source-attribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source-only Re-Master public SEO arrivals
+        run: node --test tests/search-discovery.test.mjs
