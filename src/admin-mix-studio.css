@@ -299,3 +299,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Owner-curated cross-brand mix promotions */
+.mix-promotion-brands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.mix-brand-card{display:grid;justify-items:start;gap:6px;padding:14px;border-radius:12px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.45);color:#f8fafc;text-align:left;cursor:pointer}
+.mix-brand-card.active{border-color:#7dd3fc;background:rgba(14,116,144,.25)}
+.mix-brand-card small{color:#cbd5e1;line-height:1.45}
+.mix-facet{border:1px solid rgba(148,163,184,.23);border-radius:12px;padding:12px;min-width:0}
+.mix-facet legend{font-weight:700;padding:0 6px}
+.mix-facet legend small{font-weight:400;color:#94a3b8}
+.mix-facet-options{display:flex;flex-wrap:wrap;gap:10px}
+.mix-facet-label{display:inline-flex;gap:7px;align-items:center;padding:7px 10px;background:rgba(15,23,42,.5);border-radius:9px;font-size:13px;cursor:pointer}
+.mix-facet-label input{accent-color:#06b6d4}
+.mix-promotion-search{display:flex;gap:10px;align-items:end;justify-content:space-between}
+.mix-promotion-search label{display:grid;gap:5px;flex:1;max-width:480px;font-size:13px}
+.mix-promotion-search input{min-height:42px;padding:9px 11px;width:100%;background:#0f172a;color:#f8fafc;border:1px solid rgba(148,163,184,.35);border-radius:9px}
+.mix-promotion-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;max-height:350px;overflow:auto}
+.mix-promotion-item{display:flex;align-items:center;gap:9px;min-width:0;text-align:left;background:rgba(15,23,42,.52);color:#fff;border:1px solid rgba(148,163,184,.25);border-radius:10px;padding:7px;cursor:pointer}
+.mix-promotion-item.active{border-color:#7dd3fc;background:rgba(14,116,144,.19)}
+.mix-promotion-item img{width:42px;height:58px;object-fit:contain;flex:none}
+.mix-promotion-item>span:nth-child(2){min-width:0;flex:1;display:grid;gap:4px}
+.mix-promotion-item strong,.mix-promotion-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mix-promotion-item small{font-size:11px;color:#cbd5e1}
+.mix-catalog-link{display:inline-flex;align-items:center;gap:6px;color:#7dd3fc;font-size:13px}
+@media(max-width:980px){.mix-promotion-brands{grid-template-columns:repeat(2,minmax(0,1fr))}.mix-promotion-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:580px){.mix-promotion-brands,.mix-promotion-items{grid-template-columns:1fr}.mix-promotion-search{flex-direction:column;align-items:stretch}}

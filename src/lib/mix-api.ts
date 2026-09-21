@@ -9,6 +9,12 @@ export type MixStyle =
 
 export type VisualRegion = "any" | "north" | "south" | "inland" | "costa-calida";
 export type VisualType = "mixed" | "villas" | "apartments" | "pools" | "sea-views" | "interiors";
+export type PromotionBrand = "zeneco" | "art" | "books" | "none";
+export interface PromotionItem {
+  id: string; title: string; imageUrl: string; detailUrl: string;
+  style?: string; collection?: string; series?: string; language?: string;
+}
+export interface PromotionCatalog { art: PromotionItem[]; books: PromotionItem[]; }
 
 export interface MixDraftInput {
   title: string;
@@ -17,8 +23,12 @@ export interface MixDraftInput {
   crossfadeSeconds: number;
   playlist: string;
   zenEcoHomesEnabled: boolean;
+  promotionBrand?: PromotionBrand;
+  artStyles?: string[]; artCollections?: string[]; artIds?: string[];
+  bookSeries?: string[]; bookLanguages?: string[]; bookIds?: string[];
   visualRegion: VisualRegion;
   visualType: VisualType;
+  visualTypes?: VisualType[];
   sponsorIntervalMinutes: number;
   ctaText: string;
   selectedSongIds: string[];
@@ -33,6 +43,7 @@ export interface MixJob {
   crossfade_seconds: number;
   playlist_name: string;
   zenecohomes_enabled: boolean;
+  input_snapshot?: { visualPlan?: { promotionBrand?: PromotionBrand; brand?: PromotionBrand } };
   visual_region: VisualRegion;
   visual_type: VisualType;
   sponsor_interval_minutes: number;
@@ -131,4 +142,13 @@ export async function cancelMixJob(id: string): Promise<MixJob> {
   const data = await jsonOrError(response);
   if (!data.mix) throw new Error("Mixen ble avbrutt, men serveren returnerte ingen jobb.");
   return data.mix as MixJob;
+}
+
+export async function loadMixPromotionCatalog(): Promise<PromotionCatalog> {
+  const response = await mixFetch("/api/neural-beat-mixes-catalog", { method: "GET" });
+  const data = await jsonOrError(response);
+  if (!Array.isArray(data.art) || !Array.isArray(data.books)) {
+    throw new Error("Mix Studio fikk en ufullstendig oversikt over kunst og bøker.");
+  }
+  return data as PromotionCatalog;
 }

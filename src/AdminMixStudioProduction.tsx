@@ -100,10 +100,10 @@ export default function AdminMixStudioProduction() {
         <div className="mix-section-heading">
           <div>
             <p className="admin-eyebrow">Produksjon</p>
-            <h3>Test Mediterranean Mix i produksjon</h3>
+            <h3>Produser en 30-minutters Re-Master Freddy-miks</h3>
             <p>
-              Første produksjonsmodus er kontrollert til 30 minutter. Lagre planen over, og start deretter hele
-              kjeden: crossfade, ZenEcoHomes-bilder, render, YouTube, spilleliste og kommentar.
+              Velg sanger og promotering over. Produksjonen henter bare godkjente bolig-, kunst- eller bokbilder,
+              bygger crossfade-lyd, legger inn riktig CTA, og publiserer miksen på Re-Master Freddy-kanalen.
             </p>
           </div>
           {job && (
@@ -160,7 +160,7 @@ export default function AdminMixStudioProduction() {
             </button>
             <button className="admin-primary" onClick={startProduction} disabled={busy}>
               {busy ? <Loader2 className="admin-spinner" size={17} /> : <Rocket size={17} />}
-              Start 30-min produksjonstest
+              Produser og publiser 30-min miks
             </button>
           </div>
         </div>

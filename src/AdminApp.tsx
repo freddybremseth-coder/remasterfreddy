@@ -17,7 +17,7 @@ type AdminTab = "publishing" | "mixes" | "assets" | "jobs" | "analytics" | "reco
 
 const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof Music2 }> = [
   { id: "publishing", label: "Publisering", description: "MP3 og YouTube-pipeline", icon: Music2 },
-  { id: "mixes", label: "Mix Studio", description: "Lange mixer + ZenEcoHomes", icon: Waves },
+  { id: "mixes", label: "Mix Studio", description: "Musikk + bolig, kunst og bøker", icon: Waves },
   { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
   { id: "jobs", label: "Produksjonsjobber", description: "Status og eventhistorikk", icon: ListChecks },
   { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
