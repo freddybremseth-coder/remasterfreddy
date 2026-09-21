@@ -1,6 +1,6 @@
 import { requireAdmin } from "./_admin.js";
 
-export default async function handler(request: any, response: any) {
+export const config = { maxDuration: 300 };\n\nexport default async function handler(request: any, response: any) {
   const admin = await requireAdmin(request, response);
   if (!admin) return;
   if (request.method !== "POST") {
