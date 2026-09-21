@@ -6,7 +6,7 @@
   "use strict";
   var current = window.location;
   if (current.protocol !== "https:" ||
-      !/^(?:www\.)?remaster\.freddybremseth\.com$/i.test(current.hostname)) return;
+      !/^remaster\.freddybremseth\.com$/i.test(current.hostname)) return;
 
   var path = current.pathname || "/";
   // This Vite landing is the only independent, indexable public route.
