@@ -4,7 +4,7 @@ import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, uploadSong } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, uploadSong, publishMissingArtShort } from "./lib/admin-api";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -26,6 +26,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [shortsProcessingId, setShortsProcessingId] = useState<string | null>(null);
+  const [shortsMessage, setShortsMessage] = useState("");
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
@@ -119,6 +121,29 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
   }
 
+  async function retryArtShort(song: AdminSong) {
+    if (!youtubeHealth?.connected) {
+      setError("Koble Re-Master Freddy til riktig YouTube-kanal før du lager Short.");
+      return;
+    }
+    setShortsProcessingId(song.id);
+    setShortsMessage("");
+    setError("");
+    try {
+      const result = await publishMissingArtShort(song.id);
+      if (result.status === "processing") {
+        setShortsMessage(`Short for ${song.title} er allerede under produksjon.`);
+      } else {
+        setShortsMessage(`Short for ${song.title}: ${result.shortUrl || "Allerede publisert"}`);
+      }
+      await refreshSongs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke lage Short");
+    } finally {
+      setShortsProcessingId(null);
+    }
+  }
+
   return (
     <section className="admin-card admin-studio">
       <YouTubeHealthCard onHealthChange={setYouTubeHealth} />
@@ -181,6 +206,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         </button>
       </div>
 
+      {shortsMessage && <div className="admin-success"><CheckCircle2 size={17} />{shortsMessage}</div>}
       {error && (
         <div className="admin-error admin-inline-message">
           <AlertCircle size={17} />
@@ -239,9 +265,27 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                 </div>
                 <div className="admin-song-state">
                   {song.youtubeUrl ? (
-                    <a href={song.youtubeUrl} target="_blank" rel="noreferrer">
-                      Se på YouTube <ExternalLink size={14} />
-                    </a>
+                    <>
+                      <a href={song.youtubeUrl} target="_blank" rel="noreferrer">
+                        Se på YouTube <ExternalLink size={14} />
+                      </a>
+                      {song.metadata?.shortsUrl && (
+                        <a href={song.metadata.shortsUrl} target="_blank" rel="noreferrer">
+                          Se Short <ExternalLink size={14} />
+                        </a>
+                      )}
+                      {song.metadata?.artVisualMode && !song.metadata?.shortsUrl && (
+                        <button
+                          className="admin-secondary"
+                          disabled={Boolean(shortsProcessingId) || !youtubeHealth?.connected || song.metadata?.shortsStatus === "needs-reconciliation"}
+                          onClick={() => retryArtShort(song)}
+                          title={song.metadata?.shortsError || "Lag Short av en publisert kunstsang uten å laste opp fullversjonen igjen"}
+                        >
+                          {shortsProcessingId === song.id ? <Loader2 className="admin-spinner" size={15} /> : <Play size={15} />}
+                          {song.metadata?.shortsStatus === "needs-reconciliation" ? "Kontroller YouTube først" : "Lag manglende Short"}
+                        </button>
+                      )}
+                    </>
                   ) : song.audioUrl ? (
                     <span className="admin-ready">Klar</span>
                   ) : (
