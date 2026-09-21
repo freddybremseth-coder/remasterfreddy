@@ -28,6 +28,7 @@ export interface MixDraftInput {
   bookSeries?: string[]; bookLanguages?: string[]; bookIds?: string[];
   visualRegion: VisualRegion;
   visualType: VisualType;
+  visualTypes?: VisualType[];
   sponsorIntervalMinutes: number;
   ctaText: string;
   selectedSongIds: string[];
