@@ -26,6 +26,7 @@ export interface MixDraftInput {
   promotionBrand?: PromotionBrand;
   thumbnailStyle?: "automatic"|"art-lounge"|"standard";
   thumbnailTitle?: string;
+  commentStyle?: "short"|"detailed";
   artStyles?: string[]; artCollections?: string[]; artIds?: string[];
   bookSeries?: string[]; bookLanguages?: string[]; bookIds?: string[];
   visualRegion: VisualRegion;
