@@ -66,3 +66,16 @@ describe("Re-Master mix production status", () => {
     expect(screen.getByRole("button",{name:"Miks er allerede i produksjon"})).toBeDisabled();
   });
 });
+
+it("reports a stalled Art Lounge as stopped and keeps the saved selections intact",async()=>{
+  jobs.mockResolvedValue([{
+    ...active,status:"failed",pipeline_step:"render_stalled_needs_review",
+    error_code:"MIX_RENDER_STALLED_NEEDS_REVIEW",
+    error_message:"Rendering feilet på 18%.",progress:18,
+  }]);
+  render(<AdminMixStudioProduction/>);
+  expect(await screen.findByText("Art Lounge")).toBeInTheDocument();
+  expect(screen.getByText("Renderingen stoppet. Nytt forsøk krever feilsøking.")).toBeInTheDocument();
+  expect(screen.getByText(/Automatisk omstart er deaktivert/)).toBeInTheDocument();
+  expect(screen.queryByText(/Ingen ny status fra produksjonsmotoren på over åtte minutter/)).not.toBeInTheDocument();
+});
