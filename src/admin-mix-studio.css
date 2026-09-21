@@ -324,3 +324,11 @@
 .mix-catalog-link{display:inline-flex;align-items:center;gap:6px;color:#7dd3fc;font-size:13px}
 @media(max-width:980px){.mix-promotion-brands{grid-template-columns:repeat(2,minmax(0,1fr))}.mix-promotion-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.mix-promotion-brands,.mix-promotion-items{grid-template-columns:1fr}.mix-promotion-search{flex-direction:column;align-items:stretch}}
+
+/* A server-backed job survives tab closes/reloads and is shown prominently. */
+.mix-live-production{gap:12px;border-color:rgba(125,211,252,.45)}
+.mix-live-percent{font-variant-numeric:tabular-nums;font-size:clamp(24px,4vw,40px);color:#7dd3fc}
+.mix-live-meter{height:12px;background:rgba(148,163,184,.24);border-radius:999px;overflow:hidden}
+.mix-live-meter>div{height:100%;background:#38bdf8;border-radius:inherit;transition:width .35s ease}
+.mix-live-note{color:#cbd5e1;line-height:1.55}
+.mix-live-production>small{color:#cbd5e1;line-height:1.5;overflow-wrap:anywhere}

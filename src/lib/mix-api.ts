@@ -58,6 +58,11 @@ export interface MixJob {
   error_message?: string | null;
   created_at: string;
   updated_at: string;
+  heartbeat_at?: string | null;
+  started_at?: string | null;
+  queued_at?: string | null;
+  lease_expires_at?: string | null;
+  youtube_upload_started_at?: string | null;
 }
 
 export interface MixProductionStart {
