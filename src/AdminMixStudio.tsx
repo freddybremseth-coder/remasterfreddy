@@ -41,6 +41,7 @@ type MixDraft = {
   bookIds: string[];
   visualRegion: VisualRegion;
   visualType: VisualType;
+  visualTypes: VisualType[];
   sponsorIntervalMinutes: number;
   ctaText: string;
   selectedSongIds: string[];
@@ -106,6 +107,7 @@ const DEFAULT_DRAFT: MixDraft = {
   bookSeries: [], bookLanguages: [], bookIds: [],
   visualRegion: "any",
   visualType: "mixed",
+  visualTypes: ["mixed"],
   sponsorIntervalMinutes: 20,
   ctaText: "Dreaming of a home in Spain? Explore Costa Blanca at ZenEcoHomes.com",
   selectedSongIds: [],
@@ -132,7 +134,9 @@ export default function AdminMixStudio() {
       if (!saved) return DEFAULT_DRAFT;
       const previous = JSON.parse(saved) as Partial<MixDraft>;
       return { ...DEFAULT_DRAFT, ...previous,
-        promotionBrand: previous.promotionBrand || (previous.zenEcoHomesEnabled === false ? "none" : "zeneco") };
+        promotionBrand: previous.promotionBrand || (previous.zenEcoHomesEnabled === false ? "none" : "zeneco"),
+        visualTypes: Array.isArray(previous.visualTypes) && previous.visualTypes.length ? previous.visualTypes : [previous.visualType || "mixed"],
+      };
 
     } catch {
       return DEFAULT_DRAFT;
@@ -357,17 +361,28 @@ export default function AdminMixStudio() {
               <option value="costa-calida">Costa Cálida</option>
             </select>
           </label>
-          <label>
-            <span>Bildetype</span>
-            <select value={draft.visualType} onChange={(event) => patchDraft({ visualType: event.target.value as VisualType })} >
-              <option value="mixed">Mixed</option>
-              <option value="villas">Villas</option>
-              <option value="apartments">Apartments</option>
-              <option value="pools">Pools</option>
-              <option value="sea-views">Sea views</option>
-              <option value="interiors">Interiors</option>
-            </select>
-          </label>
+          <fieldset className="mix-facet">
+            <legend>Velg bildetyper (tilfeldig blant valgte)</legend>
+            <div className="mix-facet-options">
+              {([
+                ["mixed","Alle boligbilder"],["villas","Villaer"],["apartments","Leiligheter"],
+                ["pools","Basseng"],["sea-views","Havutsikt"],["interiors","Interiør (prioriteres)"],
+              ] as Array<[VisualType,string]>).map(([type,label])=>(
+                <label key={type} className="mix-facet-label">
+                  <input type="checkbox" checked={draft.visualTypes.includes(type)}
+                    onChange={()=>{
+                      const old=draft.visualTypes;
+                      const next = type==="mixed" ? ["mixed"] as VisualType[]
+                        : old.includes(type) ? old.filter(x=>x!==type)
+                        : [...old.filter(x=>x!=="mixed"),type];
+                      const types=next.length?next:["mixed"] as VisualType[];
+                      patchDraft({visualTypes:types,visualType:types[0]});
+                    }}/>
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label>
             <span>Sponsorinnslag</span>
             <select value={draft.sponsorIntervalMinutes} onChange={(event) => patchDraft({ sponsorIntervalMinutes: Number(event.target.value) })} >
