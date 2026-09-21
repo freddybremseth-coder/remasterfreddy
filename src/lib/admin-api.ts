@@ -145,7 +145,7 @@ export async function loadSongs(): Promise<AdminSong[]> {
   return Array.isArray(data.songs) ? data.songs : [];
 }
 
-export async function uploadSong(file: File, title: string, artist: string): Promise<AdminSong> {
+export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" = ""): Promise<AdminSong> {
   if (!file || !title.trim()) throw new Error("Velg en MP3-fil og skriv inn tittel.");
   if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
 
@@ -163,6 +163,7 @@ export async function uploadSong(file: File, title: string, artist: string): Pro
       title: title.trim(),
       artist: artist.trim() || "Re-Master Freddy",
       audioUrl: signed.publicUrl,
+      ...(genre ? { genre } : {}),
     }),
   });
   const registered = await registerResponse.json().catch(() => ({}));
