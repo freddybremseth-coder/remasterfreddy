@@ -44,7 +44,7 @@ describe("Re-Master mix production status", () => {
     // Even if a previous status were a draft, the server preflight is authoritative.
     expect(start).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button",{name:"Hent ny status"}));
+    fireEvent.click(screen.getByRole("button",{name:"Oppdater status"}));
     await waitFor(()=>expect(jobs).toHaveBeenCalledTimes(2));
     expect(create).not.toHaveBeenCalled();
   });
