@@ -12,6 +12,7 @@ import {
   Waves,
 } from "lucide-react";
 import { AdminSong, loadSongs } from "./lib/admin-api";
+import MixPromotionPicker, {type PromotionDraft} from "./MixPromotionPicker";
 import "./admin-mix-studio.css";
 
 type MixStyle =
@@ -31,6 +32,13 @@ type MixDraft = {
   crossfadeSeconds: number;
   playlist: string;
   zenEcoHomesEnabled: boolean;
+  promotionBrand: PromotionDraft["promotionBrand"];
+  artStyles: string[];
+  artCollections: string[];
+  artIds: string[];
+  bookSeries: string[];
+  bookLanguages: string[];
+  bookIds: string[];
   visualRegion: VisualRegion;
   visualType: VisualType;
   sponsorIntervalMinutes: number;
@@ -93,6 +101,9 @@ const DEFAULT_DRAFT: MixDraft = {
   crossfadeSeconds: 8,
   playlist: styleProfiles["mediterranean-sunset"].playlist,
   zenEcoHomesEnabled: true,
+  promotionBrand: "zeneco",
+  artStyles: [], artCollections: [], artIds: [],
+  bookSeries: [], bookLanguages: [], bookIds: [],
   visualRegion: "any",
   visualType: "mixed",
   sponsorIntervalMinutes: 20,
@@ -118,7 +129,11 @@ export default function AdminMixStudio() {
   const [draft, setDraft] = useState<MixDraft>(() => {
     try {
       const saved = window.localStorage.getItem(DRAFT_KEY);
-      return saved ? { ...DEFAULT_DRAFT, ...JSON.parse(saved) } : DEFAULT_DRAFT;
+      if (!saved) return DEFAULT_DRAFT;
+      const previous = JSON.parse(saved) as Partial<MixDraft>;
+      return { ...DEFAULT_DRAFT, ...previous,
+        promotionBrand: previous.promotionBrand || (previous.zenEcoHomesEnabled === false ? "none" : "zeneco") };
+
     } catch {
       return DEFAULT_DRAFT;
     }
@@ -204,15 +219,15 @@ export default function AdminMixStudio() {
       <div className="mix-hero">
         <div>
           <p className="admin-eyebrow">Mediterranean Mix Studio</p>
-          <h2>Lag lange YouTube-mixer med ZenEcoHomes</h2>
+          <h2>Lag musikkmixer som promoterer dine merkevarer</h2>
           <p>
-            Sett sammen Re-Master Freddy-spor til 30–180 minutters deep-house-mixer og klargjør
-            Costa Blanca-bilder, sponsorinnslag, CTA og riktig YouTube-spilleliste i én produksjonsplan.
+            Velg dine egne sanger, deretter Zen Eco Homes-boliger, Freddy Bremseth Art-kunst eller bokomslag.
+            Tilfeldig bildevalg skjer bare innenfor bildetyper og titler du tillater. Produksjon er foreløpig begrenset til 30 minutter; 60–180 minutter kan planlegges.
           </p>
         </div>
         <div className="mix-hero-badges">
           <span><Waves size={16} /> Deep House</span>
-          <span><House size={16} /> ZenEcoHomes</span>
+          <span><House size={16} /> {draft.promotionBrand === "zeneco" ? "Zen Eco Homes" : draft.promotionBrand === "art" ? "Freddy Bremseth Art" : draft.promotionBrand === "books" ? "Freddy Bremseth Books" : "Musikkvideo"}</span>
           <span><Music2 size={16} /> {selectedSongs.length} spor</span>
         </div>
       </div>
@@ -308,27 +323,33 @@ export default function AdminMixStudio() {
         </div>
       </div>
 
+      <MixPromotionPicker draft={draft} onChange={(patch) => patchDraft({
+        ...patch,
+        ...(patch.promotionBrand ? {zenEcoHomesEnabled: patch.promotionBrand === "zeneco"} : {}),
+        ...(patch.promotionBrand === "art" && draft.ctaText.includes("ZenEcoHomes") ? {
+          ctaText: "Explore original artworks at art.freddybremseth.com",
+          playlist: "🎨 Art & Music — Freddy Bremseth",
+        } : {}),
+        ...(patch.promotionBrand === "books" && (draft.ctaText.includes("ZenEcoHomes") || draft.ctaText.includes("art.freddybremseth")) ? {
+          ctaText: "Discover books by Freddy Bremseth at books.freddybremseth.com",
+          playlist: "📚 Books & Music — Freddy Bremseth",
+        } : {}),
+      })} />
+
+      {draft.promotionBrand === "zeneco" && (
       <div className="mix-section mix-sponsor-section">
         <div className="mix-section-heading">
           <div>
             <p className="admin-eyebrow">Visual Engine</p>
-            <h3>ZenEcoHomes-integrasjon</h3>
+            <h3>Velg Zen Eco Homes-bilder</h3>
             <p>Bruk bolig- og livsstilsbilder som en rolig premium-bakgrunn uten å gjøre musikkvideoen til en hard annonse.</p>
           </div>
-          <label className="mix-toggle">
-            <input
-              type="checkbox"
-              checked={draft.zenEcoHomesEnabled}
-              onChange={(event) => patchDraft({ zenEcoHomesEnabled: event.target.checked })}
-            />
-            <span>{draft.zenEcoHomesEnabled ? "Aktiv" : "Av"}</span>
-          </label>
         </div>
 
         <div className="mix-grid">
           <label>
             <span>Område</span>
-            <select value={draft.visualRegion} onChange={(event) => patchDraft({ visualRegion: event.target.value as VisualRegion })} disabled={!draft.zenEcoHomesEnabled}>
+            <select value={draft.visualRegion} onChange={(event) => patchDraft({ visualRegion: event.target.value as VisualRegion })} >
               <option value="any">Hele porteføljen</option>
               <option value="north">Costa Blanca North</option>
               <option value="south">Costa Blanca South</option>
@@ -338,7 +359,7 @@ export default function AdminMixStudio() {
           </label>
           <label>
             <span>Bildetype</span>
-            <select value={draft.visualType} onChange={(event) => patchDraft({ visualType: event.target.value as VisualType })} disabled={!draft.zenEcoHomesEnabled}>
+            <select value={draft.visualType} onChange={(event) => patchDraft({ visualType: event.target.value as VisualType })} >
               <option value="mixed">Mixed</option>
               <option value="villas">Villas</option>
               <option value="apartments">Apartments</option>
@@ -349,7 +370,7 @@ export default function AdminMixStudio() {
           </label>
           <label>
             <span>Sponsorinnslag</span>
-            <select value={draft.sponsorIntervalMinutes} onChange={(event) => patchDraft({ sponsorIntervalMinutes: Number(event.target.value) })} disabled={!draft.zenEcoHomesEnabled}>
+            <select value={draft.sponsorIntervalMinutes} onChange={(event) => patchDraft({ sponsorIntervalMinutes: Number(event.target.value) })} >
               <option value={10}>Hvert 10. minutt</option>
               <option value={15}>Hvert 15. minutt</option>
               <option value={20}>Hvert 20. minutt</option>
@@ -364,7 +385,7 @@ export default function AdminMixStudio() {
 
         <label className="mix-full-field">
           <span>CTA i video / beskrivelse</span>
-          <input value={draft.ctaText} onChange={(event) => patchDraft({ ctaText: event.target.value })} disabled={!draft.zenEcoHomesEnabled} />
+          <input value={draft.ctaText} onChange={(event) => patchDraft({ ctaText: event.target.value })}  />
         </label>
 
         <div className="mix-sponsor-preview">
@@ -376,6 +397,27 @@ export default function AdminMixStudio() {
           </a>
         </div>
       </div>
+
+      )}
+      {draft.promotionBrand !== "zeneco" && (
+        <div className="mix-section">
+          <label className="mix-full-field">
+            <span>Tekst på sponsorinnslag i videoen</span>
+            <input value={draft.ctaText} onChange={event=>patchDraft({ctaText:event.target.value})} />
+          </label>
+          <div className="mix-grid">
+            <label><span>Sponsorinnslag</span>
+              <select value={draft.sponsorIntervalMinutes} onChange={event=>patchDraft({sponsorIntervalMinutes:Number(event.target.value)})}>
+                <option value={10}>Hvert 10. minutt</option><option value={15}>Hvert 15. minutt</option>
+                <option value={20}>Hvert 20. minutt</option><option value={30}>Hvert 30. minutt</option>
+              </select>
+            </label>
+            <label><span>YouTube-spilleliste</span>
+              <input value={draft.playlist} onChange={event=>patchDraft({playlist:event.target.value})}/>
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="mix-section">
         <div className="mix-section-heading">
@@ -396,7 +438,7 @@ export default function AdminMixStudio() {
         <div>
           <strong>Produksjonsplan klar</strong>
           <span>
-            {selectedSongs.length} spor · mål {draft.targetMinutes} min · {draft.crossfadeSeconds}s crossfade · {draft.zenEcoHomesEnabled ? "ZenEcoHomes på" : "uten sponsor"}
+            {selectedSongs.length} spor · mål {draft.targetMinutes} min · {draft.crossfadeSeconds}s crossfade · {draft.promotionBrand === "zeneco" ? "ZenEcoHomes" : draft.promotionBrand === "art" ? "Freddy Bremseth Art" : draft.promotionBrand === "books" ? "Freddy Bremseth Books" : "uten sponsor"}
           </span>
         </div>
         <button className="admin-primary" onClick={saveDraft}>
@@ -408,9 +450,8 @@ export default function AdminMixStudio() {
       <div className="mix-next-step">
         <Sparkles size={18} />
         <p>
-          Produksjonsmotoren er aktiv. Lagre utkastet, og bruk produksjonskortet under for å starte Mix Worker som henter
-          ZenEcoHomes-bilder, bygger crossfade-lyd, animerer bildene, legger inn sponsorsegmenter, genererer chapters/SEO
-          og publiserer den første 30-minutters testen til YouTube.
+          Lagre utkastet, og start den kontrollerte 30-minutters produksjonen under. Bildene hentes kun fra valgt merkevare.
+          Lengre mikser forblir utkast inntil segmentert langtidsrendering er aktivert.
         </p>
       </div>
     </section>
