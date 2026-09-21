@@ -1,11 +1,27 @@
 {
   "rewrites": [
-    { "source": "/gallery/:songId", "destination": "/index.html" },
-    { "source": "/admin", "destination": "/index.html" },
-    { "source": "/admin/(.*)", "destination": "/index.html" }
+    {
+      "source": "/gallery/:songId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "functions": {
-    "api/neural-beat-library-cleanup.ts": { "maxDuration": 300 },
-    "api/neural-beat.ts": { "maxDuration": 300 }
+    "api/neural-beat-library-cleanup.ts": {
+      "maxDuration": 300
+    },
+    "api/neural-beat.ts": {
+      "maxDuration": 300
+    },
+    "api/neural-beat-art-short.ts": {
+      "maxDuration": 300
+    }
   }
 }

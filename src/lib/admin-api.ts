@@ -156,9 +156,13 @@ export async function publishMissingArtShort(songId: string): Promise<{ status: 
     method: "POST",
     body: JSON.stringify({ songId }),
   });
-  const data = await response.json().catch(() => ({}));
+  const raw = await response.text();
+  let data: { error?: string; success?: boolean; status?: string; shortUrl?: string | null };
+  try { data = JSON.parse(raw); } catch { data = {}; }
   if (!response.ok || !data.success) {
-    throw new Error(data.error || "Kunne ikke lage Short. Fullversjonen er ikke berørt.");
+    const diagnostic = data.error
+      || `Shorts-API svarte med HTTP ${response.status}${raw.trimStart().startsWith("<") ? " (HTML i stedet for JSON)" : ""}. Fullversjonen er ikke berørt.`;
+    throw new Error(diagnostic);
   }
   return data as { status: string; shortUrl: string | null };
 }
