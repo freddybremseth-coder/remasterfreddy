@@ -38,7 +38,7 @@ function facetPicker(
           <label key={value} className="mix-facet-label">
             <input type="checkbox" checked={selected.includes(value)}
               onChange={()=>onChange(toggle(selected,value))} />
-            {value.replaceAll("-"," ")}
+            {value.replace(/-/g," ")}
           </label>
         ))}
       </div>
