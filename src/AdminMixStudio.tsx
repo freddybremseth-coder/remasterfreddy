@@ -327,18 +327,24 @@ export default function AdminMixStudio() {
         </div>
       </div>
 
-      <MixPromotionPicker draft={draft} onChange={(patch) => patchDraft({
-        ...patch,
-        ...(patch.promotionBrand ? {zenEcoHomesEnabled: patch.promotionBrand === "zeneco"} : {}),
-        ...(patch.promotionBrand === "art" && draft.ctaText.includes("ZenEcoHomes") ? {
-          ctaText: "Explore original artworks at art.freddybremseth.com",
-          playlist: "🎨 Art & Music — Freddy Bremseth",
-        } : {}),
-        ...(patch.promotionBrand === "books" && (draft.ctaText.includes("ZenEcoHomes") || draft.ctaText.includes("art.freddybremseth")) ? {
-          ctaText: "Discover books by Freddy Bremseth at books.freddybremseth.com",
-          playlist: "📚 Books & Music — Freddy Bremseth",
-        } : {}),
-      })} />
+      <MixPromotionPicker draft={draft} onChange={(patch) => {
+        const nextBrand = patch.promotionBrand;
+        const brandChanged = nextBrand && nextBrand !== draft.promotionBrand;
+        const defaults = !brandChanged ? {} : nextBrand === "zeneco"
+          ? { ctaText: DEFAULT_DRAFT.ctaText, playlist: DEFAULT_DRAFT.playlist }
+          : nextBrand === "art"
+          ? { ctaText: "Explore original artworks at art.freddybremseth.com",
+              playlist: "🎨 Art & Music — Freddy Bremseth" }
+          : nextBrand === "books"
+          ? { ctaText: "Discover books by Freddy Bremseth at books.freddybremseth.com",
+              playlist: "📚 Books & Music — Freddy Bremseth" }
+          : { ctaText: "", playlist: "🎧 Re-Master Freddy Music Mixes" };
+        patchDraft({
+          ...patch,
+          ...defaults,
+          ...(nextBrand ? {zenEcoHomesEnabled: nextBrand === "zeneco"} : {}),
+        });
+      }} />
 
       {draft.promotionBrand === "zeneco" && (
       <div className="mix-section mix-sponsor-section">
