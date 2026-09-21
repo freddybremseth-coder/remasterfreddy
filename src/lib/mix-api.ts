@@ -24,6 +24,8 @@ export interface MixDraftInput {
   playlist: string;
   zenEcoHomesEnabled: boolean;
   promotionBrand?: PromotionBrand;
+  thumbnailStyle?: "automatic"|"art-lounge"|"standard";
+  thumbnailTitle?: string;
   artStyles?: string[]; artCollections?: string[]; artIds?: string[];
   bookSeries?: string[]; bookLanguages?: string[]; bookIds?: string[];
   visualRegion: VisualRegion;
