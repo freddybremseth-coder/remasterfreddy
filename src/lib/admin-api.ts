@@ -8,6 +8,12 @@ export interface AdminSong {
   youtubeUrl?: string;
   genre?: string;
   mood?: string;
+  metadata?: {
+    artVisualMode?: "meditation" | "relaxing" | "alternative";
+    shortsUrl?: string | null;
+    shortsStatus?: string;
+    shortsError?: string | null;
+  };
 }
 
 export type ImageKind = "image" | "logo" | "thumbnail";
@@ -143,6 +149,18 @@ export async function loadSongs(): Promise<AdminSong[]> {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke hente sangene.");
   return Array.isArray(data.songs) ? data.songs : [];
+}
+
+export async function publishMissingArtShort(songId: string): Promise<{ status: string; shortUrl: string | null }> {
+  const response = await adminFetch("/api/neural-beat-art-short", {
+    method: "POST",
+    body: JSON.stringify({ songId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || "Kunne ikke lage Short. Fullversjonen er ikke berørt.");
+  }
+  return data as { status: string; shortUrl: string | null };
 }
 
 export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" = ""): Promise<AdminSong> {
