@@ -46,7 +46,15 @@ export interface MixJob {
   crossfade_seconds: number;
   playlist_name: string;
   zenecohomes_enabled: boolean;
-  input_snapshot?: { visualPlan?: { promotionBrand?: PromotionBrand; brand?: PromotionBrand } };
+  input_snapshot?: { visualPlan?: {
+    promotionBrand?: PromotionBrand; brand?: PromotionBrand; source?: PromotionBrand;
+    artStyles?: string[]; artCollections?: string[]; artIds?: string[];
+    bookSeries?: string[]; bookLanguages?: string[]; bookIds?: string[];
+    visualTypes?: VisualType[];
+    thumbnailStyle?: "art-lounge"|"standard";
+    thumbnailTitle?: string;
+    commentStyle?: "short"|"detailed";
+  } };
   visual_region: VisualRegion;
   visual_type: VisualType;
   sponsor_interval_minutes: number;
