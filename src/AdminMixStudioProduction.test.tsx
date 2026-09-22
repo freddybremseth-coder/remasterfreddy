@@ -79,3 +79,34 @@ it("reports a stalled Art Lounge as stopped and keeps the saved selections intac
   expect(screen.getByText(/Automatisk omstart er deaktivert/)).toBeInTheDocument();
   expect(screen.queryByText(/Ingen ny status fra produksjonsmotoren på over åtte minutter/)).not.toBeInTheDocument();
 });
+
+it("restores exact failed Art and Champagne tracks and selected art without creating or starting a duplicate video",async()=>{
+  jobs.mockResolvedValue([{
+    ...active,id:"b3e27aed-ce0b-4284-ab84-9b40ab9a0c7b",
+    title:"Art and Champagne",status:"failed",progress:12,
+    pipeline_step:"failed",error_code:"MIX_PROMOTION_SELECTION_INVALID",
+    error_message:"Royal Street Art: Hope, Pain and Love has style symbolic-street-art.",
+    youtube_url:null,youtube_upload_started_at:null,youtube_video_id:null,
+    track_ids:["song-a","song-b"],
+    input_snapshot:{visualPlan:{
+      brand:"art",artStyles:["street-art","symbolic-realism"],
+      artIds:["kongelig-gatekunst-hap-smerte-og-kjrlighet","quiet-figure"],
+      artCollections:[],bookIds:[],thumbnailStyle:"art-lounge",
+    }},
+  }]);
+  window.localStorage.setItem("remaster-mediterranean-mix-draft-v1",JSON.stringify({title:"My other saved mix"}));
+  render(<AdminMixStudioProduction/>);
+  expect(await screen.findByText("Art and Champagne")).toBeInTheDocument();
+  expect(screen.getByText(/Royal Street Art: Hope, Pain and Love has style symbolic-street-art/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:/Gjenopprett dette utkastet og vis bildet som må rettes/}));
+  const restored=JSON.parse(window.localStorage.getItem("remaster-mediterranean-mix-draft-v1")||"{}");
+  expect(restored.title).toBe("Art and Champagne");
+  expect(restored.artStyles).toEqual(["street-art","symbolic-realism"]);
+  expect(restored.artIds).toEqual(["kongelig-gatekunst-hap-smerte-og-kjrlighet","quiet-figure"]);
+  expect(restored.selectedSongIds).toEqual(["song-a","song-b"]);
+  expect(JSON.parse(window.localStorage.getItem("remaster-mediterranean-mix-draft-v1-backup-before-recovery")||"{}").title)
+    .toBe("My other saved mix");
+  expect(create).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+  expect(screen.getByText(/Ingenting er startet automatisk/)).toBeInTheDocument();
+});
