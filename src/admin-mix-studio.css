@@ -357,3 +357,18 @@
 .mix-comment-preview p{margin:0;overflow-wrap:anywhere;line-height:1.55}
 .mix-comment-preview a{color:#b5eaff;text-decoration:underline;text-underline-offset:3px}
 .mix-comment-preview small{color:#d0e0eb;line-height:1.55}
+
+/* Explicit art-selection conflicts remain visible even when filter results hide the work. */
+.mix-selection-conflicts{display:grid;gap:12px}
+.mix-selection-conflicts>p{margin:0}
+.mix-selection-conflict{display:flex;align-items:flex-start;gap:14px;padding:12px;border:1px solid #c18665;border-radius:10px;background:#fff9f3;color:#462416}
+.mix-selection-conflict>img{width:72px;height:72px;object-fit:contain;flex-shrink:0;background:#fff;border-radius:6px}
+.mix-selection-conflict>div{min-width:0;display:grid;gap:7px}
+.mix-selection-conflict small{display:block;overflow-wrap:anywhere;color:#704531}
+.mix-selection-conflict p{margin:0;line-height:1.5}
+.mix-selection-conflict .mix-actions{display:flex;flex-wrap:wrap;gap:8px}
+.mix-selection-conflict button{white-space:normal;text-align:left;line-height:1.4}
+.mix-recovery-panel{display:grid;gap:10px;padding:14px;border:1px solid #7499ae;border-radius:10px;background:#112b3d;color:#f5fbff}
+.mix-recovery-panel p{margin:0;line-height:1.5}
+.mix-recovery-panel button{justify-self:start;white-space:normal}
+.mix-recovery-panel small{color:#c5dce8}
