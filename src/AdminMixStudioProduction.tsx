@@ -176,7 +176,7 @@ export default function AdminMixStudioProduction() {
       };
       window.localStorage.setItem(DRAFT_KEY,JSON.stringify(restored));
       setDraftRevision(value=>value+1);
-      setMessage("Art and Champagne-utvalget er gjenopprettet i Mix Studio ovenfor. Rett den navngitte stilkonflikten og lagre utkastet før du eventuelt starter en ny produksjon. Ingenting er startet automatisk.");
+      setMessage(`«${job.title}» er gjenopprettet i Mix Studio ovenfor. Rett den navngitte stilkonflikten og lagre utkastet før du eventuelt starter en ny produksjon. Ingenting er startet automatisk.`);
       setError("");
     }catch {
       setError("Kunne ikke gjenopprette produksjonsutkastet. Prøv på nytt etter at nettleserens lokale lagring er tilgjengelig.");
