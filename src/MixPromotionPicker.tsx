@@ -74,6 +74,25 @@ export default function MixPromotionPicker({draft,onChange}:Props) {
   const filtered=useMemo(()=>safeItems(items,draft),[items,draft]);
   const chosenIds=draft.promotionBrand==="art"?draft.artIds:draft.bookIds;
   const available=filtered.filter(item=>!chosenIds.length||chosenIds.includes(item.id));
+  // A saved explicit selection can become incompatible when styles or collections
+  // change. Never hide these works in the filtered grid and then fail after
+  // minutes of audio encoding: show the *actual title* and a one-click repair.
+  const conflicts=chosenIds.flatMap(id=>{
+    const item=items.find(candidate=>candidate.id===id);
+    if(!item)return [{id,title:id,reason:"Dette verket er ikke i den publiserte katalogen, eller mangler offentlig forhåndsvisning.",item:null as PromotionItem|null,facet:"missing"}];
+    if(draft.promotionBrand==="art"){
+      if(draft.artStyles.length&&!draft.artStyles.includes(item.style||""))
+        return [{id,title:item.title,reason:"Verkets stil er «"+(item.style||"ukjent")+"», men denne stilen er ikke valgt.",item,facet:"style"}];
+      if(draft.artCollections.length&&!draft.artCollections.includes(item.collection||""))
+        return [{id,title:item.title,reason:"Verkets kolleksjon er «"+(item.collection||"ukjent")+"», men denne kolleksjonen er ikke valgt.",item,facet:"collection"}];
+    }else{
+      if(draft.bookSeries.length&&!draft.bookSeries.includes(item.series||""))
+        return [{id,title:item.title,reason:"Bokens serie er «"+(item.series||"ukjent")+"», men denne serien er ikke valgt.",item,facet:"series"}];
+      if(draft.bookLanguages.length&&!draft.bookLanguages.includes(item.language||""))
+        return [{id,title:item.title,reason:"Bokens språk er «"+(item.language||"ukjent")+"», men dette språket er ikke valgt.",item,facet:"language"}];
+    }
+    return [];
+  });
   const visible=filtered.filter(item=>item.title.toLowerCase().includes(search.toLowerCase())).slice(0,120);
   const unique=(field:keyof PromotionItem)=>[...new Set(items.map(item=>String(item[field]||"")).filter(Boolean))].sort();
 
@@ -122,6 +141,39 @@ export default function MixPromotionPicker({draft,onChange}:Props) {
           )}
           {catalog&&(
             <>
+              {conflicts.length>0&&(
+                <div className="admin-error mix-selection-conflicts" role="alert">
+                  <strong>{conflicts.length} manuelt valgt {draft.promotionBrand==="art"?"kunstverk":"bok"} passer ikke til filtrene.</strong>
+                  <p>Rett utvalget før du lagrer eller starter produksjon. Ingen verk blir fjernet automatisk.</p>
+                  {conflicts.map(conflict=>(
+                    <div className="mix-selection-conflict" key={conflict.id}>
+                      {conflict.item?.imageUrl&&<img src={conflict.item.imageUrl} alt="" loading="lazy"/>}
+                      <div>
+                        <strong>{conflict.title}</strong>
+                        <small>Referanse: {conflict.id}</small>
+                        <p>{conflict.reason}</p>
+                        <div className="mix-actions">
+                          {conflict.item&&conflict.facet!=="missing"&&
+                            <button type="button" className="admin-secondary"
+                              onClick={()=>{
+                                const item=conflict.item!;
+                                if(conflict.facet==="style")onChange({artStyles:[...new Set([...draft.artStyles,item.style!])]});
+                                if(conflict.facet==="collection")onChange({artCollections:[...new Set([...draft.artCollections,item.collection!])]});
+                                if(conflict.facet==="series")onChange({bookSeries:[...new Set([...draft.bookSeries,item.series!])]});
+                                if(conflict.facet==="language")onChange({bookLanguages:[...new Set([...draft.bookLanguages,item.language!])]});
+                              }}>Legg til {conflict.facet==="style"?"kunststilen":conflict.facet==="collection"?"kolleksjonen":conflict.facet==="series"?"bokserien":"språket"} «{conflict.facet==="style"?conflict.item.style:conflict.facet==="collection"?conflict.item.collection:conflict.facet==="series"?conflict.item.series:conflict.item.language}»</button>}
+                          <button type="button" className="admin-secondary"
+                            onClick={()=>onChange(draft.promotionBrand==="art"
+                              ?{artIds:draft.artIds.filter(value=>value!==conflict.id)}
+                              :{bookIds:draft.bookIds.filter(value=>value!==conflict.id)})}>
+                            Fjern dette {draft.promotionBrand==="art"?"kunstverket":"bokomslaget"} fra miksen
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mix-track-summary">
                 <strong>{available.length} mulige bilder</strong>
                 <span>{chosenIds.length===0?"Tilfeldig fra alle som passer valgte typer":"Tilfeldig fra "+chosenIds.length+" manuelt valgte"}</span>

@@ -50,6 +50,28 @@ describe("cross-brand mix visual picker",()=>{
     await waitFor(()=>expect(catalogMock).toHaveBeenCalledTimes(1));
   });
 
+  it("identifies the exact hidden artwork and offers add-actual-style or remove-work repairs without silently clearing the other IDs",async()=>{
+    const onChange=vi.fn();
+    const incompatible={
+      id:"kongelig-gatekunst-hap-smerte-og-kjrlighet",
+      title:"Royal Street Art: Hope, Pain and Love",
+      style:"symbolic-street-art",collection:"symbolic-street-art",
+      imageUrl:"https://example.com/royal.webp",
+      detailUrl:"https://art.freddybremseth.com/verk/kongelig-gatekunst-hap-smerte-og-kjrlighet/",
+    };
+    catalogMock.mockResolvedValue({art:[ART,incompatible],books:[BOOK]});
+    const saved={...draft("art"),artStyles:["street-art","symbolic-realism"],
+      artIds:[ART.id,incompatible.id]};
+    render(<MixPromotionPicker draft={saved} onChange={onChange}/>);
+    expect(await screen.findByText("Royal Street Art: Hope, Pain and Love")).toBeInTheDocument();
+    expect(screen.getByText(/Verkets stil er «symbolic-street-art»/)).toBeInTheDocument();
+    expect(screen.getByText(/kongelig-gatekunst-hap-smerte-og-kjrlighet/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:/Legg til kunststilen «symbolic-street-art»/}));
+    expect(onChange).toHaveBeenCalledWith({artStyles:["street-art","symbolic-realism","symbolic-street-art"]});
+    fireEvent.click(screen.getByRole("button",{name:/Fjern dette kunstverket fra miksen/}));
+    expect(onChange).toHaveBeenCalledWith({artIds:[ART.id]});
+  });
+
   it("does not query another brand when Zen Eco Homes alone is selected",()=>{
     render(<MixPromotionPicker draft={draft("zeneco")} onChange={vi.fn()}/>);
     expect(catalogMock).not.toHaveBeenCalled();
