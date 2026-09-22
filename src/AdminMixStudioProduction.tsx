@@ -50,6 +50,7 @@ function readSavedDraft(): MixDraftInput {
 
 export default function AdminMixStudioProduction() {
   const [job, setJob] = useState<MixJob | null>(null);
+  const [draftRevision, setDraftRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [checkedAt, setCheckedAt] = useState(0);
@@ -149,6 +150,39 @@ export default function AdminMixStudioProduction() {
     } finally { setBusy(false); }
   }
 
+  function restoreFailedSelection() {
+    if(!job || job.status!=="failed" || job.error_code!=="MIX_PROMOTION_SELECTION_INVALID" ||
+      job.youtube_upload_started_at || job.youtube_video_id) return;
+    const plan=job.input_snapshot?.visualPlan;
+    if(!plan)return;
+    try {
+      const existing=window.localStorage.getItem(DRAFT_KEY);
+      if(existing)window.localStorage.setItem(DRAFT_KEY+"-backup-before-recovery",existing);
+      const original=existing?JSON.parse(existing) as Partial<MixDraftInput>:{};
+      const brand=plan.brand||plan.source||plan.promotionBrand||(job.zenecohomes_enabled?"zeneco":"none");
+      const restored:MixDraftInput={
+        ...original,
+        title:job.title,style:job.style,targetMinutes:job.target_minutes,
+        crossfadeSeconds:job.crossfade_seconds,playlist:job.playlist_name,
+        zenEcoHomesEnabled:brand==="zeneco",promotionBrand:brand,
+        artStyles:plan.artStyles||[],artCollections:plan.artCollections||[],artIds:plan.artIds||[],
+        bookSeries:plan.bookSeries||[],bookLanguages:plan.bookLanguages||[],bookIds:plan.bookIds||[],
+        thumbnailStyle:plan.thumbnailStyle||"automatic",thumbnailTitle:plan.thumbnailTitle||"",
+        commentStyle:plan.commentStyle||"detailed",
+        visualRegion:job.visual_region,visualType:job.visual_type,
+        visualTypes:plan.visualTypes||[job.visual_type],
+        sponsorIntervalMinutes:job.sponsor_interval_minutes,ctaText:job.cta_text||"",
+        selectedSongIds:[...job.track_ids],queue:false,
+      };
+      window.localStorage.setItem(DRAFT_KEY,JSON.stringify(restored));
+      setDraftRevision(value=>value+1);
+      setMessage("Art and Champagne-utvalget er gjenopprettet i Mix Studio ovenfor. Rett den navngitte stilkonflikten og lagre utkastet før du eventuelt starter en ny produksjon. Ingenting er startet automatisk.");
+      setError("");
+    }catch {
+      setError("Kunne ikke gjenopprette produksjonsutkastet. Prøv på nytt etter at nettleserens lokale lagring er tilgjengelig.");
+    }
+  }
+
   const running = job?.status === "running" || job?.status === "queued";
   const renderNeedsReview = job?.error_code === "MIX_RENDER_STALLED_NEEDS_REVIEW";
   const heartbeatTime = job?.heartbeat_at || job?.updated_at || null;
@@ -159,7 +193,7 @@ export default function AdminMixStudioProduction() {
 
   return (
     <>
-      <AdminMixStudio />
+      <AdminMixStudio key={draftRevision} />
 
       <section className="admin-card admin-mix-studio">
         <div className="mix-section-heading">
@@ -237,6 +271,16 @@ export default function AdminMixStudioProduction() {
             )}
             {job.status === "failed" && job.error_message && (
               <div className="admin-error" role="alert">{job.error_message}</div>
+            )}
+            {job.status === "failed" && job.error_code === "MIX_PROMOTION_SELECTION_INVALID" &&
+              !job.youtube_upload_started_at && !job.youtube_video_id && (
+              <div className="mix-recovery-panel">
+                <p>Dette er en konflikt mellom et manuelt valgt verk og bildenes stil-/kolleksjonsfiltre. Ingen YouTube-opplasting er startet. Du kan hente tilbake nøyaktig de samme sangene, valgte verkene og filtrene og se hvilket bilde som må justeres.</p>
+                <button type="button" className="admin-secondary" onClick={restoreFailedSelection}>
+                  Gjenopprett dette utkastet og vis bildet som må rettes
+                </button>
+                <small>Dette starter ikke produksjonen på nytt. Ditt tidligere lagrede lokale utkast sikkerhetskopieres.</small>
+              </div>
             )}
             {job.youtube_url && (
               <a href={job.youtube_url} target="_blank" rel="noreferrer" className="admin-primary">
