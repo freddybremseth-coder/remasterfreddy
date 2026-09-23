@@ -128,7 +128,7 @@ function recommendedTrackCount(targetMinutes: number) {
   // Until exact audio duration is exposed by the catalog API, use a conservative
   // four-minute planning average. The long-running renderer will calculate the
   // exact duration before production starts.
-  return Math.max(4, Math.min(60, Math.ceil(targetMinutes / 4)));
+  return Math.max(2, Math.min(60, Math.ceil(targetMinutes / 4)));
 }
 
 export default function AdminMixStudio() {
