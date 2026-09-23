@@ -1,7 +1,7 @@
 import { getAdminSession } from "./supabase";
-import type { PromotionBrand, VisualRegion, VisualType } from "./mix-api";
+import type { VisualRegion, VisualType } from "./mix-api";
 
-export type ReelBrand = Exclude<PromotionBrand,"none">;
+export type ReelBrand = "art" | "books" | "zeneco" | "freddybremseth" | "pinosoecolife" | "donaanna";
 export type ReelChannel = "instagram"|"facebook";
 export type ReelDuration = 15|20|30|45|60;
 
