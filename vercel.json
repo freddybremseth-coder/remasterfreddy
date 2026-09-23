@@ -22,6 +22,9 @@
     },
     "api/neural-beat-art-short.ts": {
       "maxDuration": 300
+    },
+    "api/neural-beat-reels.ts": {
+      "maxDuration": 300
     }
   }
 }
