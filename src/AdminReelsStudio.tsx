@@ -222,7 +222,7 @@ export default function AdminReelsStudio(){
                 </button>
               </div>;
             })}
-            {!!publishStatus.otherChannels?.length&&<div className="mix-section"><strong>Andre tilkoblede kanaler</strong>
+            {!!publishStatus.otherChannels?.length&&<div className="mix-section"><strong>Andre registrerte kanaler</strong>
               {publishStatus.otherChannels.map(other=><p key={other.platform+other.account}>{other.platform==="twitter"?"X":other.platform} · {other.account}: {other.reason}</p>)}
             </div>}
           </>}
