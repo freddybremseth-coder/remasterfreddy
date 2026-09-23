@@ -129,11 +129,11 @@ export default function AdminReelsStudio(){
       <div className="mix-section-heading"><div><p className="admin-eyebrow">Boligområde</p><h3>Velg hvor boligene skal komme fra</h3>
         <p>Du kan velge en bred region og eventuelt snevre inn til for eksempel Benidorm, Finestrat eller Villajoyosa.</p></div></div>
       <div className="mix-grid">
-        <label><span>Region</span><select value={region} onChange={e=>setRegion(e.target.value as VisualRegion)}>
+        <label><span>Region</span><select aria-label="Region" value={region} onChange={e=>setRegion(e.target.value as VisualRegion)}>
           <option value="any">Hele porteføljen</option><option value="north">Costa Blanca North</option>
           <option value="south">Costa Blanca South</option><option value="inland">Inland Alicante</option><option value="costa-calida">Costa Cálida</option>
         </select></label>
-        <label><span>Spesifikt område / by</span><input list="reel-area-presets" value={areaQuery} onChange={e=>setAreaQuery(e.target.value)} placeholder="f.eks. Benidorm"/>
+        <label><span>Spesifikt område / by</span><input aria-label="Spesifikt område / by" list="reel-area-presets" value={areaQuery} onChange={e=>setAreaQuery(e.target.value)} placeholder="f.eks. Benidorm"/>
           <datalist id="reel-area-presets">{AREA_PRESETS.filter(Boolean).map(area=><option key={area} value={area}/>)}</datalist>
           <small>Tomt felt bruker hele regionen.</small></label>
       </div>
