@@ -1,0 +1,26 @@
+
+.admin-reels-studio{display:grid;gap:22px}
+.reels-hero{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+.reels-hero h2{margin:.2rem 0 .45rem}
+.reels-hero p{max-width:760px}
+.reels-badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.reels-badges span{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #496a7f;border-radius:999px;background:#102738;color:#e9f7ff;font-size:.86rem}
+.reels-channel-picker{padding:14px;border:1px solid #42677c;border-radius:12px;background:#0e2434}
+.reels-channel-picker small{display:block;margin-top:8px;color:#bed0db}
+.reels-render-actions{display:flex;gap:10px;flex-wrap:wrap}
+.reels-result{display:grid;grid-template-columns:minmax(220px,320px) 1fr;gap:20px;padding:18px;border:1px solid #526f80;border-radius:14px;background:#0c1f2e}
+.reels-result video{width:100%;aspect-ratio:9/16;object-fit:contain;background:#050b11;border-radius:10px;max-height:580px}
+.reels-result>div{display:grid;align-content:start;gap:12px;min-width:0}
+.reels-result pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;padding:12px;border-radius:8px;background:#07141f;color:#dcecf7;font:inherit;font-size:.88rem;line-height:1.45}
+.reels-history{display:grid;gap:8px}
+.reels-history article{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:11px 12px;border:1px solid #365467;border-radius:10px;background:#0e2231}
+.reels-history article>div{display:grid;gap:2px;min-width:0}
+.reels-history article span{font-size:.84rem;color:#bfd0dc}
+.reels-history article>span[data-state="ready"],.reels-history article>span[data-state="published"]{color:#94f0bd}
+.reels-history article>span[data-state="failed"],.reels-history article>span[data-state="needs_review"]{color:#ffb49f}
+.reels-history article a{white-space:nowrap}
+@media(max-width:760px){
+  .reels-hero{display:grid}.reels-badges{justify-content:flex-start}
+  .reels-result{grid-template-columns:1fr}.reels-result video{max-height:520px}
+  .reels-history article{grid-template-columns:1fr auto}.reels-history article a{grid-column:1/-1}
+}
