@@ -123,7 +123,7 @@ export default function AdminReelsStudio(){
       </label>)}
     </div><small>Samme vertikale master fungerer på begge. Du får MP4 + caption etter rendering.</small></fieldset>
 
-    <MixPromotionPicker draft={promotion} onChange={patchPromotion}/>
+    <MixPromotionPicker draft={promotion} onChange={patchPromotion} allowNone={false}/>
 
     {promotion.promotionBrand==="zeneco"&&<div className="mix-section">
       <div className="mix-section-heading"><div><p className="admin-eyebrow">Boligområde</p><h3>Velg hvor boligene skal komme fra</h3>
