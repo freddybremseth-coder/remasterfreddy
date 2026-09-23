@@ -19,6 +19,16 @@ describe("Mix Studio saved brand-aware comment templates",()=>{
     expect(saved.promotionBrand).toBe("zeneco");
     expect(screen.getByText(/Lenkene til enkeltverk settes inn etter endelig bildeutvalg/)).toBeInTheDocument();
   });
+  it("defaults to 5-minute short mixes and persists chosen 3-minute length",()=>{
+    render(<AdminMixStudio/>);
+    const length=screen.getByLabelText("Mållengde") as HTMLSelectElement;
+    expect(length.value).toBe("5");
+    expect(screen.getByRole("option",{name:"3 minutter"})).toBeInTheDocument();
+    fireEvent.change(length,{target:{value:"3"}});
+    fireEvent.click(screen.getByRole("button",{name:"Lagre mix-utkast"}));
+    const saved=JSON.parse(window.localStorage.getItem("remaster-mediterranean-mix-draft-v1")||"{}");
+    expect(saved.targetMinutes).toBe(3);
+  });
   it("switches between brands and previews the correct destination",()=>{
     render(<AdminMixStudio/>);
     fireEvent.click(screen.getByRole("button",{name:"Velg books"}));
