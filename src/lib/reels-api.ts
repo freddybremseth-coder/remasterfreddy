@@ -38,3 +38,11 @@ export async function produceReel(request:ReelRequest):Promise<ReelJob>{
   if(!result.job)throw new Error("Reel-forespørselen ble mottatt uten jobbstatus.");
   return result.job;
 }
+
+export async function markStalledReel(jobId:string):Promise<ReelJob>{
+  const result=await adminFetch("/api/neural-beat-reels",{
+    method:"PATCH",body:JSON.stringify({jobId,action:"mark-stalled"}),
+  });
+  if(!result.job)throw new Error("Reel-jobben ble ikke oppdatert.");
+  return result.job;
+}
