@@ -93,7 +93,7 @@ export default function AdminReelsStudio(){
   const pendingKey=typeof window!=="undefined"?window.localStorage.getItem(REQUEST_KEY):null;
   const activeRendering=rendering||!!jobs.find(job=>job.state==="rendering"&&
     Date.now()-Date.parse(job.updated_at)<5*60_000);
-  const canRender=!loading&&!catalogLoading&&!activeRendering&&!!songId&&title.trim().length>=3&&channels.length>0&&
+  const canRender=!loading&&!catalogLoading&&!activeRendering&&!pendingKey&&!!songId&&title.trim().length>=3&&channels.length>0&&
     (isProperty(brand)?!!area&&!!catalog.length&&(selectedIds.length===0||selectedItems.length===selectedIds.length)
       :selectedIds.length>=1&&selectedItems.length===selectedIds.length);
   function changeBrand(next:ReelBrand){
