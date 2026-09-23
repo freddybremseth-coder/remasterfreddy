@@ -2,11 +2,13 @@ import {useEffect,useMemo,useState} from "react";
 import {Check,Clapperboard,Copy,Download,Loader2,RefreshCw,Sparkles} from "lucide-react";
 import {loadSongs,type AdminSong} from "./lib/admin-api";
 import MixPromotionPicker,{type PromotionDraft} from "./MixPromotionPicker";
-import {createReel,loadReelJobs,loadReelPublishStatus,publishReel,type ReelPublishStatus,type ReelBrand,type ReelChannel,type ReelDuration,type ReelJob} from "./lib/reels-api";
+import {createReel,loadReelJobs,loadReelPublishStatus,publishReel,type ReelPublishStatus,type ReelPublishChannel,type ReelBrand,type ReelChannel,type ReelDuration,type ReelJob} from "./lib/reels-api";
 import type {VisualRegion,VisualType} from "./lib/mix-api";
 import "./admin-reels-studio.css";
 
 const REEL_TITLES:Record<ReelBrand,string>={art:"Art Lounge Reel",books:"Books & Music Reel",zeneco:"Costa Blanca Homes Reel",freddybremseth:"Freddy Bremseth Reel",pinosoecolife:"Pinoso EcoLife Reel",donaanna:"Doña Anna Reel"};
+const PUBLISH_CHANNELS:ReelPublishChannel[]=["youtube","instagram","facebook"];
+const PUBLISH_LABELS:Record<ReelPublishChannel,string>={youtube:"YouTube",instagram:"Instagram",facebook:"Facebook"};
 const PROPERTY_REEL_BRANDS=new Set<ReelBrand>(["zeneco","pinosoecolife"]);
 const AREA_PRESETS=["","Benidorm","Finestrat","Villajoyosa","Altea","Albir","La Nucia","Polop","Calpe","Moraira","Denia","Javea","Pinoso","Aspe","Novelda","Torrevieja","Orihuela Costa","Murcia"];
 
@@ -108,16 +110,18 @@ export default function AdminReelsStudio(){
     setSelectedJobId(job.id);setLatestUrl(url);setLatestCaption(job.caption||"");
     setError("");setMessage("");void refreshPublication(job.id);
   }
-  async function sendToYouTube(){
-    if(!selectedJobId||!publishStatus?.channels.youtube?.connected)return;
-    const account=publishStatus.channels.youtube.account||"YouTube";
-    if(!window.confirm(`Publisere denne Reel offentlig på YouTube-kanalen «${account}»?`))return;
+  async function sendToPlatform(channel:ReelPublishChannel){
+    const jobId=selectedJobId,target=publishStatus?.channels[channel];
+    if(!jobId||!target?.connected||publishing||publishStatus?.deliveries.some(d=>d.channel===channel))return;
+    const label=PUBLISH_LABELS[channel],account=target.account||label;
+    if(!window.confirm(`Publisere denne Reel offentlig på ${label}-kontoen «${account}»?`))return;
     setPublishing(true);setError("");setMessage("");
     try{
-      const result=await publishReel(selectedJobId,"youtube");
-      setMessage(`Publisert på YouTube: ${result.account}. ${result.externalUrl||""}`);
-    }catch(e){setError(e instanceof Error?e.message:"Publiseringen ble ikke bekreftet. Kontroller YouTube-kanalen før du prøver igjen.");}
-    finally{setPublishing(false);await refreshPublication(selectedJobId);}
+      const result=await publishReel(jobId,channel);
+      setMessage(channel==="facebook"?`Facebook har mottatt Reelen for ${result.account}. Videoen kan fremdeles behandles før den blir synlig.`:
+        `Publisert på ${label}: ${result.account}. ${result.externalUrl||""}`);
+    }catch(e){setError(e instanceof Error?e.message:`Publiseringen er ikke bekreftet. Kontroller ${label} før du forsøker igjen.`);}
+    finally{setPublishing(false);await refreshPublication(jobId);}
   }
   async function copyCaption(){
     if(!latestCaption)return;
@@ -129,10 +133,10 @@ export default function AdminReelsStudio(){
     <div className="reels-hero">
       <div>
         <p className="admin-eyebrow">Reels Studio</p>
-        <h2>Lag korte videoer for Instagram og Facebook</h2>
+        <h2>Lag korte videoer og publiser direkte</h2>
         <p>Velg Re-Master Freddy-musikk og lag en 1080 × 1920 MP4 for Art, Books, Zen Eco Homes, FreddyBremseth.com, Pinoso EcoLife eller Doña Anna. Hver Reel bruker den valgte merkevarens egne bilder, profil og lenke.</p>
       </div>
-      <div className="reels-badges"><span><Clapperboard size={16}/> 9:16</span><span>15–60 sek</span><span>Instagram + Facebook</span></div>
+      <div className="reels-badges"><span><Clapperboard size={16}/> 9:16</span><span>15–60 sek</span><span>YouTube + Instagram + Facebook</span></div>
     </div>
 
     {error&&<div className="admin-error">{error}</div>}
@@ -202,16 +206,25 @@ export default function AdminReelsStudio(){
     {latestUrl&&<div className="reels-result">
       <video src={latestUrl} controls playsInline preload="metadata"/>
       <div><strong>Ferdig Reel</strong><p>Vertikal MP4 med Re-Master Freddy-musikk og valgt innhold.</p>
-        {selectedJobId&&<div className="mix-section"><strong>Publiser på YouTube Shorts</strong>
-          {statusLoading?<p>Kontrollerer YouTube-kanal og tidligere publisering …</p>:publishStatus&&<>
-            <p>{publishStatus.channels.youtube?.connected?`Valgt kanal: ${publishStatus.channels.youtube.account}`:publishStatus.channels.youtube?.reason||"Ingen YouTube-kanal er koblet til denne merkevaren."}</p>
-            {publishStatus.deliveries.filter(d=>d.channel==="youtube").map(d=><p key={d.channel}>
-              {d.state==="published"?<>Publisert. {d.external_url&&<a href={d.external_url} target="_blank" rel="noreferrer">Åpne på YouTube</a>}</>:d.state==="needs_review"?"Tidligere opplasting krever kontroll før et nytt forsøk.":"Opplasting startet — kontroller YouTube før du forsøker igjen."}
-            </p>)}
-            <button className="admin-primary" type="button" onClick={sendToYouTube}
-              disabled={publishing||!publishStatus.channels.youtube?.connected||publishStatus.deliveries.some(d=>d.channel==="youtube")}>
-              {publishing?"Publiserer på YouTube …":"Publiser på YouTube"}
-            </button>
+        {selectedJobId&&<div className="mix-section"><strong>Publiser ferdig Reel</strong>
+          {statusLoading?<p>Kontrollerer tilkoblede kontoer og tidligere publisering …</p>:publishStatus&&<>
+            {PUBLISH_CHANNELS.map(channel=>{
+              const target=publishStatus.channels[channel];
+              const delivery=publishStatus.deliveries.find(d=>d.channel===channel);
+              const prepared=channel==="youtube"||jobs.find(j=>j.id===selectedJobId)?.channels.includes(channel);
+              return <div key={channel} className="mix-section">
+                <p><strong>{PUBLISH_LABELS[channel]}</strong> · {target?.connected?`Konto: ${target.account}`:target?.reason||"Ingen konto er tilkoblet for denne merkevaren."}</p>
+                {delivery&&<p>{delivery.state==="published"?<>{channel==="facebook"?"Facebook har mottatt videoen.":"Publisert."} {delivery.external_url&&<a href={delivery.external_url} target="_blank" rel="noreferrer">Åpne innlegget</a>}</>:delivery.state==="needs_review"?"Tidligere publisering må kontrolleres før et nytt forsøk.":"Publisering er startet. Kontroller kontoen før et nytt forsøk."}</p>}
+                {!prepared&&<small>Denne videoen ble ikke klargjort for {PUBLISH_LABELS[channel]}. Velg kanalen når du lager en ny Reel.</small>}
+                <button className="admin-primary" type="button" onClick={()=>void sendToPlatform(channel)}
+                  disabled={publishing||!target?.connected||!prepared||Boolean(delivery)}>
+                  {publishing?"Publisering pågår …":`Publiser på ${PUBLISH_LABELS[channel]}`}
+                </button>
+              </div>;
+            })}
+            {!!publishStatus.otherChannels?.length&&<div className="mix-section"><strong>Andre registrerte kanaler</strong>
+              {publishStatus.otherChannels.map(other=><p key={other.platform+other.account}>{other.platform==="twitter"?"X":other.platform} · {other.account}: {other.reason}</p>)}
+            </div>}
           </>}
         </div>}
         <div className="mix-actions"><a className="admin-primary" href={latestUrl} target="_blank" rel="noreferrer"><Download size={15}/> Åpne MP4</a>
@@ -227,7 +240,7 @@ export default function AdminReelsStudio(){
           return <article key={job.id}><div><strong>{job.title}</strong><span>{job.brand} · {job.duration_seconds}s · {job.channels.join(" + ")}</span>
             <small>{new Date(job.created_at).toLocaleString("nb-NO")}</small></div><span data-state={job.state}>{job.state}</span>
             {url&&<a href={url} target="_blank" rel="noreferrer">Åpne video</a>}
-            {url&&job.state==="ready"&&<button type="button" className="admin-secondary" onClick={()=>selectRenderedReel(job)}>Velg for YouTube</button>}
+            {url&&job.state==="ready"&&<button type="button" className="admin-secondary" onClick={()=>selectRenderedReel(job)}>Velg for publisering</button>}
             {job.error&&<small className="admin-error">{job.error}</small>}</article>
         })}
       </div>

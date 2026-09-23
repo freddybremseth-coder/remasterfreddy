@@ -39,7 +39,7 @@ export async function createReel(input:ReelCreateInput):Promise<{reel:ReelJob;pu
   return {reel:data.reel,publicUrl:data.publicUrl};
 }
 
-export type ReelPublishChannel = "instagram" | "youtube";
+export type ReelPublishChannel = "instagram" | "youtube" | "facebook";
 export interface ReelDelivery {
   channel:ReelPublishChannel;
   state:"publishing"|"published"|"needs_review";
@@ -52,6 +52,7 @@ export interface ReelDestination {
 export interface ReelPublishStatus {
   channels:Record<ReelPublishChannel,ReelDestination>;
   deliveries:ReelDelivery[];
+  otherChannels?:Array<{platform:string;account:string;connected:boolean;publishSupported:boolean;reason:string}>;
 }
 /** Shows exact RealtyFlow connected accounts and any prior external publish attempt. */
 export async function loadReelPublishStatus(jobId:string):Promise<ReelPublishStatus>{
