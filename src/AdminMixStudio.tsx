@@ -233,7 +233,7 @@ export default function AdminMixStudio() {
           <h2>Lag musikkmixer som promoterer dine merkevarer</h2>
           <p>
             Velg dine egne sanger, deretter Zen Eco Homes-boliger, Freddy Bremseth Art-kunst eller bokomslag.
-            Tilfeldig bildevalg skjer bare innenfor bildetyper og titler du tillater. Produksjon er foreløpig begrenset til 30 minutter; 60–180 minutter kan planlegges.
+            Tilfeldig bildevalg skjer bare innenfor bildetyper og titler du tillater. Velg korte, stabile mixer fra 3 til 30 minutter. Samme kunst-, bok- og boligfiltre brukes uansett lengde.
           </p>
         </div>
         <div className="mix-hero-badges">
@@ -261,11 +261,12 @@ export default function AdminMixStudio() {
         <label>
           <span>Mållengde</span>
           <select value={draft.targetMinutes} onChange={(event) => patchDraft({ targetMinutes: Number(event.target.value) })}>
+            <option value={3}>3 minutter</option>
+            <option value={5}>5 minutter</option>
+            <option value={10}>10 minutter</option>
+            <option value={15}>15 minutter</option>
+            <option value={20}>20 minutter</option>
             <option value={30}>30 minutter</option>
-            <option value={60}>60 minutter</option>
-            <option value={90}>90 minutter</option>
-            <option value={120}>2 timer</option>
-            <option value={180}>3 timer</option>
           </select>
         </label>
         <label>
