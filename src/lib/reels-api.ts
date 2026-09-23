@@ -38,3 +38,29 @@ export async function createReel(input:ReelCreateInput):Promise<{reel:ReelJob;pu
   if(!data.reel||!data.publicUrl)throw new Error("Reel ble rendret, men mangler lagret videolenke.");
   return {reel:data.reel,publicUrl:data.publicUrl};
 }
+
+export type ReelPublishChannel = "instagram" | "youtube";
+export interface ReelDelivery {
+  channel:ReelPublishChannel;
+  state:"publishing"|"published"|"needs_review";
+  external_id:string|null;external_url:string|null;error:string|null;updated_at:string;
+}
+export interface ReelDestination {
+  connected:boolean;brandId:string|null;channelId:string|null;
+  account:string|null;reason:string;
+}
+export interface ReelPublishStatus {
+  channels:Record<ReelPublishChannel,ReelDestination>;
+  deliveries:ReelDelivery[];
+}
+/** Shows exact RealtyFlow connected accounts and any prior external publish attempt. */
+export async function loadReelPublishStatus(jobId:string):Promise<ReelPublishStatus>{
+  return await fetchAdmin("/api/neural-beat-reels-publish?jobId="+encodeURIComponent(jobId),{method:"GET"}) as ReelPublishStatus;
+}
+/** Explicit owner action; if an earlier upload is unresolved, the API blocks re-submission. */
+export async function publishReel(jobId:string,channel:ReelPublishChannel):Promise<{
+  success:true;channel:ReelPublishChannel;externalId:string;externalUrl:string;account:string;
+}>{
+  return await fetchAdmin("/api/neural-beat-reels-publish",{method:"POST",
+    body:JSON.stringify({jobId,channel})});
+}

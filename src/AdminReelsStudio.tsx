@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from "react";
 import {Check,Clapperboard,Copy,Download,Loader2,RefreshCw,Sparkles} from "lucide-react";
 import {loadSongs,type AdminSong} from "./lib/admin-api";
 import MixPromotionPicker,{type PromotionDraft} from "./MixPromotionPicker";
-import {createReel,loadReelJobs,type ReelBrand,type ReelChannel,type ReelDuration,type ReelJob} from "./lib/reels-api";
+import {createReel,loadReelJobs,loadReelPublishStatus,publishReel,type ReelPublishStatus,type ReelBrand,type ReelChannel,type ReelDuration,type ReelJob} from "./lib/reels-api";
 import type {VisualRegion,VisualType} from "./lib/mix-api";
 import "./admin-reels-studio.css";
 
@@ -36,6 +36,10 @@ export default function AdminReelsStudio(){
   const [message,setMessage]=useState("");
   const [latestUrl,setLatestUrl]=useState("");
   const [latestCaption,setLatestCaption]=useState("");
+  const [selectedJobId,setSelectedJobId]=useState("");
+  const [publishStatus,setPublishStatus]=useState<ReelPublishStatus|null>(null);
+  const [statusLoading,setStatusLoading]=useState(false);
+  const [publishing,setPublishing]=useState(false);
 
   const playableSongs=useMemo(()=>songs.filter(song=>Boolean(song.audioUrl)),[songs]);
   async function refresh(){
@@ -75,6 +79,7 @@ export default function AdminReelsStudio(){
     if(!songId){setError("Velg en Re-Master Freddy-sang.");return;}
     if(!channels.length){setError("Velg Instagram, Facebook eller begge.");return;}
     setRendering(true);setError("");setMessage("");setLatestUrl("");setLatestCaption("");
+    setSelectedJobId("");setPublishStatus(null);
     try{
       const result=await createReel({
         title,brand,durationSeconds:duration,songId,channels,
@@ -84,10 +89,35 @@ export default function AdminReelsStudio(){
         visualTypes:PROPERTY_REEL_BRANDS.has(brand)?visualTypes:["mixed"],
       });
       setLatestUrl(result.publicUrl);setLatestCaption(result.reel.caption||"");
+      setSelectedJobId(result.reel.id);
+      void refreshPublication(result.reel.id);
       setMessage(`Reel ferdig: ${duration} sekunder, 1080 × 1920. Klar for ${channels.map(x=>x==="instagram"?"Instagram":"Facebook").join(" + ")}.`);
       setJobs(await loadReelJobs());
     }catch(e){setError(e instanceof Error?e.message:"Reel-produksjonen feilet.");}
     finally{setRendering(false);}
+  }
+  async function refreshPublication(jobId:string){
+    setStatusLoading(true);setPublishStatus(null);
+    try{setPublishStatus(await loadReelPublishStatus(jobId));}
+    catch(e){setError(e instanceof Error?e.message:"Kunne ikke lese publiseringsstatus fra RealtyFlow.");}
+    finally{setStatusLoading(false);}
+  }
+  function selectRenderedReel(job:ReelJob){
+    const url=urlFor(job);
+    if(!url||job.state!=="ready")return;
+    setSelectedJobId(job.id);setLatestUrl(url);setLatestCaption(job.caption||"");
+    setError("");setMessage("");void refreshPublication(job.id);
+  }
+  async function sendToYouTube(){
+    if(!selectedJobId||!publishStatus?.channels.youtube?.connected)return;
+    const account=publishStatus.channels.youtube.account||"YouTube";
+    if(!window.confirm(`Publisere denne Reel offentlig på YouTube-kanalen «${account}»?`))return;
+    setPublishing(true);setError("");setMessage("");
+    try{
+      const result=await publishReel(selectedJobId,"youtube");
+      setMessage(`Publisert på YouTube: ${result.account}. ${result.externalUrl||""}`);
+    }catch(e){setError(e instanceof Error?e.message:"Publiseringen ble ikke bekreftet. Kontroller YouTube-kanalen før du prøver igjen.");}
+    finally{setPublishing(false);await refreshPublication(selectedJobId);}
   }
   async function copyCaption(){
     if(!latestCaption)return;
@@ -172,6 +202,18 @@ export default function AdminReelsStudio(){
     {latestUrl&&<div className="reels-result">
       <video src={latestUrl} controls playsInline preload="metadata"/>
       <div><strong>Ferdig Reel</strong><p>Vertikal MP4 med Re-Master Freddy-musikk og valgt innhold.</p>
+        {selectedJobId&&<div className="mix-section"><strong>Publiser på YouTube Shorts</strong>
+          {statusLoading?<p>Kontrollerer YouTube-kanal og tidligere publisering …</p>:publishStatus&&<>
+            <p>{publishStatus.channels.youtube?.connected?`Valgt kanal: ${publishStatus.channels.youtube.account}`:publishStatus.channels.youtube?.reason||"Ingen YouTube-kanal er koblet til denne merkevaren."}</p>
+            {publishStatus.deliveries.filter(d=>d.channel==="youtube").map(d=><p key={d.channel}>
+              {d.state==="published"?<>Publisert. {d.external_url&&<a href={d.external_url} target="_blank" rel="noreferrer">Åpne på YouTube</a>}</>:d.state==="needs_review"?"Tidligere opplasting krever kontroll før et nytt forsøk.":"Opplasting startet — kontroller YouTube før du forsøker igjen."}
+            </p>)}
+            <button className="admin-primary" type="button" onClick={sendToYouTube}
+              disabled={publishing||!publishStatus.channels.youtube?.connected||publishStatus.deliveries.some(d=>d.channel==="youtube")}>
+              {publishing?"Publiserer på YouTube …":"Publiser på YouTube"}
+            </button>
+          </>}
+        </div>}
         <div className="mix-actions"><a className="admin-primary" href={latestUrl} target="_blank" rel="noreferrer"><Download size={15}/> Åpne MP4</a>
           <button className="admin-secondary" onClick={copyCaption}><Copy size={15}/> Kopier caption</button></div>
         {latestCaption&&<pre>{latestCaption}</pre>}</div>
@@ -184,7 +226,9 @@ export default function AdminReelsStudio(){
           const url=urlFor(job);
           return <article key={job.id}><div><strong>{job.title}</strong><span>{job.brand} · {job.duration_seconds}s · {job.channels.join(" + ")}</span>
             <small>{new Date(job.created_at).toLocaleString("nb-NO")}</small></div><span data-state={job.state}>{job.state}</span>
-            {url&&<a href={url} target="_blank" rel="noreferrer">Åpne video</a>}{job.error&&<small className="admin-error">{job.error}</small>}</article>
+            {url&&<a href={url} target="_blank" rel="noreferrer">Åpne video</a>}
+            {url&&job.state==="ready"&&<button type="button" className="admin-secondary" onClick={()=>selectRenderedReel(job)}>Velg for YouTube</button>}
+            {job.error&&<small className="admin-error">{job.error}</small>}</article>
         })}
       </div>
     </div>

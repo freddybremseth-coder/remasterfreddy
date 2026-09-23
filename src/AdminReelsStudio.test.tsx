@@ -2,19 +2,20 @@ import {fireEvent,render,screen,waitFor} from "@testing-library/react";
 import {beforeEach,describe,expect,it,vi} from "vitest";
 import AdminReelsStudio from "./AdminReelsStudio";
 import {loadSongs} from "./lib/admin-api";
-import {createReel,loadReelJobs} from "./lib/reels-api";
+import {createReel,loadReelJobs,loadReelPublishStatus,publishReel} from "./lib/reels-api";
 
 vi.mock("./lib/admin-api",()=>({loadSongs:vi.fn()}));
-vi.mock("./lib/reels-api",()=>({createReel:vi.fn(),loadReelJobs:vi.fn()}));
+vi.mock("./lib/reels-api",()=>({createReel:vi.fn(),loadReelJobs:vi.fn(),loadReelPublishStatus:vi.fn(),publishReel:vi.fn()}));
 vi.mock("./MixPromotionPicker",()=>({default:({onChange}:{onChange:(v:any)=>void})=><div>
   <button type="button" onClick={()=>onChange({promotionBrand:"zeneco"})}>Velg Zen</button>
   <button type="button" onClick={()=>onChange({promotionBrand:"books"})}>Velg Books</button>
 </div>}));
-const songs=vi.mocked(loadSongs),jobs=vi.mocked(loadReelJobs),create=vi.mocked(createReel);
+const songs=vi.mocked(loadSongs),jobs=vi.mocked(loadReelJobs),create=vi.mocked(createReel),status=vi.mocked(loadReelPublishStatus),publish=vi.mocked(publishReel);
 
 describe("Reels Studio",()=>{
   beforeEach(()=>{
-    songs.mockReset();jobs.mockReset();create.mockReset();
+    songs.mockReset();jobs.mockReset();create.mockReset();status.mockReset();publish.mockReset();
+    status.mockResolvedValue({channels:{youtube:{connected:false,brandId:null,channelId:null,account:null,reason:"Ingen kanal"},instagram:{connected:false,brandId:null,channelId:null,account:null,reason:""}},deliveries:[]});
     songs.mockResolvedValue([{id:"11111111-1111-4111-8111-111111111111",title:"Sunset Song",artist:"Re-Master Freddy",audioUrl:"https://example.com/song.mp3"} as any]);
     jobs.mockResolvedValue([]);
   });
@@ -75,4 +76,29 @@ describe("Reels Studio",()=>{
       expect(create.mock.lastCall?.[0].brand).toBe(brand);
     }
   });
+  it("only enables YouTube publishing for the exact connected destination and blocks repeated posts",async()=>{
+    const reel={id:"11111111-1111-4111-8111-111111111111",brand:"donaanna",title:"Doña Anna Reel",
+      duration_seconds:30,song_id:null,song_title:"Sunset",channels:["instagram"],selection:{publicUrl:"https://cdn.example/reel.mp4"},
+      state:"ready",video_path:"11111111-1111-4111-8111-111111111111.mp4",caption:"Olives",publications:{},error:null,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString()} as any;
+    jobs.mockResolvedValue([reel]);
+    status.mockResolvedValue({channels:{
+      instagram:{connected:false,brandId:null,channelId:null,account:null,reason:""},
+      youtube:{connected:true,brandId:"donaanna",channelId:"channel",account:"Doña Anna",reason:""},
+    },deliveries:[]});
+    publish.mockResolvedValue({success:true,channel:"youtube",externalId:"youtube-video",externalUrl:"https://www.youtube.com/watch?v=youtube-video",account:"Doña Anna"});
+    const confirm=vi.spyOn(window,"confirm").mockReturnValue(true);
+    try{
+      render(<AdminReelsStudio/>);
+      await screen.findByText("Sunset Song");
+      fireEvent.click(screen.getByRole("button",{name:"Velg for YouTube"}));
+      const button=await screen.findByRole("button",{name:"Publiser på YouTube"});
+      await waitFor(()=>expect(button).toBeEnabled());
+      fireEvent.click(button);
+      await waitFor(()=>expect(publish).toHaveBeenCalledWith(reel.id,"youtube"));
+      expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Doña Anna"));
+      expect(await screen.findByText(/Publisert på YouTube: Doña Anna/)).toBeInTheDocument();
+    }finally{confirm.mockRestore();}
+  });
+
 });
