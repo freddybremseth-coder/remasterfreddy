@@ -14,6 +14,7 @@ export type PromotionDraft = {
 type Props = {
   draft: PromotionDraft;
   onChange: (patch: Partial<PromotionDraft>) => void;
+  allowNone?: boolean;
 };
 
 const BRANDS: Array<{id:PromotionBrand;name:string;description:string}> = [
@@ -56,7 +57,7 @@ function safeItems(items:PromotionItem[],draft:PromotionDraft) {
   );
 }
 
-export default function MixPromotionPicker({draft,onChange}:Props) {
+export default function MixPromotionPicker({draft,onChange,allowNone=true}:Props) {
   const [catalog,setCatalog] = useState<PromotionCatalog|null>(null);
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState("");
@@ -104,7 +105,7 @@ export default function MixPromotionPicker({draft,onChange}:Props) {
         <p>Musikken er alltid fra Re-Master Freddy. Velg ett merke for bilder, visuell profil og lenker i denne miksen.</p>
       </div>
       <div className="mix-promotion-brands">
-        {BRANDS.map(brand=>(
+        {BRANDS.filter(brand=>allowNone || brand.id!=="none").map(brand=>(
           <button type="button" key={brand.id}
             className={`mix-brand-card ${draft.promotionBrand===brand.id?"active":""}`}
             aria-pressed={draft.promotionBrand===brand.id}
