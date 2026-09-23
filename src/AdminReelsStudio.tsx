@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {Check,Download,ExternalLink,Film,Loader2,RefreshCw,Save,Search} from "lucide-react";
 import {loadSongs,type AdminSong} from "./lib/admin-api";
-import {loadReelCatalog,loadReelJobs,produceReel,
+import {loadReelCatalog,loadReelJobs,produceReel,markStalledReel,
   type ReelBrand,type ReelChannel,type ReelItem,type ReelJob,type ReelRequest} from "./lib/reels-api";
 import "./admin-mix-studio.css";
 import "./admin-reels-studio.css";
@@ -131,6 +131,18 @@ export default function AdminReelsStudio(){
       else setNote("Jobbstatus oppdatert.");
     }catch(e){setError(e instanceof Error?e.message:"Kunne ikke oppdatere Reels-jobber.");}
   }
+  async function recoverStalledReel(job:ReelJob){
+    setError("");
+    try{
+      const stopped=await markStalledReel(job.id);
+      setActive(stopped);
+      if(window.localStorage.getItem(REQUEST_KEY)===job.request_key)
+        window.localStorage.removeItem(REQUEST_KEY);
+      await refresh();
+      setNote("Den stoppede Reelen er merket som feilet. Du kan nå velge et nytt forsøk. Ingen video er publisert.");
+    }catch(err){setError(err instanceof Error?err.message:"Kunne ikke avklare den stoppede Reelen.");}
+  }
+
   async function copyCaption(value:string){
     try{await navigator.clipboard.writeText(value);setCopied(true);}
     catch{setError("Kunne ikke kopiere bildeteksten. Marker og kopier teksten manuelt.");}
@@ -254,6 +266,13 @@ export default function AdminReelsStudio(){
             <ExternalLink size={17}/> Åpne videofilen</a>
         </div>
       </>}
+      {active.state==="rendering" && Date.now()-Date.parse(active.updated_at)>10*60_000 &&
+        !active.videoUrl&&<div className="admin-warning">
+          <p>Denne renderingen har ikke svart på over ti minutter. Du kan markere den som stoppet før du prøver igjen. Eksisterende sanger og bildekatalog endres ikke.</p>
+          <button type="button" className="admin-secondary" onClick={()=>void recoverStalledReel(active)}>
+            Merk gammel render som stoppet
+          </button>
+        </div>}
       {active.error&&<div className="admin-error">{active.error}</div>}
       {active.caption&&<>
         <label>Ferdig bildetekst for Instagram/Facebook
