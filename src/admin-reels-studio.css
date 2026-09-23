@@ -1,0 +1,24 @@
+/* Reels Studio: independent portrait export workflow, responsive grid and readable controls. */
+.admin-reels-studio{display:grid;gap:24px}
+.admin-reels-studio .admin-eyebrow{display:flex;align-items:center;gap:8px}
+.admin-reels-studio .mix-section{display:grid;gap:16px}
+.admin-reels-studio .mix-grid>label{min-width:220px}
+.admin-reels-studio select,.admin-reels-studio input,.admin-reels-studio textarea{max-width:100%}
+.reels-visual-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;max-height:580px;overflow-y:auto;padding:3px}
+.reels-visual-item{position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;padding:8px;background:#12283a;border:2px solid #456075;border-radius:12px;color:#e7f2f8;min-width:0}
+.reels-visual-item:hover,.reels-visual-item.active{border-color:#ffcf79;background:#183b4f}
+.reels-visual-item img{width:100%;aspect-ratio:4/5;object-fit:contain;border-radius:7px;background:#0a1522}
+.reels-visual-item strong{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.reels-visual-item small{color:#c5dce9;font-size:12px;overflow-wrap:anywhere}
+.reels-visual-check{position:absolute;top:14px;right:14px;background:#124c56;color:#fff;padding:5px 7px;border-radius:6px;display:flex;align-items:center;gap:3px;font-size:11px}
+.reels-channels{display:flex;gap:22px;flex-wrap:wrap}
+.reels-channels label{display:flex;align-items:center;gap:10px;cursor:pointer}
+.reels-channels input{width:18px;height:18px}
+.reels-output video{display:block;aspect-ratio:9/16;height:min(560px,75vh);max-width:100%;background:#081018;border-radius:12px}
+.reels-output textarea{width:100%;resize:vertical;background:#10283b;color:#e7f3fb;border:1px solid #7a98a9;border-radius:8px;padding:12px;line-height:1.55}
+.reels-output label{display:grid;gap:8px}
+.reels-history{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.reels-history-item{display:grid;gap:6px;text-align:left;background:#10283a;color:#e7f3fb;border:1px solid #476b82;padding:12px;border-radius:10px}
+.reels-history-item.active,.reels-history-item:hover{border-color:#f6bb5a}
+.reels-history-item span{font-size:12px;color:#bfd0df}
+@media(max-width:640px){.reels-visual-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.reels-output video{width:100%;height:auto;max-height:70vh}}
