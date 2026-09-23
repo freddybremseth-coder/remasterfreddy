@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowLeft, BarChart3, BrainCircuit, ExternalLink, Image, ListChecks, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Waves } from "lucide-react";
+import { ArrowLeft, BarChart3, BrainCircuit, Clapperboard, ExternalLink, Image, ListChecks, Loader2, LockKeyhole, LogOut, Music2, ShieldCheck, Waves } from "lucide-react";
 import AdminAnalytics from "./AdminAnalytics";
 import AdminAssets from "./AdminAssets";
 import AdminJobs from "./AdminJobs";
 import AdminMixStudioProduction from "./AdminMixStudioProduction";
 import AdminRecommendations from "./AdminRecommendations";
+import AdminReelsStudio from "./AdminReelsStudio";
 import AdminStudio from "./AdminStudio";
 import { ImageKind } from "./lib/admin-api";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
@@ -13,11 +14,12 @@ import "./admin.css";
 import "./admin-tabs.css";
 
 type AdminState = "loading" | "signed-out" | "authorized" | "forbidden";
-type AdminTab = "publishing" | "mixes" | "assets" | "jobs" | "analytics" | "recommendations";
+type AdminTab = "publishing" | "mixes" | "reels" | "assets" | "jobs" | "analytics" | "recommendations";
 
 const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof Music2 }> = [
   { id: "publishing", label: "Publisering", description: "MP3 og YouTube-pipeline", icon: Music2 },
-  { id: "mixes", label: "Mix Studio", description: "Musikk + bolig, kunst og bøker", icon: Waves },
+  { id: "mixes", label: "Mix Studio", description: "3–30 min musikk + merkevarer", icon: Waves },
+  { id: "reels", label: "Reels Studio", description: "15–60 sek · Art, Books og Homes", icon: Clapperboard },
   { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
   { id: "jobs", label: "Produksjonsjobber", description: "Status og eventhistorikk", icon: ListChecks },
   { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
@@ -166,6 +168,7 @@ export default function AdminApp() {
             />
           )}
           {activeTab === "mixes" && <AdminMixStudioProduction />}
+          {activeTab === "reels" && <AdminReelsStudio />}
           {activeTab === "assets" && (
             <AdminAssets
               intent={assetIntent}
