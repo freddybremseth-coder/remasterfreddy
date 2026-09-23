@@ -15,7 +15,7 @@ const songs=vi.mocked(loadSongs),jobs=vi.mocked(loadReelJobs),create=vi.mocked(c
 describe("Reels Studio",()=>{
   beforeEach(()=>{
     songs.mockReset();jobs.mockReset();create.mockReset();status.mockReset();publish.mockReset();
-    status.mockResolvedValue({channels:{youtube:{connected:false,brandId:null,channelId:null,account:null,reason:"Ingen kanal"},instagram:{connected:false,brandId:null,channelId:null,account:null,reason:""}},deliveries:[]});
+    status.mockResolvedValue({channels:{youtube:{connected:false,brandId:null,channelId:null,account:null,reason:"Ingen kanal"},instagram:{connected:false,brandId:null,channelId:null,account:null,reason:""},facebook:{connected:false,brandId:null,channelId:null,account:null,reason:""}},deliveries:[]});
     songs.mockResolvedValue([{id:"11111111-1111-4111-8111-111111111111",title:"Sunset Song",artist:"Re-Master Freddy",audioUrl:"https://example.com/song.mp3"} as any]);
     jobs.mockResolvedValue([]);
   });
@@ -85,13 +85,14 @@ describe("Reels Studio",()=>{
     status.mockResolvedValue({channels:{
       instagram:{connected:false,brandId:null,channelId:null,account:null,reason:""},
       youtube:{connected:true,brandId:"donaanna",channelId:"channel",account:"Doña Anna",reason:""},
+      facebook:{connected:false,brandId:null,channelId:null,account:null,reason:""},
     },deliveries:[]});
     publish.mockResolvedValue({success:true,channel:"youtube",externalId:"youtube-video",externalUrl:"https://www.youtube.com/watch?v=youtube-video",account:"Doña Anna"});
     const confirm=vi.spyOn(window,"confirm").mockReturnValue(true);
     try{
       render(<AdminReelsStudio/>);
       await screen.findByText("Sunset Song");
-      fireEvent.click(screen.getByRole("button",{name:"Velg for YouTube"}));
+      fireEvent.click(screen.getByRole("button",{name:"Velg for publisering"}));
       const button=await screen.findByRole("button",{name:"Publiser på YouTube"});
       await waitFor(()=>expect(button).toBeEnabled());
       fireEvent.click(button);
@@ -99,6 +100,52 @@ describe("Reels Studio",()=>{
       expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Doña Anna"));
       expect(await screen.findByText(/Publisert på YouTube: Doña Anna/)).toBeInTheDocument();
     }finally{confirm.mockRestore();}
+  });
+
+  it("offers Instagram and Facebook direct buttons only for connected accounts and shows future channels without fake publish actions",async()=>{
+    const reel={id:"11111111-1111-4111-8111-111111111111",brand:"pinosoecolife",title:"Pinoso Reel",
+      duration_seconds:30,song_id:null,song_title:"Song",channels:["instagram","facebook"],
+      selection:{publicUrl:"https://cdn.example/pinoso.mp4"},state:"ready",video_path:"11111111-1111-4111-8111-111111111111.mp4",
+      caption:"Pinoso EcoLife",publications:{},error:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()} as any;
+    jobs.mockResolvedValue([reel]);
+    status.mockResolvedValue({channels:{
+      youtube:{connected:false,brandId:null,channelId:null,account:null,reason:"Ingen egen YouTube-kanal"},
+      instagram:{connected:true,brandId:"pinosoecolife",channelId:"ig",account:"pinosoecolife",reason:""},
+      facebook:{connected:true,brandId:"pinosoecolife",channelId:"fb",account:"Pinosoecolife",reason:""},
+    },deliveries:[],otherChannels:[{platform:"linkedin",account:"Freddy",connected:true,publishSupported:false,reason:"Video ikke implementert"}]});
+    publish.mockResolvedValue({success:true,channel:"instagram",externalId:"ig-post",externalUrl:"",account:"pinosoecolife"});
+    const confirm=vi.spyOn(window,"confirm").mockReturnValue(true);
+    try{
+      render(<AdminReelsStudio/>);
+      await screen.findByText("Sunset Song");
+      fireEvent.click(screen.getByRole("button",{name:"Velg for publisering"}));
+      const ig=await screen.findByRole("button",{name:"Publiser på Instagram"});
+      const fb=screen.getByRole("button",{name:"Publiser på Facebook"});
+      expect(ig).toBeEnabled();expect(fb).toBeEnabled();
+      expect(screen.getByText(/linkedin · Freddy/)).toBeInTheDocument();
+      expect(screen.queryByRole("button",{name:/Publiser på LinkedIn/i})).not.toBeInTheDocument();
+      fireEvent.click(ig);
+      await waitFor(()=>expect(publish).toHaveBeenCalledWith(reel.id,"instagram"));
+      expect(confirm).toHaveBeenCalledWith(expect.stringContaining("pinosoecolife"));
+    }finally{confirm.mockRestore();}
+  });
+  it("disables Facebook and Instagram after any earlier attempt",async()=>{
+    const reel={id:"11111111-1111-4111-8111-111111111111",brand:"zeneco",title:"Zen Eco",
+      duration_seconds:30,song_id:null,song_title:"Song",channels:["instagram","facebook"],
+      selection:{publicUrl:"https://cdn.example/zen.mp4"},state:"ready",
+      video_path:"11111111-1111-4111-8111-111111111111.mp4",caption:"Zen",publications:{},error:null,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString()} as any;
+    jobs.mockResolvedValue([reel]);
+    status.mockResolvedValue({channels:{
+      youtube:{connected:false,brandId:null,channelId:null,account:null,reason:""},
+      instagram:{connected:true,brandId:"zeneco",channelId:"ig",account:"zenecohomesspain",reason:""},
+      facebook:{connected:true,brandId:"zeneco",channelId:"fb",account:"Zen Eco Homes",reason:""},
+    },deliveries:[{channel:"facebook",state:"needs_review",external_id:null,external_url:null,error:"timeout",updated_at:new Date().toISOString()}]});
+    render(<AdminReelsStudio/>);
+    await screen.findByText("Sunset Song");
+    fireEvent.click(screen.getByRole("button",{name:"Velg for publisering"}));
+    expect(await screen.findByRole("button",{name:"Publiser på Instagram"})).toBeEnabled();
+    expect(screen.getByRole("button",{name:"Publiser på Facebook"})).toBeDisabled();
   });
 
 });
