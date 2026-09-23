@@ -107,7 +107,7 @@ async function jsonOrError(response: Response) {
       throw new Error("Mix Studio-databasen er ikke installert i RealtyFlow ennå.");
     }
     if (data.code === "MIX_PRODUCTION_MAX_30_MIN") {
-      throw new Error("Produksjonstesten støtter foreløpig 30 minutter. Lengre mixer kan lagres som utkast.");
+      throw new Error("Mix Studio produserer nå videoer fra 3 til 30 minutter.");
     }
     throw new Error(data.error || "Mix Studio API-kallet feilet.");
   }
