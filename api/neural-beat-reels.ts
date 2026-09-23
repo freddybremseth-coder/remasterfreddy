@@ -1,5 +1,5 @@
 import {requireAdmin} from "./_admin.js";
-const ALLOWED=new Set(["GET","POST"]);
+const ALLOWED=new Set(["GET","POST","PATCH"]);
 export default async function handler(request:any,response:any){
   const admin=await requireAdmin(request,response);
   if(!admin)return;
