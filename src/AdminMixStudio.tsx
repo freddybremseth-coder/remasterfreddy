@@ -102,7 +102,7 @@ const styleProfiles: Record<
 const DEFAULT_DRAFT: MixDraft = {
   title: "Mediterranean Sunset Deep House Mix #001 — Costa Blanca Luxury Vibes",
   style: "mediterranean-sunset",
-  targetMinutes: 30,
+  targetMinutes: 5,
   crossfadeSeconds: 8,
   playlist: styleProfiles["mediterranean-sunset"].playlist,
   zenEcoHomesEnabled: true,
@@ -128,7 +128,7 @@ function recommendedTrackCount(targetMinutes: number) {
   // Until exact audio duration is exposed by the catalog API, use a conservative
   // four-minute planning average. The long-running renderer will calculate the
   // exact duration before production starts.
-  return Math.max(4, Math.min(60, Math.ceil(targetMinutes / 4)));
+  return Math.max(2, Math.min(60, Math.ceil(targetMinutes / 4)));
 }
 
 export default function AdminMixStudio() {
@@ -233,7 +233,7 @@ export default function AdminMixStudio() {
           <h2>Lag musikkmixer som promoterer dine merkevarer</h2>
           <p>
             Velg dine egne sanger, deretter Zen Eco Homes-boliger, Freddy Bremseth Art-kunst eller bokomslag.
-            Tilfeldig bildevalg skjer bare innenfor bildetyper og titler du tillater. Produksjon er foreløpig begrenset til 30 minutter; 60–180 minutter kan planlegges.
+            Tilfeldig bildevalg skjer bare innenfor bildetyper og titler du tillater. Velg en kort miks på 3–30 minutter. Lengre miks kan fortsatt lagres som plan.
           </p>
         </div>
         <div className="mix-hero-badges">
@@ -261,6 +261,11 @@ export default function AdminMixStudio() {
         <label>
           <span>Mållengde</span>
           <select value={draft.targetMinutes} onChange={(event) => patchDraft({ targetMinutes: Number(event.target.value) })}>
+            <option value={3}>3 minutter</option>
+            <option value={5}>5 minutter</option>
+            <option value={10}>10 minutter</option>
+            <option value={15}>15 minutter</option>
+            <option value={20}>20 minutter</option>
             <option value={30}>30 minutter</option>
             <option value={60}>60 minutter</option>
             <option value={90}>90 minutter</option>
@@ -586,7 +591,7 @@ export default function AdminMixStudio() {
       <div className="mix-next-step">
         <Sparkles size={18} />
         <p>
-          Lagre utkastet, og start den kontrollerte 30-minutters produksjonen under. Bildene hentes kun fra valgt merkevare.
+          Lagre utkastet, og start en miks på 3–30 minutter under. Bildene hentes kun fra valgt merkevare.
           Lengre mikser forblir utkast inntil segmentert langtidsrendering er aktivert.
         </p>
       </div>
