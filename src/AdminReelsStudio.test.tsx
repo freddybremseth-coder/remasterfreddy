@@ -57,4 +57,22 @@ describe("Reels Studio",()=>{
     await waitFor(()=>expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({brand:"books",areaQuery:"",durationSeconds:20,channels:["instagram"]});
   });
+
+  it("selects each additional brand without leaking a previous brand into the API request",async()=>{
+    create.mockResolvedValue({publicUrl:"https://cdn.example/reel.mp4",reel:{
+      id:"r",brand:"donaanna",title:"Doña Anna Reel",duration_seconds:30,song_id:"11111111-1111-4111-8111-111111111111",
+      song_title:"Sunset Song",channels:["instagram","facebook"],selection:{publicUrl:"https://cdn.example/reel.mp4"},
+      state:"ready",video_path:"r.mp4",caption:"Doña Anna",publications:{},error:null,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString(),
+    }});
+    render(<AdminReelsStudio/>);
+    await screen.findByText("Sunset Song");
+    const selector=screen.getByRole("combobox",{name:"Reels-merkevare"});
+    for(const brand of ["freddybremseth","pinosoecolife","donaanna"]){
+      fireEvent.change(selector,{target:{value:brand}});
+      fireEvent.click(screen.getByRole("button",{name:"Lag Reel"}));
+      await waitFor(()=>expect(create).toHaveBeenCalledTimes(["freddybremseth","pinosoecolife","donaanna"].indexOf(brand)+1));
+      expect(create.mock.lastCall?.[0].brand).toBe(brand);
+    }
+  });
 });
