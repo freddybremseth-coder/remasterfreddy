@@ -587,8 +587,8 @@ export default function AdminMixStudio() {
       <div className="mix-next-step">
         <Sparkles size={18} />
         <p>
-          Lagre utkastet, og start den kontrollerte 30-minutters produksjonen under. Bildene hentes kun fra valgt merkevare.
-          Lengre mikser forblir utkast inntil segmentert langtidsrendering er aktivert.
+          Lagre utkastet, og start produksjonen under. Du kan velge 3, 5, 10, 15, 20 eller 30 minutter.
+          Bildene hentes kun fra valgt merkevare, og korte mixer bruker et mindre visuelt utvalg for raskere og mer stabil rendering.
         </p>
       </div>
     </section>
