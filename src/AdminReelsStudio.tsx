@@ -6,6 +6,8 @@ import {createReel,loadReelJobs,type ReelBrand,type ReelChannel,type ReelDuratio
 import type {VisualRegion,VisualType} from "./lib/mix-api";
 import "./admin-reels-studio.css";
 
+const REEL_TITLES:Record<ReelBrand,string>={art:"Art Lounge Reel",books:"Books & Music Reel",zeneco:"Costa Blanca Homes Reel",freddybremseth:"Freddy Bremseth Reel",pinosoecolife:"Pinoso EcoLife Reel",donaanna:"Doña Anna Reel"};
+const PROPERTY_REEL_BRANDS=new Set<ReelBrand>(["zeneco","pinosoecolife"]);
 const AREA_PRESETS=["","Benidorm","Finestrat","Villajoyosa","Altea","Albir","La Nucia","Polop","Calpe","Moraira","Denia","Javea","Pinoso","Aspe","Novelda","Torrevieja","Orihuela Costa","Murcia"];
 
 const basePromotion:PromotionDraft={
@@ -20,6 +22,7 @@ export default function AdminReelsStudio(){
   const [songs,setSongs]=useState<AdminSong[]>([]);
   const [jobs,setJobs]=useState<ReelJob[]>([]);
   const [promotion,setPromotion]=useState<PromotionDraft>(basePromotion);
+  const [brand,setBrand]=useState<ReelBrand>("art");
   const [title,setTitle]=useState("Art Lounge Reel");
   const [duration,setDuration]=useState<ReelDuration>(30);
   const [songId,setSongId]=useState("");
@@ -60,25 +63,25 @@ export default function AdminReelsStudio(){
   }
   function patchPromotion(patch:Partial<PromotionDraft>){
     setPromotion(current=>({...current,...patch}));
-    if(patch.promotionBrand){
+    if(patch.promotionBrand && patch.promotionBrand!=="none"){
       const brand=patch.promotionBrand;
+      setBrand(brand);
       if(brand==="art")setTitle("Art Lounge Reel");
       if(brand==="books")setTitle("Books & Music Reel");
       if(brand==="zeneco")setTitle("Costa Blanca Homes Reel");
     }
   }
   async function render(){
-    if(promotion.promotionBrand==="none"){setError("Velg kunst, bøker eller Zen Eco Homes.");return;}
     if(!songId){setError("Velg en Re-Master Freddy-sang.");return;}
     if(!channels.length){setError("Velg Instagram, Facebook eller begge.");return;}
     setRendering(true);setError("");setMessage("");setLatestUrl("");setLatestCaption("");
     try{
       const result=await createReel({
-        title,brand:promotion.promotionBrand as ReelBrand,durationSeconds:duration,songId,channels,
+        title,brand,durationSeconds:duration,songId,channels,
         artStyles:promotion.artStyles,artCollections:promotion.artCollections,artIds:promotion.artIds,
         bookSeries:promotion.bookSeries,bookLanguages:promotion.bookLanguages,bookIds:promotion.bookIds,
-        region,areaQuery:promotion.promotionBrand==="zeneco"?areaQuery:"",
-        visualTypes:promotion.promotionBrand==="zeneco"?visualTypes:["mixed"],
+        region,areaQuery:PROPERTY_REEL_BRANDS.has(brand)?areaQuery:"",
+        visualTypes:PROPERTY_REEL_BRANDS.has(brand)?visualTypes:["mixed"],
       });
       setLatestUrl(result.publicUrl);setLatestCaption(result.reel.caption||"");
       setMessage(`Reel ferdig: ${duration} sekunder, 1080 × 1920. Klar for ${channels.map(x=>x==="instagram"?"Instagram":"Facebook").join(" + ")}.`);
@@ -97,7 +100,7 @@ export default function AdminReelsStudio(){
       <div>
         <p className="admin-eyebrow">Reels Studio</p>
         <h2>Lag korte videoer for Instagram og Facebook</h2>
-        <p>Velg Re-Master Freddy-musikk og kombiner den med publisert kunst, bøker eller Zen Eco Homes-boliger i et bestemt område. Systemet lager én vertikal 1080 × 1920 MP4 og en ferdig caption.</p>
+        <p>Velg Re-Master Freddy-musikk og lag en 1080 × 1920 MP4 for Art, Books, Zen Eco Homes, FreddyBremseth.com, Pinoso EcoLife eller Doña Anna. Hver Reel bruker den valgte merkevarens egne bilder, profil og lenke.</p>
       </div>
       <div className="reels-badges"><span><Clapperboard size={16}/> 9:16</span><span>15–60 sek</span><span>Instagram + Facebook</span></div>
     </div>
@@ -123,11 +126,24 @@ export default function AdminReelsStudio(){
       </label>)}
     </div><small>Samme vertikale master fungerer på begge. Du får MP4 + caption etter rendering.</small></fieldset>
 
-    <MixPromotionPicker draft={promotion} onChange={patchPromotion} allowNone={false}/>
+    <div className="mix-grid"><label><span>Reels-merkevare</span><select aria-label="Reels-merkevare" value={brand} onChange={e=>{
+      const next=e.target.value as ReelBrand;
+      setBrand(next);setTitle(REEL_TITLES[next]);
+      if(next==="pinosoecolife")setRegion("inland");
+      if(next==="zeneco")setRegion("north");
+      if(next==="art"||next==="books"||next==="zeneco")setPromotion(current=>({...current,promotionBrand:next}));
+    }}>
+      <option value="art">Freddy Bremseth Art</option><option value="books">Freddy Bremseth Books</option>
+      <option value="zeneco">Zen Eco Homes</option><option value="freddybremseth">FreddyBremseth.com</option>
+      <option value="pinosoecolife">Pinoso EcoLife</option><option value="donaanna">Doña Anna</option>
+    </select></label></div>
+    {(brand==="art"||brand==="books"||brand==="zeneco")&&<MixPromotionPicker draft={promotion} onChange={patchPromotion} allowNone={false}/>}
+    {brand==="freddybremseth"&&<p>Personlig merkevare: tilfeldig utvalg fra publisert kunst og bokomslag, med freddybremseth.com som avsender.</p>}
+    {brand==="donaanna"&&<p>Doña Anna: kuraterte, offentlige bilder av oliven, gården, olivenolje og produkter fra eget bildearkiv.</p>}
 
-    {promotion.promotionBrand==="zeneco"&&<div className="mix-section">
+    {PROPERTY_REEL_BRANDS.has(brand)&&<div className="mix-section">
       <div className="mix-section-heading"><div><p className="admin-eyebrow">Boligområde</p><h3>Velg hvor boligene skal komme fra</h3>
-        <p>Du kan velge en bred region og eventuelt snevre inn til for eksempel Benidorm, Finestrat eller Villajoyosa.</p></div></div>
+        <p>Velg riktig region og snevre inn til et bestemt område. Pinoso EcoLife bruker kun sitt eget utvalg av innlandsboliger.</p></div></div>
       <div className="mix-grid">
         <label><span>Region</span><select aria-label="Region" value={region} onChange={e=>setRegion(e.target.value as VisualRegion)}>
           <option value="any">Hele porteføljen</option><option value="north">Costa Blanca North</option>
@@ -144,7 +160,7 @@ export default function AdminReelsStudio(){
     </div>}
 
     <div className="reels-render-actions">
-      <button className="admin-primary" type="button" onClick={render} disabled={rendering||loading||!songId||promotion.promotionBrand==="none"}>
+      <button className="admin-primary" type="button" onClick={render} disabled={rendering||loading||!songId}>
         {rendering?<Loader2 className="admin-spinner" size={17}/>:<Sparkles size={17}/>}
         {rendering?"Lager Reel …":"Lag Reel"}
       </button>
