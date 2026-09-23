@@ -135,8 +135,8 @@ export default function AdminMixStudioProduction() {
         applyJob(identicalStalled);
         throw new Error("Denne miksen stoppet allerede under rendering. Ingen ny kopi blir laget før feilen er rettet.");
       }
-      if (draft.targetMinutes !== 30) {
-        throw new Error("Velg 30 minutter og lagre utkastet først. 60–180 minutter er foreløpig planleggingsmodus.");
+      if (draft.targetMinutes < 3 || draft.targetMinutes > 30) {
+        throw new Error("Velg 3–30 minutter og lagre utkastet først. 60–180 minutter er foreløpig planleggingsmodus.");
       }
       const saved = await createMixDraft(draft);
       applyJob(saved);
@@ -199,7 +199,7 @@ export default function AdminMixStudioProduction() {
         <div className="mix-section-heading">
           <div>
             <p className="admin-eyebrow">Produksjon</p>
-            <h3>Produser en 30-minutters Re-Master Freddy-miks</h3>
+            <h3>Produser en Re-Master Freddy-miks på 3–30 minutter</h3>
             <p>
               Velg sanger og promotering over. Produksjonen henter bare godkjente bolig-, kunst- eller bokbilder,
               bygger crossfade-lyd, legger inn riktig CTA, og publiserer miksen på Re-Master Freddy-kanalen.
@@ -249,7 +249,7 @@ export default function AdminMixStudioProduction() {
             <strong>{mixStepLabel(job.pipeline_step)}</strong>
             {running && (
               <p className="mix-live-note">
-                En 30-minutters video må først rendres og lastes opp. Prosentsatsen oppdateres
+                Videoen må først rendres og lastes opp. Prosentsatsen oppdateres
                 når serveren rapporterer fremdrift; du kan lukke siden uten å avbryte jobben.
               </p>
             )}
@@ -294,7 +294,7 @@ export default function AdminMixStudioProduction() {
 
         <div className="mix-production-footer">
           <div>
-            <strong>Produksjonsgrense nå: 30 minutter</strong>
+            <strong>Produksjonslengde nå: 3–30 minutter</strong>
             <span>Lengre mixer kan lagres som utkast og aktiveres når segmentert long-form-render er ferdig.</span>
           </div>
           <div className="mix-actions">
@@ -307,7 +307,7 @@ export default function AdminMixStudioProduction() {
             </button>
             <button className="admin-primary" onClick={startProduction} disabled={busy || loadingHistory || running}>
               {busy ? <Loader2 className="admin-spinner" size={17} /> : <Rocket size={17} />}
-              {running ? "Miks er allerede i produksjon" : "Produser og publiser 30-min miks"}
+              {running ? "Miks er allerede i produksjon" : "Produser og publiser miks"}
             </button>
           </div>
         </div>
