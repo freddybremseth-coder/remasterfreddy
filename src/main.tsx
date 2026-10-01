@@ -4,6 +4,7 @@ import App from "./App";
 import AdminApp from "./AdminApp";
 import AdminEntry from "./AdminEntry";
 import MusicArtGallery from "./MusicArtGallery";
+import DemoTour15s from "./DemoTour15s";
 import "./styles.css";
 
 function trackSearchDiscovery() {
@@ -50,6 +51,7 @@ function PublicSite() {
 
 const songGalleryMatch = window.location.pathname.match(/^\/gallery\/([0-9a-f-]{36})\/?$/i);
 const page = window.location.pathname === "/admin" ? <AdminApp /> :
+  window.location.pathname === "/demo" || window.location.pathname === "/demo/" ? <DemoTour15s /> :
   songGalleryMatch ? <MusicArtGallery songId={songGalleryMatch[1]} /> : <PublicSite />;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
