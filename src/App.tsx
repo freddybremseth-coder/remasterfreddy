@@ -402,6 +402,22 @@ function App() {
           <img src="/assets/mic-lab.jpg" alt="Industrial microphone studio setup" loading="lazy" />
         </div>
       </section>
+
+      <footer className="brand-network-footer">
+        <div>
+          <strong>Re-Master Freddy</strong>
+          <span>Created by <a href="https://www.freddybremseth.com/">Freddy Bremseth</a></span>
+        </div>
+        <nav aria-label="Freddy Bremseth project network">
+          <span>Freddy Bremseth network</span>
+          <a href="https://www.zenecohomes.com/">Zen Eco Homes</a>
+          <a href="https://www.pinosoecolife.com/">Pinoso Eco Life</a>
+          <a href="https://www.donaanna.com/">Doña Anna</a>
+          <a href="https://www.chatgenius.pro/">ChatGenius</a>
+          <a href="https://books.freddybremseth.com/">Books</a>
+          <a href="https://art.freddybremseth.com/">Art</a>
+        </nav>
+      </footer>
     </main>
   );
 }
