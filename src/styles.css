@@ -806,3 +806,22 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+.brand-network-footer{
+ position:relative;z-index:10;width:min(1180px,calc(100% - 32px));margin:0 auto;
+ padding:28px 0 38px;border-top:1px solid rgba(244,251,255,.12);
+ display:grid;grid-template-columns:auto 1fr;gap:20px 36px;align-items:start;
+ color:#8eacba;font-size:.76rem;line-height:1.55
+}
+.brand-network-footer>div{display:grid;gap:4px}
+.brand-network-footer>div strong{color:#f8fdff;font-size:.9rem}
+.brand-network-footer a{color:inherit}
+.brand-network-footer>div a{color:var(--cyan)}
+.brand-network-footer nav{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:7px 16px}
+.brand-network-footer nav span{color:var(--cyan);font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.brand-network-footer nav a{opacity:.68}
+.brand-network-footer nav a:hover,.brand-network-footer nav a:focus-visible{opacity:1;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:720px){
+ .brand-network-footer{width:min(100% - 20px,1180px);grid-template-columns:1fr}
+ .brand-network-footer nav{justify-content:flex-start}
+}
