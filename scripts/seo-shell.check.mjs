@@ -31,6 +31,6 @@ test("Admin SPA routes are explicitly noindex despite static homepage fallback",
     const entry = (config.headers ?? []).find((rule) => rule.source === path);
     assert.ok(entry, `Missing response header for ${path}`);
     const value = (entry.headers ?? []).find((header) => header.key.toLowerCase() === "x-robots-tag")?.value;
-    assert.match(value ?? "", /\\bnoindex\\b/);
+    assert.match(value ?? "", /\bnoindex\b/);
   }
 });
