@@ -24,3 +24,13 @@ test("Original React heading and static HTML use identical title", () => {
 test("Built public HTML also contains the real crawlable H1", { skip: !existsSync(built) }, () => {
   checkShell(readFileSync(built, "utf8"));
 });
+
+test("Admin SPA routes are explicitly noindex despite static homepage fallback", () => {
+  const config = JSON.parse(readFileSync(new URL("vercel.json", root), "utf8"));
+  for (const path of ["/admin", "/admin/(.*)"]) {
+    const entry = (config.headers ?? []).find((rule) => rule.source === path);
+    assert.ok(entry, `Missing response header for ${path}`);
+    const value = (entry.headers ?? []).find((header) => header.key.toLowerCase() === "x-robots-tag")?.value;
+    assert.match(value ?? "", /\\bnoindex\\b/);
+  }
+});
