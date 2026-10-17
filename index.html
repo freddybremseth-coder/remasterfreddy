@@ -57,7 +57,26 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      Static, crawlable homepage summary. React replaces this fallback when
+      the application loads; only one live H1 remains after mounting.
+      Keep this heading identical to the existing React hero heading.
+      This does not change the client-side hero content or admin functionality.
+    -->
+    <div id="root">
+      <main class="app-shell">
+        <section class="hero-section" aria-label="Re-Master Freddy music">
+          <div class="hero-copy">
+            <h1>RE-MASTER FREDDY</h1>
+            <p class="hero-lede">
+              Summer house, night-drive EDM and chill electronic beats — new tracks every day.
+              Press play and let the channel run: Ibiza sunsets, beach clubs and late-night city drives in one stream.
+            </p>
+            <p><a href="https://www.youtube.com/channel/UCPAj3RNC2S_Nv7QV4-oYoIw">Listen on YouTube</a></p>
+          </div>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
