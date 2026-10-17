@@ -14,7 +14,8 @@ function checkShell(html) {
   assert.equal(headings[0][1].trim(), "RE-MASTER FREDDY");
   assert.match(body, /<div id="root">[\s\S]*<h1>RE-MASTER FREDDY<\/h1>/);
   assert.match(body, /Summer house, night-drive EDM and chill electronic beats/);
-  assert.match(body, /<script[^>]+type="module"/);
+  // Vite moves module scripts into <head> in the built HTML.
+  assert.match(html, /<script[^>]+type="module"/);
 }
 test("Original React heading and static HTML use identical title", () => {
   assert.match(app, /<h1>RE-MASTER FREDDY<\/h1>/);
