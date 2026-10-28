@@ -98,7 +98,7 @@ interface SignedUpload {
   uploadUrl: string;
   publicUrl: string;
   token: string;
-  method: "signed";
+  method: "supabase-signed-upload";
 }
 
 async function adminFetch(path: string, init: RequestInit = {}) {
@@ -122,7 +122,7 @@ async function createSignedUpload(fileName: string): Promise<SignedUpload> {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Kunne ikke opprette sikker opplastingsadresse.");
-  if (data.method !== "signed" || !data.uploadUrl || !data.publicUrl || !data.token) {
+  if (data.method !== "supabase-signed-upload" || !data.uploadUrl || !data.publicUrl || !data.token) {
     throw new Error("Opplastingen ble stoppet fordi sikker signert adresse eller token mangler.");
   }
   return data as SignedUpload;
@@ -132,7 +132,6 @@ async function putSignedFile(signed: SignedUpload, file: File, contentType: stri
   const uploadResponse = await fetch(signed.uploadUrl, {
     method: "PUT",
     headers: {
-      Authorization: `Bearer ${signed.token}`,
       "Content-Type": contentType,
     },
     body: file,
