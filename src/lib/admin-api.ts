@@ -132,7 +132,6 @@ async function putSignedFile(signed: SignedUpload, file: File, contentType: stri
   const uploadResponse = await fetch(signed.uploadUrl, {
     method: "PUT",
     headers: {
-      Authorization: `Bearer ${signed.token}`,
       "Content-Type": contentType,
     },
     body: file,
