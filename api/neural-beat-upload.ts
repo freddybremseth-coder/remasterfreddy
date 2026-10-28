@@ -43,8 +43,8 @@ export default async function handler(request: any, response: any) {
     return;
   }
 
-  if (data.method !== "signed" || !data.uploadUrl || !data.token || !data.publicUrl) {
-    response.status(502).json({ error: "The upload service did not return a secure signed URL." });
+  if (data.method !== "supabase-signed-upload" || !data.uploadUrl || !data.token || !data.publicUrl) {
+    response.status(502).json({ error: "RealtyFlow returned an incomplete Supabase signed-upload ticket." });
     return;
   }
 
@@ -53,7 +53,7 @@ export default async function handler(request: any, response: any) {
     uploadUrl: data.uploadUrl,
     token: data.token,
     publicUrl: data.publicUrl,
-    method: "signed",
+    method: "supabase-signed-upload",
     expiresIn: Number(data.expiresIn || 600),
   });
 }
