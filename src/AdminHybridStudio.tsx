@@ -32,8 +32,13 @@ export default function AdminHybridStudio() {
       const res = await fetch(`/api/hybrid-song-preview?songId=${encodeURIComponent(songId)}`, {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Forhåndsvisning utilgjengelig");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 503 || res.status === 502) {
+          throw new Error("Videoplanlegging er ennå ikke aktivert i RealtyFlow. Ingen sang eller medier er endret.");
+        }
+        throw new Error(data.error || "Forhåndsvisning utilgjengelig");
+      }
       setPlan(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ukjent feil");
@@ -50,7 +55,7 @@ export default function AdminHybridStudio() {
       {loading ? "Lager videoplan…" : "Vis videoplan (0 kreditter)"}
     </button>
     {error && <p role="alert" className="admin-error">{error}</p>}
-    {plan?.state === "NEEDS_APPROVED_MEDIA" && <p role="status">Ingen godkjente medier for denne sjangeren. Legg først klipp og bilder inn i RealtyFlows mediebibliotek.</p>}
+    {plan?.state === "NEEDS_APPROVED_MEDIA" && <p role="status">Ingen godkjente medier for denne sjangeren. Legg først klipp og bilder inn i RealtyFlows mediebibliotek. Ingen kostnader påløper.</p>}
     {plan?.state === "NEEDS_DURATION" && <p role="status">Sangen mangler registrert spilletid. Kontroller MP3-metadata.</p>}
     {plan?.state === "PREVIEW_ONLY" && plan.plan && <>
       <h3>Videoplan for {plan.song?.title}</h3>
