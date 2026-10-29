@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { loadSongs, type AdminSong } from "./lib/admin-api";
 import { getAdminSession } from "./lib/supabase";
 import AdminHybridMediaUpload from "./AdminHybridMediaUpload";
+import AdminHybridLibraryReview from "./AdminHybridLibraryReview";
 
 type Storyboard = {
   state: "PREVIEW_ONLY" | "NEEDS_DURATION" | "NEEDS_APPROVED_MEDIA";
@@ -56,6 +57,7 @@ export default function AdminHybridStudio() {
       {loading ? "Lager videoplan…" : "Vis videoplan (0 kreditter)"}
     </button>
     <AdminHybridMediaUpload />
+    <AdminHybridLibraryReview />
     {error && <p role="alert" className="admin-error">{error}</p>}
     {plan?.state === "NEEDS_APPROVED_MEDIA" && <p role="status">Ingen godkjente medier for denne sjangeren. Legg først klipp og bilder inn i RealtyFlows mediebibliotek. Ingen kostnader påløper.</p>}
     {plan?.state === "NEEDS_DURATION" && <p role="status">Sangen mangler registrert spilletid. Kontroller MP3-metadata.</p>}
