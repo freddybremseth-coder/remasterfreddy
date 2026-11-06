@@ -26,7 +26,17 @@ export default async function handler(request: any, response: any) {
         "X-ReMaster-Migration-Secret": secret,
       },
       cache: "no-store",
+      redirect: "manual",
     });
+    const contentType = upstream.headers.get("content-type") || "";
+    if (upstream.status >= 300 && upstream.status < 400) {
+      response.status(502).json({ error: "RealtyFlow sendte forespørselen til innlogging. Proxy-ruten er ikke klar." });
+      return;
+    }
+    if (!contentType.includes("application/json")) {
+      response.status(502).json({ error: "RealtyFlow returnerte ikke et gyldig JSON-svar." });
+      return;
+    }
     response.setHeader("Content-Type", "application/json");
     response.setHeader("Cache-Control", "no-store");
     response.status(upstream.status).send(await upstream.text());
