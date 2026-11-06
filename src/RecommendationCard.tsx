@@ -61,6 +61,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
   }
 
   const metadataAction = recommendation.action.type === "update_metadata";
+  const titleNeedsApproval = metadataAction && Boolean(recommendation.action.newTitle?.trim()) && !locked;
 
   return (
     <article className={`recommendation-card ${locked ? "recommendation-locked" : ""}`}>
@@ -75,7 +76,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
             {execution?.status === "completed" || execution?.status === "published"
               ? <CheckCircle2 size={13} />
               : <Clock3 size={13} />}
-            {statusLabel(execution?.status)}
+            {titleNeedsApproval ? "Krever godkjenning" : statusLabel(execution?.status)}
           </span>
         </div>
       </div>
@@ -116,6 +117,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
         </small>
       )}
 
+      {titleNeedsApproval && <small className="recommendation-timestamp">Autopilot endrer ikke tittelen. Denne handlingen krever bekreftelse her og oppdaterer deretter YouTube.</small>}
       {result && <div className="recommendation-result"><CheckCircle2 size={16} />{result}</div>}
       {error && <div className="admin-error recommendation-error">{error}</div>}
 
@@ -126,7 +128,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
         disabled={running || locked}
       >
         {running ? <Loader2 className="admin-spinner" size={16} /> : locked ? <CheckCircle2 size={16} /> : <PlayCircle size={16} />}
-        {locked ? statusLabel(execution?.status) : "Utfør etter godkjenning"}
+        {locked ? statusLabel(execution?.status) : titleNeedsApproval ? "Godkjenn og utfør tittelendring" : "Utfør etter godkjenning"}
       </button>
     </article>
   );
