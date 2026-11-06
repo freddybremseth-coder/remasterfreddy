@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, RefreshCw, Target } from "lucide-react";
 import AutopilotControl from "./AutopilotControl";
+import AdminGrowthReview from "./AdminGrowthReview";
 import RecommendationCard from "./RecommendationCard";
 import RecommendationHistory from "./RecommendationHistory";
 import { loadRecommendations } from "./lib/recommendations";
@@ -67,6 +68,7 @@ export default function AdminRecommendations() {
       </div>
 
       <RecommendationHistory items={bundle?.actionHistory || []} />
+      <AdminGrowthReview />
     </section>
   );
 }
