@@ -12,6 +12,13 @@ describe("Re-Master autopilot consent clarity", () => {
     expect(control).toContain("unsavedChanges || mode === \"off\"");
     expect(control).toContain("metadataRequiresApprovalCount");
   });
+  it("only calls a scheduler run successful when there is a recorded result", () => {
+    expect(control).toContain("Ingen registrert planlagt kjøring");
+    expect(control).toContain("lastRun.status === \"success\"");
+    expect(control).toContain("lastRun.status === \"error\"");
+    expect(control).toContain("Foreslått til godkjenning");
+    expect(control).toContain("Europe/Madrid");
+  });
   it("marks title changes as requiring a separate confirmation", () => {
     expect(card).toContain("Krever godkjenning");
     expect(card).toContain("Godkjenn metadataforslag inkl. tittel");
