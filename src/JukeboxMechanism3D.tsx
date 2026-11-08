@@ -82,6 +82,7 @@ function Mechanism({ time }: { time: number }) {
       <mesh rotation={[0,0,0]}><cylinderGeometry args={[.78,.78,.025,72]}/><meshStandardMaterial color="#11151a" metalness={.3} roughness={.36}/></mesh>
       <mesh position={[0,.015,0]}><cylinderGeometry args={[.23,.23,.004,48]}/><meshStandardMaterial color="#267f9e" roughness={.65}/></mesh>
       <mesh position={[0,.025,0]}><cylinderGeometry args={[.045,.045,.005,24]}/><meshStandardMaterial color="#dfd2a8" metalness={.7}/></mesh>
+      <mesh position={[0,.028,-.48]}><boxGeometry args={[.12,.008,.025]}/><meshStandardMaterial color="#d5c38a" metalness={.55}/></mesh>
     </group></group>
     <group position={[1.12,.35,1.25]} rotation={[0,-p.cue*.55,0]}>
       <mesh><cylinderGeometry args={[.13,.13,.13,24]}/><meshStandardMaterial color="#a5b7c1" metalness={.8}/></mesh>
@@ -111,7 +112,6 @@ export default function JukeboxMechanism3D() {
       </Canvas>
     </div>
     <p role="status" aria-live="off">Fase: {phaseAt(time)} · {time.toFixed(2)} / {DURATION.toFixed(2)} sekunder</p>
-    <p role="status">Fase: {phaseAt(time)} · {time.toFixed(2)} sekunder</p>
     <div className="jukebox-3d-controls">
       <button type="button" onClick={()=>{setTime(0);setRunning(true);}}>Test plateveksleren i 3D uten musikk</button>
       <button type="button" onClick={()=>setRunning(v=>!v)}>{running?"Pause mekanikk":"Fortsett mekanikk"}</button>
