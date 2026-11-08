@@ -18,12 +18,12 @@ export function poseAt(seconds: number) {
   const travel = ease(2.5, 4.5);
   return {
     x: 0,
-    y: 1.55 - 1.25 * lower,
+    y: 1.55 - 1.335 * lower,
     z: -1.5 + 0.55 * extract + 1.95 * travel,
     tilt: Math.PI / 2 * (1 - rotate),
     gripped: t >= 1.0 && t < 5.9,
     released: t >= 5.9,
-    cue: ease(6.2, 7.1),
+    cue: ease(6.35, 7.1),
     playing: t >= 7.1,
     carriageZ: -1.5 + 0.55 * extract + 1.95 * travel,
   };
@@ -39,7 +39,7 @@ function Bar({ a, b, radius = .035, color = "#b9c9cf" }: { a: [number,number,num
 function Mechanism({ time }: { time: number }) {
   const p = poseAt(time);
   const pivot: [number,number,number] = [0,2.15,p.carriageZ];
-  const grip: [number,number,number] = [0,p.y+.13,p.z];
+  const grip: [number,number,number] = [0,p.released ? 1.05 : p.y+.13,p.released ? p.z-.65 : p.z];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
     <mesh position={[0,.08,1]}><cylinderGeometry args={[.98,.98,.16,64]}/><meshStandardMaterial color="#77838c" metalness={.9} roughness={.22}/></mesh>
@@ -52,7 +52,7 @@ function Mechanism({ time }: { time: number }) {
     <Bar a={pivot} b={grip} radius={.055}/>
     <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,p.y+.13,p.z]} radius={.027}/>
     <Bar a={[.24,2.13,p.carriageZ]} b={[.15,p.y+.13,p.z]} radius={.027}/>
-    <group position={grip} rotation={[p.tilt,0,0]}>
+    <group position={grip} rotation={[p.released ? 0 : p.tilt,0,0]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
     </group>
@@ -80,7 +80,7 @@ export default function JukeboxMechanism3D() {
   },[running]);
   return <div className="jukebox-3d">
     <div className="jukebox-3d-canvas" aria-label="Interaktiv 3D-prototype av plateveksler">
-      <Canvas camera={{position:front?[0,2.5,7]:[4,3.5,5],fov:38}} shadows>
+      <Canvas key={front?"front":"inspection"} camera={{position:front?[0,2.5,7]:[4,3.5,5],fov:38}} shadows>
         <color attach="background" args={["#101a25"]}/>
         <ambientLight intensity={.8}/><directionalLight position={[3,6,5]} intensity={2.3} castShadow/>
         <pointLight position={[-2,2,2]} intensity={15} color="#f2bd74"/>
