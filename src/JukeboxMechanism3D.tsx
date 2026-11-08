@@ -64,6 +64,13 @@ function Mechanism({ time }: { time: number }) {
   const grip: [number,number,number] = [gripper.x,gripper.y,gripper.z];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
+    {/* Open mechanical chassis, not a substitute for the final photographic cabinet. */}
+    <mesh position={[0,-.19,-.15]} receiveShadow><boxGeometry args={[3.25,.24,4.8]}/><meshStandardMaterial color="#24313a" metalness={.78} roughness={.36}/></mesh>
+    {[-1.55,1.55].map(x=><group key={x}>
+      <mesh position={[x,1.03,-.15]}><boxGeometry args={[.11,2.42,4.65]}/><meshStandardMaterial color="#5b6972" metalness={.85} roughness={.27}/></mesh>
+      <mesh position={[x,2.26,-.15]}><boxGeometry args={[.12,.12,4.65]}/><meshStandardMaterial color="#b8a276" metalness={.78} roughness={.22}/></mesh>
+    </group>)}
+    <mesh position={[0,.64,-2.28]}><boxGeometry args={[3.2,1.8,.13]}/><meshStandardMaterial color="#16242c" metalness={.65} roughness={.36}/></mesh>
     <mesh position={[0,.08,1]}><cylinderGeometry args={[.98,.98,.16,64]}/><meshStandardMaterial color="#77838c" metalness={.9} roughness={.22}/></mesh>
     <mesh position={[0,.175,1]}><cylinderGeometry args={[.81,.81,.04,64]}/><meshStandardMaterial color="#121820" metalness={.4} roughness={.65}/></mesh>
     <mesh position={[0,.24,1]}><cylinderGeometry args={[.045,.045,.15,20]}/><meshStandardMaterial color="#e1d4aa" metalness={.8}/></mesh>
