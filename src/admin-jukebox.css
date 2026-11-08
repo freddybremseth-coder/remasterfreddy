@@ -26,3 +26,12 @@
 .jukebox-portrait .jukebox-label span{font-size:9px}
 @keyframes jukebox-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.jukebox-controls{grid-template-columns:1fr}.jukebox-frame{border-width:5px}.jukebox-deck{border-width:5px}.jukebox-label{border-width:3px}.jukebox-tonearm{height:7px}.jukebox-tonearm span{height:22px;width:18px;top:-9px}}
+
+/* Optional 3D inspection area; isolated from existing 2D storyboard. */
+.jukebox-3d{max-width:790px;margin:18px auto;color:#dce6ef}
+.jukebox-3d-canvas{height:440px;max-height:65vh;border:1px solid #607a86;border-radius:16px;overflow:hidden;background:#101a25}
+.jukebox-3d-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.jukebox-3d-controls button{padding:9px 12px;border:1px solid #7596a4;border-radius:8px;background:#17313d;color:#fff;cursor:pointer}
+.jukebox-3d-controls label{display:flex;flex:1 1 240px;align-items:center;gap:10px;flex-wrap:wrap}
+.jukebox-3d-controls input{flex:1;min-width:130px}
+@media(max-width:600px){.jukebox-3d-canvas{height:330px}}
