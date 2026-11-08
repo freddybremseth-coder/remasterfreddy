@@ -30,6 +30,7 @@ def build_art(title, artist, destination, portrait):
     if not short_title:
         raise ValueError("Song title cannot be empty")
     title_size = 39 if portrait else 36
+    readable_title = svg_text(title.strip()[:90])
     # Text is drawn on the label itself so it rotates with the record.
     disc = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
       <circle cx="500" cy="500" r="492" fill="#0a0b11" stroke="#343743" stroke-width="9"/>
@@ -54,7 +55,8 @@ def build_art(title, artist, destination, portrait):
       <text x="{width/2}" y="{height*.15}" fill="#f7d68b" font-family="DejaVu Sans" font-weight="bold" font-size="{48 if portrait else 47}" text-anchor="middle">RE-MASTER FREDDY</text>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.09}" fill="#080a0f" stroke="#e6c570" stroke-width="18"/>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.01}" fill="#151721" stroke="#68777f" stroke-width="7"/>
-      <text x="{width/2}" y="{height*.925}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{31 if portrait else 28}">JUKEBOX SINGLES · 1960s EDITION</text>
+      <text x="{width/2}" y="{height*.90}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
+      <text x="{width/2}" y="{height*.935}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
     </svg>'''
     disc_svg = destination / "disc.svg"
     bg_svg = destination / "background.svg"
