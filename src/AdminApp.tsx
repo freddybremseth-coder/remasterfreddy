@@ -8,6 +8,7 @@ import AdminRecommendations from "./AdminRecommendations";
 import AdminReelsStudio from "./AdminReelsStudio";
 import AdminStudio from "./AdminStudio";
 import AdminHybridStudio from "./AdminHybridStudio";
+import AdminJukeboxStudio from "./AdminJukeboxStudio";
 import { ImageKind } from "./lib/admin-api";
 import { ADMIN_EMAIL, getAdminSession, isSupabaseConfigured, signInAdmin, signOutAdmin } from "./lib/supabase";
 import { REALTYFLOW_YOUTUBE_RECONNECT_URL } from "./lib/youtube-reconnect";
@@ -15,13 +16,14 @@ import "./admin.css";
 import "./admin-tabs.css";
 
 type AdminState = "loading" | "signed-out" | "authorized" | "forbidden";
-type AdminTab = "publishing" | "hybrid" | "mixes" | "reels" | "assets" | "jobs" | "analytics" | "recommendations";
+type AdminTab = "publishing" | "hybrid" | "mixes" | "reels" | "jukebox" | "assets" | "jobs" | "analytics" | "recommendations";
 
 const tabs: Array<{ id: AdminTab; label: string; description: string; icon: typeof Music2 }> = [
   { id: "publishing", label: "Publisering", description: "MP3 og YouTube-pipeline", icon: Music2 },
   { id: "hybrid", label: "Hybrid Video", description: "Trygg forhåndsvisning uten publisering", icon: Clapperboard },
   { id: "mixes", label: "Mix Studio", description: "3–30 min musikk + merkevarer", icon: Waves },
   { id: "reels", label: "Reels Studio", description: "15–60 sek · Art, Books og Homes", icon: Clapperboard },
+  { id: "jukebox", label: "Jukeboks", description: "60-talls vinyl · trygg forhåndsvisning", icon: Music2 },
   { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
   { id: "jobs", label: "Produksjonsjobber", description: "Status og eventhistorikk", icon: ListChecks },
   { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
@@ -172,6 +174,7 @@ export default function AdminApp() {
           {activeTab === "hybrid" && <AdminHybridStudio />}
           {activeTab === "mixes" && <AdminMixStudioProduction />}
           {activeTab === "reels" && <AdminReelsStudio />}
+          {activeTab === "jukebox" && <AdminJukeboxStudio />}
           {activeTab === "assets" && (
             <AdminAssets
               intent={assetIntent}
