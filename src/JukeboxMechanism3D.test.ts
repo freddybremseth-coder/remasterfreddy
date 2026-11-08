@@ -26,6 +26,14 @@ describe("jukebox 3D choreography",()=>{
     expect(recordRotationAt(7.1)).toBe(0);
     expect(recordRotationAt(8.1)).toBeCloseTo(Math.PI*1.5);
   });
+  it("keeps record in rack before extraction and grips before moving",()=>{
+    expect(poseAt(0).z).toBeCloseTo(-1.5);
+    expect(poseAt(.95).z).toBeCloseTo(-1.5);
+    expect(poseAt(.95).gripped).toBe(false);
+    expect(poseAt(1.05).gripped).toBe(true);
+    expect(poseAt(1.05).z).toBeCloseTo(-1.5);
+    expect(poseAt(2.5).z).toBeGreaterThan(-1.5);
+  });
   it("keeps gripper anchored before release and retracts smoothly",()=>{
     const before=gripperPositionAt(5.9);
     const mid=gripperPositionAt(6.125);
