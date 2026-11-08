@@ -4,6 +4,7 @@ import {
   loadAutopilotSettings,
   runAutopilot,
   saveAutopilotSettings,
+  type AutopilotLastRun,
   type AutopilotMode,
   type AutopilotRunResult,
   type AutopilotSettings,
@@ -19,6 +20,7 @@ const modes: Array<{ id: AutopilotMode; label: string; description: string }> = 
 
 export default function AutopilotControl() {
   const [settings, setSettings] = useState<AutopilotSettings | null>(null);
+  const [lastRun, setLastRun] = useState<AutopilotLastRun | null>(null);
   const [mode, setMode] = useState<AutopilotMode>("off");
   const [maxActions, setMaxActions] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function AutopilotControl() {
 
   useEffect(() => {
     loadAutopilotSettings()
-      .then((result) => { setSettings(result); setMode(result.mode); setMaxActions(result.maxActionsPerRun); })
+      .then((result) => { setSettings(result.settings); setLastRun(result.lastRun); setMode(result.settings.mode); setMaxActions(result.settings.maxActionsPerRun); })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Kunne ikke hente autopilot-innstillingene."))
       .finally(() => setLoading(false));
   }, []);
@@ -59,6 +61,17 @@ export default function AutopilotControl() {
 
   const allowsActionBudget = mode === "plan_non_destructive" || mode === "execute_guarded";
   const unsavedChanges = Boolean(settings && (mode !== settings.mode || maxActions !== settings.maxActionsPerRun));
+  const nextUtc = new Date();
+  nextUtc.setUTCHours(20, 10, 0, 0);
+  if (nextUtc.getTime() <= Date.now()) nextUtc.setUTCDate(nextUtc.getUTCDate() + 1);
+  const formatSpanishTime = (value: Date | string) => new Intl.DateTimeFormat("nb-NO", {
+    timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(value));
+  const lastDetailCount = (name: string) => {
+    const raw = lastRun?.details?.[name];
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  };
 
   return (
     <section className="autopilot-control">
@@ -93,6 +106,20 @@ export default function AutopilotControl() {
           </div>
         </div>
 
+        <div className="autopilot-run-result" aria-label="Status for planlagt autopilot">
+          <p><strong>Planlagt autopilot</strong> · {settings?.mode === "execute_guarded" ? "Aktiv" : "Ikke aktiv i Utfør og mål"}</p>
+          <p>Neste planlagte tidspunkt: {formatSpanishTime(nextUtc)} (Spania).</p>
+          {lastRun ? <>
+            <p>Siste registrerte planlagte kjøring: {formatSpanishTime(lastRun.at)} · {lastRun.status === "success" ? "Vellykket" : "Feilet"}.</p>
+            <div className="autopilot-run-stats">
+              <span><strong>{lastDetailCount("executed_count") ?? "–"}</strong><small>Utført</small></span>
+              <span><strong>{lastDetailCount("saved_count") ?? "–"}</strong><small>Planlagt</small></span>
+              <span><strong>{lastDetailCount("skipped_count") ?? "–"}</strong><small>Hoppet over</small></span>
+              <span><strong>{lastDetailCount("approval_count") ?? "–"}</strong><small>Foreslått til godkjenning</small></span>
+            </div>
+            {lastRun.status === "error" && <p className="admin-error">Den siste planlagte kjøringen feilet. Sjekk loggene før ny kjøring.</p>}
+          </> : <p>Ingen registrert planlagt kjøring er tilgjengelig ennå. Dette er ikke en bekreftelse på at autopiloten har kjørt.</p>}
+        </div>
         {settings?.updatedAt && <small className="autopilot-updated">Sist endret {new Date(settings.updatedAt).toLocaleString("nb-NO")}{settings.updatedBy ? ` av ${settings.updatedBy}` : ""}</small>}
         {message && <div className="admin-success autopilot-message">{message}</div>}
         {error && <div className="admin-error autopilot-message">{error}</div>}
