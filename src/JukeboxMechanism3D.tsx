@@ -43,6 +43,7 @@ export function poseAt(seconds: number) {
     z: -1.5 + 0.55 * extract + 1.95 * travel,
     tilt: Math.PI / 2 * (1 - rotate),
     gripped: t >= 1.0 && t < 5.9,
+    approaching: t < 1.0,
     released: t >= 5.9,
     cue: ease(6.35, 7.1),
     playing: t >= 7.1,
@@ -62,6 +63,10 @@ function Mechanism({ time }: { time: number }) {
   const pivot: [number,number,number] = [0,2.15,p.carriageZ];
   const gripper=gripperPositionAt(time);
   const grip: [number,number,number] = [gripper.x,gripper.y,gripper.z];
+  const approach=Math.max(0,Math.min(1,time/.95));
+  const reach=approach*approach*(3-2*approach);
+  const gripVisibleZ=grip[2]-(1-reach)*.7;
+  const gripVisible: [number,number,number]=[grip[0],grip[1],gripVisibleZ];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
     {/* Open mechanical chassis, not a substitute for the final photographic cabinet. */}
@@ -85,10 +90,10 @@ function Mechanism({ time }: { time: number }) {
     <Bar a={[-1.12,2.28,-2.1]} b={[-1.12,2.28,1.15]} radius={.06}/>
     <Bar a={[1.12,2.28,-2.1]} b={[1.12,2.28,1.15]} radius={.06}/>
     <mesh position={[0,2.27,p.carriageZ]}><boxGeometry args={[2.35,.23,.42]}/><meshStandardMaterial color="#6e8d9d" metalness={.9} roughness={.24}/></mesh>
-    <Bar a={pivot} b={grip} radius={.055}/>
-    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,grip[1],grip[2]]} radius={.027}/>
-    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,grip[1],grip[2]]} radius={.027}/>
-    <group position={grip} rotation={[0,0,p.released ? 0 : p.tilt]}>
+    <Bar a={pivot} b={gripVisible} radius={.055}/>
+    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
+    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
+    <group position={gripVisible} rotation={[0,0,p.released ? 0 : p.tilt]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
     </group>
