@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {poseAt,DURATION,recordRotationAt,RECORD_RPM} from "./JukeboxMechanism3D";
+import {poseAt,DURATION,recordRotationAt,RECORD_RPM,gripperPositionAt,phaseAt} from "./JukeboxMechanism3D";
 
 describe("jukebox 3D choreography",()=>{
   it("keeps disc upright at the rack and horizontal at the platter",()=>{
@@ -25,6 +25,21 @@ describe("jukebox 3D choreography",()=>{
     expect(recordRotationAt(6)).toBe(0);
     expect(recordRotationAt(7.1)).toBe(0);
     expect(recordRotationAt(8.1)).toBeCloseTo(Math.PI*1.5);
+  });
+  it("keeps gripper anchored before release and retracts smoothly",()=>{
+    const before=gripperPositionAt(5.9);
+    const mid=gripperPositionAt(6.125);
+    const after=gripperPositionAt(6.35);
+    expect(before.y).toBeCloseTo(poseAt(5.9).y+.13);
+    expect(before.z).toBeCloseTo(poseAt(5.9).z);
+    expect(mid.z).toBeLessThan(before.z);
+    expect(mid.z).toBeGreaterThan(after.z);
+    expect(after.y).toBeCloseTo(1.05);
+    expect(after.z).toBeCloseTo(poseAt(6.35).z-.65);
+  });
+  it("reports the release and cue phases separately",()=>{
+    expect(phaseAt(6.1)).toContain("Trekk tilbake");
+    expect(phaseAt(6.7)).toContain("pickupen");
   });
   it("clamps seek time to the animation range",()=>{
     expect(poseAt(-20)).toEqual(poseAt(0));
