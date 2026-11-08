@@ -74,7 +74,14 @@ function Mechanism({ time }: { time: number }) {
     <mesh position={[0,.08,1]}><cylinderGeometry args={[.98,.98,.16,64]}/><meshStandardMaterial color="#77838c" metalness={.9} roughness={.22}/></mesh>
     <mesh position={[0,.175,1]}><cylinderGeometry args={[.81,.81,.04,64]}/><meshStandardMaterial color="#121820" metalness={.4} roughness={.65}/></mesh>
     <mesh position={[0,.24,1]}><cylinderGeometry args={[.045,.045,.15,20]}/><meshStandardMaterial color="#e1d4aa" metalness={.8}/></mesh>
-    {Array.from({length:12},(_,i)=><mesh key={i} position={[(i-5.5)*.16,1.55,-1.82]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[.78,.012,6,48]}/><meshStandardMaterial color={i===5?"#9b5b32":"#42525d"} metalness={.6}/></mesh>)}
+    {Array.from({length:11},(_,i)=>{
+      // Records sit vertically in parallel slots. Slot 5 is empty: its record is on the transfer arm.
+      const slot=i<5?i:i+1;
+      return <group key={slot} position={[(slot-5.5)*.16,1.55,-1.82]}>
+        <mesh rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.76,.76,.025,48]}/><meshStandardMaterial color="#151a20" metalness={.22} roughness={.44}/></mesh>
+        <mesh rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.19,.19,.029,36]}/><meshStandardMaterial color={slot%2===0?"#a84d3b":"#477b8c"} roughness={.68}/></mesh>
+      </group>;
+    })}
     <Bar a={[-1.12,2.28,-2.1]} b={[-1.12,2.28,1.15]} radius={.06}/>
     <Bar a={[1.12,2.28,-2.1]} b={[1.12,2.28,1.15]} radius={.06}/>
     <mesh position={[0,2.27,p.carriageZ]}><boxGeometry args={[2.35,.23,.42]}/><meshStandardMaterial color="#6e8d9d" metalness={.9} roughness={.24}/></mesh>
