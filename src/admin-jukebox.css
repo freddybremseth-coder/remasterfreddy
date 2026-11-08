@@ -1,0 +1,28 @@
+.admin-jukebox-studio{max-width:1100px}
+.jukebox-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.jukebox-controls label{display:grid;gap:7px;font-weight:600}
+.jukebox-controls select{width:100%;min-width:0;padding:12px;border-radius:10px;border:1px solid #64748b;background:#111827;color:#fff}
+.jukebox-stage{margin:18px auto;background:#08151c;position:relative;overflow:hidden;display:grid;place-items:center;max-width:790px;aspect-ratio:16/9;border-radius:18px}
+.jukebox-stage.jukebox-portrait{max-width:340px;aspect-ratio:9/16}
+.jukebox-frame{position:relative;width:93%;height:91%;border:9px solid #9de3e4;border-radius:16% 16% 7% 7%;box-shadow:inset 0 0 0 12px #661e2b,0 0 30px #44d6da55;background:radial-gradient(ellipse at center,#263340,#09141c);display:flex;align-items:center;flex-direction:column;overflow:hidden}
+.jukebox-header{position:relative;z-index:2;color:#f7de9c;font-size:clamp(12px,2vw,24px);font-weight:900;letter-spacing:.1em;margin-top:3.5%;text-shadow:0 0 16px #f2aa45}
+.jukebox-deck{position:relative;width:min(68%,65vh);aspect-ratio:1;margin:auto;border:9px solid #ccae66;border-radius:50%;background:#121822;box-shadow:0 0 0 9px #253843}
+.jukebox-record{position:absolute;inset:2%;border-radius:50%;background:repeating-radial-gradient(circle at center,#13151b 0 4px,#24252d 5px 6px,#0d1017 7px 10px);display:grid;place-items:center;animation:jukebox-spin 1.333333s linear infinite;animation-play-state:paused}
+.jukebox-record.is-playing{animation-play-state:running}
+.jukebox-label{width:45%;height:45%;border:6px solid #dfbd72;border-radius:50%;background:#a62e34;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5%;text-align:center;color:#fff5d0;overflow:hidden;padding:3%}
+.jukebox-label strong{font-size:clamp(7px,1.45vw,17px);line-height:1.1}
+.jukebox-label span{color:white;font-size:clamp(7px,1.25vw,15px);max-width:100%;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.jukebox-label small{font-size:clamp(5px,.8vw,11px)}
+.jukebox-tonearm{position:absolute;z-index:2;left:73%;top:-16%;width:40%;height:12px;background:linear-gradient(#f1ecda,#5f7888);transform-origin:90% 50%;transform:rotate(-30deg);border:3px solid #25323e;border-radius:20px;pointer-events:none}
+.jukebox-tonearm span{position:absolute;left:-8%;top:-11px;height:34px;width:29px;border-radius:6px;background:#b8ced3;border:4px solid #22323c}
+.jukebox-caption{z-index:2;color:white;text-align:center;font-size:clamp(12px,2vw,25px);font-weight:800;max-width:82%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4%}
+.jukebox-actions{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.jukebox-studio .admin-warning,.admin-jukebox-studio .admin-warning{display:flex;align-items:center;gap:10px}
+.jukebox-portrait .jukebox-frame{border-width:7px}
+.jukebox-portrait .jukebox-header{font-size:13px;margin-top:12%}
+.jukebox-portrait .jukebox-deck{width:87%}
+.jukebox-portrait .jukebox-caption{font-size:15px;margin-bottom:17%}
+.jukebox-portrait .jukebox-label strong{font-size:10px}
+.jukebox-portrait .jukebox-label span{font-size:9px}
+@keyframes jukebox-spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.jukebox-controls{grid-template-columns:1fr}.jukebox-frame{border-width:5px}.jukebox-deck{border-width:5px}.jukebox-label{border-width:3px}.jukebox-tonearm{height:7px}.jukebox-tonearm span{height:22px;width:18px;top:-9px}}
