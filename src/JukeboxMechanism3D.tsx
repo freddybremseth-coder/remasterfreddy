@@ -5,6 +5,10 @@ import * as THREE from "three";
 
 /** Independent, inspectable 3D prototype. Does not render MP4 or control audio. */
 export const DURATION = 8;
+export const RECORD_RPM = 45;
+export function recordRotationAt(seconds: number) {
+  return Math.max(0, seconds - 7.1) * (RECORD_RPM / 60) * Math.PI * 2;
+}
 export function poseAt(seconds: number) {
   const t = Math.max(0, Math.min(DURATION, seconds));
   const ease = (a: number, b: number) => {
@@ -56,11 +60,11 @@ function Mechanism({ time }: { time: number }) {
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
     </group>
-    <group position={discPosition} rotation={[p.tilt,0,0]}>
+    <group position={discPosition} rotation={[p.tilt,0,0]}><group rotation={[0,recordRotationAt(time),0]}>
       <mesh rotation={[0,0,0]}><cylinderGeometry args={[.78,.78,.025,72]}/><meshStandardMaterial color="#11151a" metalness={.3} roughness={.36}/></mesh>
       <mesh position={[0,.015,0]}><cylinderGeometry args={[.23,.23,.004,48]}/><meshStandardMaterial color="#267f9e" roughness={.65}/></mesh>
       <mesh position={[0,.025,0]}><cylinderGeometry args={[.045,.045,.005,24]}/><meshStandardMaterial color="#dfd2a8" metalness={.7}/></mesh>
-    </group>
+    </group></group>
     <group position={[1.12,.35,1.25]} rotation={[0,-p.cue*.55,0]}>
       <mesh><cylinderGeometry args={[.13,.13,.13,24]}/><meshStandardMaterial color="#a5b7c1" metalness={.8}/></mesh>
       <Bar a={[0,.12,0]} b={[-.53,.2-p.cue*.15,-.38]} radius={.042}/>
