@@ -93,7 +93,7 @@ function Mechanism({ time }: { time: number }) {
 export default function JukeboxMechanism3D() {
   const [time,setTime]=useState(0);
   const [running,setRunning]=useState(false);
-  const [front,setFront]=useState(true);
+  const [view,setView]=useState<"front"|"side"|"top">("front");
   useEffect(()=>{
     if(!running)return;
     let frame=0; let previous=performance.now();
@@ -103,7 +103,7 @@ export default function JukeboxMechanism3D() {
   },[running]);
   return <div className="jukebox-3d">
     <div className="jukebox-3d-canvas" aria-label="Interaktiv 3D-prototype av plateveksler">
-      <Canvas key={front?"front":"inspection"} camera={{position:front?[0,2.5,7]:[4,3.5,5],fov:38}} shadows>
+      <Canvas key={view} camera={{position:view==="front"?[0,2.5,7]:view==="side"?[5,2.8,1.4]:[0,7.5,1],fov:38}} shadows>
         <color attach="background" args={["#101a25"]}/>
         <ambientLight intensity={.8}/><directionalLight position={[3,6,5]} intensity={2.3} castShadow/>
         <pointLight position={[-2,2,2]} intensity={15} color="#f2bd74"/>
@@ -115,7 +115,7 @@ export default function JukeboxMechanism3D() {
     <div className="jukebox-3d-controls">
       <button type="button" onClick={()=>{setTime(0);setRunning(true);}}>Test plateveksleren i 3D uten musikk</button>
       <button type="button" onClick={()=>setRunning(v=>!v)}>{running?"Pause mekanikk":"Fortsett mekanikk"}</button>
-      <button type="button" onClick={()=>setFront(v=>!v)}>{front?"Skrått kontrollperspektiv":"Forfra som i jukeboksen"}</button>
+      <button type="button" onClick={()=>setView(v=>v==="front"?"side":v==="side"?"top":"front")}>Kamera: {view==="front"?"Front":view==="side"?"Side":"Ovenfra"} – bytt vinkel</button>
       <label>Kontroller bevegelsen: {time.toFixed(2)} s <input type="range" min="0" max={DURATION} step=".05" value={time} onChange={e=>{setRunning(false);setTime(Number(e.target.value));}}/></label>
     </div>
     <p>Separat 3D-prototype. Kabinettkomposisjon, realistisk kollisjonskontroll og MP4-eksport er ikke ferdig.</p>
