@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Render an original, reusable 1960s-inspired jukebox vinyl music video.
+
+Requires ffmpeg, ffprobe, and Inkscape. Does not publish anything.
+Example: python3 scripts/render-jukebox.py --audio song.mp3 --title "My Song" --output my-song.mp4
+"""
+import argparse
+import html
+import json
+import math
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+
+def run(args):
+    subprocess.run(args, check=True)
+
+
+def svg_text(value):
+    return html.escape(value, quote=True)
+
+
+def build_art(title, artist, destination, portrait):
+    width, height = (1080, 1920) if portrait else (1920, 1080)
+    center_x, center_y = width / 2, height * (0.53 if portrait else 0.55)
+    radius = min(width * 0.41, height * 0.43)
+    short_title = title.strip()[:64]
+    if not short_title:
+        raise ValueError("Song title cannot be empty")
+    title_size = 39 if portrait else 36
+    # Text is drawn on the label itself so it rotates with the record.
+    disc = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+      <circle cx="500" cy="500" r="492" fill="#0a0b11" stroke="#343743" stroke-width="9"/>
+      {''.join(f'<circle cx="500" cy="500" r="{r}" fill="none" stroke="#3b3e47" stroke-opacity=".43" stroke-width="2"/>' for r in range(285,485,7))}
+      <path d="M 140 155 A 460 460 0 0 1 410 48" fill="none" stroke="#b0c6cf" stroke-opacity=".22" stroke-width="11"/>
+      <circle cx="500" cy="500" r="217" fill="#d0a552" stroke="#e9d6a2" stroke-width="5"/>
+      <circle cx="500" cy="500" r="190" fill="#b63c3c" stroke="#682525" stroke-width="5"/>
+      <circle cx="500" cy="500" r="167" fill="none" stroke="#f1c775" stroke-width="3"/>
+      <text x="500" y="417" text-anchor="middle" fill="#fff1c3" font-family="DejaVu Sans" font-size="37" font-weight="bold">RE-MASTER</text>
+      <text x="500" y="457" text-anchor="middle" fill="#fff1c3" font-family="DejaVu Sans" font-size="43" font-weight="bold">FREDDY</text>
+      <text x="500" y="566" text-anchor="middle" fill="#ffffff" font-family="DejaVu Sans" font-size="{title_size}" font-weight="bold" textLength="{min(320,max(110,len(short_title)*20))}" lengthAdjust="spacingAndGlyphs">{svg_text(short_title)}</text>
+      <text x="500" y="614" text-anchor="middle" fill="#ffe4af" font-family="DejaVu Sans" font-size="23">45 RPM · STEREO</text>
+      <circle cx="500" cy="500" r="17" fill="#1b1b1b" stroke="#f8e8c3" stroke-width="4"/>
+    </svg>'''
+    background = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+      <defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#132c37"/><stop offset="1" stop-color="#0b0b14"/></linearGradient>
+      <linearGradient id="chrome"><stop stop-color="#9de7e5"/><stop offset=".5" stop-color="#e8ede0"/><stop offset="1" stop-color="#467e93"/></linearGradient></defs>
+      <rect width="100%" height="100%" fill="url(#bg)"/>
+      <rect x="{width*.055}" y="{height*.06}" width="{width*.89}" height="{height*.88}" rx="{min(width,height)*.13}" fill="#571c24" stroke="url(#chrome)" stroke-width="22"/>
+      <rect x="{width*.09}" y="{height*.095}" width="{width*.82}" height="{height*.81}" rx="{min(width,height)*.10}" fill="#14202a" stroke="#e1b45a" stroke-width="10"/>
+      <path d="M {width*.15} {height*.18} Q {width*.5} {height*.02} {width*.85} {height*.18}" fill="none" stroke="#65d5d5" stroke-width="22"/>
+      <text x="{width/2}" y="{height*.15}" fill="#f7d68b" font-family="DejaVu Sans" font-weight="bold" font-size="{48 if portrait else 47}" text-anchor="middle">RE-MASTER FREDDY</text>
+      <circle cx="{center_x}" cy="{center_y}" r="{radius*1.09}" fill="#080a0f" stroke="#e6c570" stroke-width="18"/>
+      <circle cx="{center_x}" cy="{center_y}" r="{radius*1.01}" fill="#151721" stroke="#68777f" stroke-width="7"/>
+      <text x="{width/2}" y="{height*.925}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{31 if portrait else 28}">JUKEBOX SINGLES · 1960s EDITION</text>
+    </svg>'''
+    disc_svg = destination / "disc.svg"
+    bg_svg = destination / "background.svg"
+    disc_svg.write_text(disc, encoding="utf-8")
+    bg_svg.write_text(background, encoding="utf-8")
+    run(["inkscape", str(disc_svg), "--export-filename", str(destination / "disc.png")])
+    run(["inkscape", str(bg_svg), "--export-filename", str(destination / "background.png")])
+    return width, height, round(radius * 2)
+
+
+def render(audio, title, output, portrait, seconds=None):
+    for tool in ("ffmpeg", "ffprobe", "inkscape"):
+        if not shutil.which(tool):
+            raise RuntimeError(f"Required executable not found: {tool}")
+    if not audio.is_file():
+        raise FileNotFoundError(audio)
+    probe = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(audio)], text=True)
+    available = float(json.loads(probe)["format"]["duration"])
+    duration = min(available, seconds) if seconds else available
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError("Audio duration must be positive")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="remaster-jukebox-") as tmp:
+        directory = Path(tmp)
+        width, height, disc_size = build_art(title, "Re-master Freddy", directory, portrait)
+        x, y = (width-disc_size)//2, int(height * (0.53 if portrait else 0.55)-disc_size/2)
+        # 45 rpm = 3*pi/2 rad/s; the 4/3-second full rotation is naturally seamless.
+        # First 4 s: the record slides in, settles, then continues spinning until audio ends.
+        filtergraph = (f"[0:v]scale={width}:{height},format=rgba[bg];"
+                       f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
+                       f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
+                       f"[bg][record]overlay=x='{x}+if(lt(t,3),(-{width})*pow(1-t/3,2),0)':y={y}:shortest=1,"
+                       f"format=yuv420p[v]")
+        command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(directory/"background.png"),
+                   "-loop", "1", "-i", str(directory/"disc.png"), "-i", str(audio),
+                   "-filter_complex", filtergraph, "-map", "[v]", "-map", "2:a:0", "-t", f"{duration:.3f}",
+                   "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
+                   "-movflags", "+faststart", "-shortest", str(output)]
+        run(command)
+    return duration
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--audio", type=Path, required=True)
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--portrait", action="store_true", help="1080x1920 vertical Short instead of 1920x1080")
+    parser.add_argument("--seconds", type=float, default=None, help="Optional preview/Short duration")
+    args = parser.parse_args()
+    length = render(args.audio, args.title, args.output, args.portrait, args.seconds)
+    print(f"Rendered {args.output} ({length:.1f} seconds)")
