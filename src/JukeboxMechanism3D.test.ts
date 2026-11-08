@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {poseAt,DURATION} from "./JukeboxMechanism3D";
+import {poseAt,DURATION,recordRotationAt,RECORD_RPM} from "./JukeboxMechanism3D";
 
 describe("jukebox 3D choreography",()=>{
   it("keeps disc upright at the rack and horizontal at the platter",()=>{
@@ -19,6 +19,12 @@ describe("jukebox 3D choreography",()=>{
     expect(poseAt(7.0).playing).toBe(false);
     expect(poseAt(7.1).cue).toBe(1);
     expect(poseAt(7.1).playing).toBe(true);
+  });
+  it("rotates only after cue at exactly 45 rpm",()=>{
+    expect(RECORD_RPM).toBe(45);
+    expect(recordRotationAt(6)).toBe(0);
+    expect(recordRotationAt(7.1)).toBe(0);
+    expect(recordRotationAt(8.1)).toBeCloseTo(Math.PI*1.5);
   });
   it("clamps seek time to the animation range",()=>{
     expect(poseAt(-20)).toEqual(poseAt(0));
