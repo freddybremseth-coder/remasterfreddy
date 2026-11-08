@@ -1,4 +1,5 @@
-import {useEffect,useMemo,useRef,useState} from "react";
+import {lazy,Suspense,useEffect,useMemo,useRef,useState} from "react";
+const JukeboxMechanism3D=lazy(()=>import("./JukeboxMechanism3D"));
 import {Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,type AdminSong} from "./lib/admin-api";
 import "./admin-jukebox.css";
@@ -11,6 +12,7 @@ export default function AdminJukeboxStudio(){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
+  const [show3D,setShow3D]=useState(false);
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
@@ -63,6 +65,8 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>
     </div>
+    <div className="jukebox-actions"><button className="admin-secondary" type="button" aria-expanded={show3D} onClick={()=>setShow3D(v=>!v)}>{show3D?"Skjul 3D-prototype":"Vis 3D-plateveksler (prototype)"}</button></div>
+    {show3D&&<Suspense fallback={<p>Laster 3D-mekanikk…</p>}><JukeboxMechanism3D/></Suspense>}
     <audio ref={audio} src={song?.audioUrl} onEnded={()=>setPlaying(false)} preload="none"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
