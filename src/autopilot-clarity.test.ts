@@ -13,7 +13,7 @@ describe("Re-Master autopilot consent clarity", () => {
   });
   it("marks title changes as requiring a separate confirmation", () => {
     expect(card).toContain("Krever godkjenning");
-    expect(card).toContain("Godkjenn og utfør tittelendring");
+    expect(card).toContain("Godkjenn metadataforslag inkl. tittel");
     expect(card).toContain("Autopilot endrer ikke tittelen");
   });
 });
