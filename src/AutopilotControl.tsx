@@ -14,7 +14,7 @@ const modes: Array<{ id: AutopilotMode; label: string; description: string }> = 
   { id: "off", label: "Av", description: "Ingen automatiske handlinger eller planlagring." },
   { id: "preview", label: "Kun forhåndsvisning", description: "AI analyserer og foreslår tiltak, men utfører og lagrer ingenting." },
   { id: "plan_non_destructive", label: "Lag trygge planer", description: "Lagrer strategi-, innholds- og publiseringsplaner uten å endre YouTube-metadata." },
-  { id: "execute_guarded", label: "Utfør og mål", description: "Utfører beskrivelser og tags ved manuell kjøring. Tittelendringer krever egen godkjenning; lagring starter ikke en tidsplan." },
+  { id: "execute_guarded", label: "Utfør og mål", description: "Trygge beskrivelser og tags kjøres daglig når modusen er lagret, eller manuelt med «Kjør». Titler krever egen godkjenning." },
 ];
 
 export default function AutopilotControl() {
@@ -58,6 +58,7 @@ export default function AutopilotControl() {
   }
 
   const allowsActionBudget = mode === "plan_non_destructive" || mode === "execute_guarded";
+  const unsavedChanges = Boolean(settings && (mode !== settings.mode || maxActions !== settings.maxActionsPerRun));
 
   return (
     <section className="autopilot-control">
@@ -65,7 +66,7 @@ export default function AutopilotControl() {
         <div>
           <p className="admin-eyebrow">Sikker automatisering</p>
           <h3>Autopilot</h3>
-          <p>Velg handlingsnivå. Lagre valget, og trykk deretter «Kjør» for å starte. Ingen automatisk tidsplan er konfigurert her.</p>
+          <p>Velg og lagre handlingsnivået. «Utfør og mål» har en daglig sikker kjøring kl. 20:10 UTC (21:10 vintertid / 22:10 sommertid i Spania). «Kjør» starter en ekstra, manuell kjøring.</p>
         </div>
         <div className="autopilot-shield"><ShieldCheck size={22} /></div>
       </div>
@@ -100,9 +101,10 @@ export default function AutopilotControl() {
           {saving ? <Loader2 className="admin-spinner" size={16} /> : <Save size={16} />} Lagre autopilot-innstillinger
         </button>
 
-        <p className="autopilot-updated">Viktig: Å velge og lagre «Utfør og mål» utfører ikke eksisterende anbefalinger. Trykk «Kjør utfør og mål». Titler må godkjennes med knappen på hvert tiltak.</p>
+        <p className="autopilot-updated">Viktig: Lagring utfører ikke tiltak umiddelbart. Når «Utfør og mål» er lagret, brukes denne modusen ved neste daglige kjøring. Titler og thumbnails krever fortsatt egen godkjenning.</p>
+        {unsavedChanges && <p className="autopilot-updated">Du har ulagrede endringer. Lagre før du starter en manuell kjøring.</p>}
         <div className="autopilot-run">
-          <button className="admin-secondary" type="button" onClick={run} disabled={running || saving || mode === "off"}>
+          <button className="admin-secondary" type="button" onClick={run} disabled={running || saving || loading || unsavedChanges || mode === "off"}>
             {running ? <Loader2 className="admin-spinner" size={16} /> : <PlayCircle size={16} />} {mode === "execute_guarded" ? "Kjør utfør og mål" : "Kjør sikker autopilot"}
           </button>
 
