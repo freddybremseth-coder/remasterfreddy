@@ -25,7 +25,8 @@ def svg_text(value):
 def build_art(title, artist, destination, portrait):
     width, height = (1080, 1920) if portrait else (1920, 1080)
     center_x, center_y = width / 2, height * (0.53 if portrait else 0.55)
-    radius = min(width * 0.41, height * 0.43)
+    # Preserve margins for the permanent song caption and the jukebox header.
+    radius = min(width * 0.41, height * 0.33)
     short_title = title.strip()[:64]
     if not short_title:
         raise ValueError("Song title cannot be empty")
@@ -55,15 +56,32 @@ def build_art(title, artist, destination, portrait):
       <text x="{width/2}" y="{height*.15}" fill="#f7d68b" font-family="DejaVu Sans" font-weight="bold" font-size="{48 if portrait else 47}" text-anchor="middle">RE-MASTER FREDDY</text>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.09}" fill="#080a0f" stroke="#e6c570" stroke-width="18"/>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.01}" fill="#151721" stroke="#68777f" stroke-width="7"/>
-      <text x="{width/2}" y="{height*.90}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
-      <text x="{width/2}" y="{height*.935}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
+      <text x="{width/2}" y="{height*.922}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
+      <text x="{width/2}" y="{height*.965}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
+    </svg>'''
+    # A separate transparent animation layer lets the arm visibly place the record
+    # without burning it into the static background or distorting the spinning label.
+    pivot_x, pivot_y = width*.79, height*.23
+    head_x, head_y = center_x+radius*.49, center_y-radius*.20
+    arm = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+      <defs><linearGradient id="metal"><stop stop-color="#788e9b"/><stop offset=".48" stop-color="#f4f0d9"/><stop offset="1" stop-color="#607482"/></linearGradient></defs>
+      <circle cx="{pivot_x}" cy="{pivot_y}" r="{radius*.092}" fill="#1d262c" stroke="#ead3a1" stroke-width="13"/>
+      <path d="M {pivot_x} {pivot_y} L {pivot_x-radius*.10} {pivot_y+radius*.18} L {head_x+radius*.065} {head_y-radius*.04}"
+            fill="none" stroke="#2a2a30" stroke-width="{radius*.085}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M {pivot_x} {pivot_y} L {pivot_x-radius*.10} {pivot_y+radius*.18} L {head_x+radius*.065} {head_y-radius*.04}"
+            fill="none" stroke="url(#metal)" stroke-width="{radius*.048}" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="{head_x-radius*.09}" y="{head_y-radius*.055}" width="{radius*.18}" height="{radius*.11}" rx="9" fill="#b6cbd0" stroke="#222b34" stroke-width="6"/>
+      <path d="M {head_x} {head_y+radius*.05} v {radius*.075}" stroke="#e0bd71" stroke-width="7"/>
     </svg>'''
     disc_svg = destination / "disc.svg"
     bg_svg = destination / "background.svg"
+    arm_svg = destination / "arm.svg"
     disc_svg.write_text(disc, encoding="utf-8")
     bg_svg.write_text(background, encoding="utf-8")
+    arm_svg.write_text(arm, encoding="utf-8")
     run(["inkscape", str(disc_svg), "--export-filename", str(destination / "disc.png")])
     run(["inkscape", str(bg_svg), "--export-filename", str(destination / "background.png")])
+    run(["inkscape", str(arm_svg), "--export-filename", str(destination / "arm.png")])
     return width, height, round(radius * 2)
 
 
@@ -84,15 +102,18 @@ def render(audio, title, output, portrait, seconds=None):
         width, height, disc_size = build_art(title, "Re-master Freddy", directory, portrait)
         x, y = (width-disc_size)//2, int(height * (0.53 if portrait else 0.55)-disc_size/2)
         # 45 rpm = 3*pi/2 rad/s; the 4/3-second full rotation is naturally seamless.
-        # First 4 s: the record slides in, settles, then continues spinning until audio ends.
+        # First 3 s: the record slides in. The jukebox arm lowers visually over it,
+        # then fades away to reveal a stable, uninterrupted vinyl loop.
         filtergraph = (f"[0:v]scale={width}:{height},format=rgba[bg];"
                        f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
                        f"[bg][record]overlay=x='{x}+if(lt(t,3),(-{width})*pow(1-t/3,2),0)':y={y}:shortest=1,"
-                       f"format=yuv420p[v]")
+                       f"format=rgba[turntable];"
+                       f"[2:v]format=rgba,fade=t=in:st=1:d=0.6:alpha=1,fade=t=out:st=3.1:d=0.9:alpha=1[arm];"
+                       f"[turntable][arm]overlay=0:0:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(directory/"background.png"),
-                   "-loop", "1", "-i", str(directory/"disc.png"), "-i", str(audio),
-                   "-filter_complex", filtergraph, "-map", "[v]", "-map", "2:a:0", "-t", f"{duration:.3f}",
+                   "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"arm.png"), "-i", str(audio),
+                   "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
                    "-movflags", "+faststart", "-shortest", str(output)]
         run(command)
