@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {poseAt,DURATION,recordRotationAt,RECORD_RPM,gripperPositionAt,phaseAt} from "./JukeboxMechanism3D";
+import {poseAt,DURATION,recordRotationAt,RECORD_RPM,gripperPositionAt,phaseAt,MAGAZINE_Z,MAGAZINE_Y} from "./JukeboxMechanism3D";
 
 describe("jukebox 3D choreography",()=>{
   it("keeps disc upright at the rack and horizontal at the platter",()=>{
@@ -25,6 +25,11 @@ describe("jukebox 3D choreography",()=>{
     expect(recordRotationAt(6)).toBe(0);
     expect(recordRotationAt(7.1)).toBe(0);
     expect(recordRotationAt(8.1)).toBeCloseTo(Math.PI*1.5);
+  });
+  it("starts the selected record at the magazine's shared centerline",()=>{
+    expect(poseAt(0).x).toBe(0);
+    expect(poseAt(0).y).toBe(MAGAZINE_Y);
+    expect(poseAt(0).z).toBe(MAGAZINE_Z);
   });
   it("keeps record in rack before extraction and grips before moving",()=>{
     expect(poseAt(0).z).toBeCloseTo(-1.5);
