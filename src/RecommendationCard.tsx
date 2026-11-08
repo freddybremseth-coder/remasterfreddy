@@ -34,7 +34,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
   async function execute() {
     if (locked) return;
     const confirmed = window.confirm(
-      `Utføre tiltaket «${recommendation.title}»?\n\n${recommendation.description}`,
+      `Utføre tiltaket «${recommendation.title}»?\n\n${recommendation.description}${recommendation.action.type === "update_metadata" && recommendation.action.newTitle?.trim() ? "\n\nDette sender tittel, beskrivelse og tags i forslaget til YouTube." : ""}`,
     );
     if (!confirmed) return;
 
@@ -73,8 +73,8 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
         </div>
         <div className="recommendation-status-stack">
           <span className="recommendation-effort">{recommendation.effort}</span>
-          <span className={`recommendation-execution status-${execution?.status || "new"}`}>
-            {execution?.status === "completed" || execution?.status === "published"
+          <span className={`recommendation-execution status-${guardedMetadataCompleted ? "completed" : execution?.status || "new"}`}>
+            {guardedMetadataCompleted || execution?.status === "completed" || execution?.status === "published"
               ? <CheckCircle2 size={13} />
               : <Clock3 size={13} />}
             {guardedMetadataCompleted ? "Metadata utført · tittel venter" : titleNeedsApproval ? "Krever godkjenning" : statusLabel(execution?.status)}
@@ -123,7 +123,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
           Beskrivelse/tags oppdatert automatisk {new Date(recommendation.safeMetadataExecution.executedAt).toLocaleString("nb-NO")}. Tittelen er ikke endret.
         </small>
       )}
-      {titleNeedsApproval && <small className="recommendation-timestamp">Autopilot endrer ikke tittelen. Denne handlingen krever bekreftelse her og oppdaterer deretter YouTube.</small>}
+      {titleNeedsApproval && <small className="recommendation-timestamp">Autopilot endrer ikke tittelen. Ved godkjenning sendes hele metadataforslaget (tittel, beskrivelse og tags) til YouTube.</small>}
       {result && <div className="recommendation-result"><CheckCircle2 size={16} />{result}</div>}
       {error && <div className="admin-error recommendation-error">{error}</div>}
 
@@ -134,7 +134,7 @@ export default function RecommendationCard({ recommendation, onExecuted }: Recom
         disabled={running || locked}
       >
         {running ? <Loader2 className="admin-spinner" size={16} /> : locked ? <CheckCircle2 size={16} /> : <PlayCircle size={16} />}
-        {locked ? statusLabel(execution?.status) : titleNeedsApproval ? "Godkjenn og utfør tittelendring" : "Utfør etter godkjenning"}
+        {locked ? statusLabel(execution?.status) : titleNeedsApproval ? "Godkjenn metadataforslag inkl. tittel" : "Utfør etter godkjenning"}
       </button>
     </article>
   );
