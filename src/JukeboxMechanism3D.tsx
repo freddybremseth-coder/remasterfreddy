@@ -20,6 +20,12 @@ export function phaseAt(seconds: number) {
   if (seconds < 7.1) return "Senk pickupen";
   return "45 RPM – avspilling";
 }
+export function gripperPositionAt(seconds: number) {
+  const p = poseAt(seconds);
+  const u = Math.max(0,Math.min(1,(seconds-5.9)/.45));
+  const retract = u*u*(3-2*u);
+  return {x:0,y:p.y+.13+(1.05-(p.y+.13))*retract,z:p.z-.65*retract};
+}
 export function poseAt(seconds: number) {
   const t = Math.max(0, Math.min(DURATION, seconds));
   const ease = (a: number, b: number) => {
@@ -54,9 +60,8 @@ function Bar({ a, b, radius = .035, color = "#b9c9cf" }: { a: [number,number,num
 function Mechanism({ time }: { time: number }) {
   const p = poseAt(time);
   const pivot: [number,number,number] = [0,2.15,p.carriageZ];
-  const retract = Math.max(0,Math.min(1,(time-5.9)/.45));
-  const smoothRetract = retract*retract*(3-2*retract);
-  const grip: [number,number,number] = [0,p.y+.13+(1.05-(p.y+.13))*smoothRetract,p.z-.65*smoothRetract];
+  const gripper=gripperPositionAt(time);
+  const grip: [number,number,number] = [gripper.x,gripper.y,gripper.z];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
     <mesh position={[0,.08,1]}><cylinderGeometry args={[.98,.98,.16,64]}/><meshStandardMaterial color="#77838c" metalness={.9} roughness={.22}/></mesh>
