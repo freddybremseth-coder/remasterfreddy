@@ -26,7 +26,7 @@ def build_art(title, artist, destination, portrait):
     width, height = (1080, 1920) if portrait else (1920, 1080)
     center_x, center_y = width / 2, height * (0.53 if portrait else 0.55)
     # Preserve margins for the permanent song caption and the jukebox header.
-    radius = min(width * 0.41, height * 0.33)
+    radius = min(width * 0.41, height * 0.25)
     short_title = title.strip()[:64]
     if not short_title:
         raise ValueError("Song title cannot be empty")
@@ -56,8 +56,8 @@ def build_art(title, artist, destination, portrait):
       <text x="{width/2}" y="{height*.15}" fill="#f7d68b" font-family="DejaVu Sans" font-weight="bold" font-size="{48 if portrait else 47}" text-anchor="middle">RE-MASTER FREDDY</text>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.09}" fill="#080a0f" stroke="#e6c570" stroke-width="18"/>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.01}" fill="#151721" stroke="#68777f" stroke-width="7"/>
-      <text x="{width/2}" y="{height*.922}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
-      <text x="{width/2}" y="{height*.965}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
+      <text x="{width/2}" y="{height*.845}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
+      <text x="{width/2}" y="{height*.895}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
     </svg>'''
     # A separate transparent animation layer lets the arm visibly place the record
     # without burning it into the static background or distorting the spinning label.
