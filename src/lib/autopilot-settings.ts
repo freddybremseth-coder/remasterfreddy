@@ -11,7 +11,14 @@ export interface AutopilotSettings {
   updatedBy?: string;
 }
 
+export interface AutopilotLastRun {
+  at: string;
+  status: "success" | "error";
+  details: Record<string, unknown>;
+}
+
 export interface AutopilotSettingsResponse {
+  lastRun?: AutopilotLastRun | null;
   settings: AutopilotSettings;
   message?: string;
   warning?: string;
@@ -90,11 +97,16 @@ async function autopilotFetch(path: string, init: RequestInit = {}) {
   });
 }
 
-export async function loadAutopilotSettings(): Promise<AutopilotSettings> {
+export async function loadAutopilotSettings(): Promise<{ settings: AutopilotSettings; lastRun: AutopilotLastRun | null }> {
   const response = await autopilotFetch("/api/neural-beat-autopilot-settings", { method: "GET" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke hente autopilot-innstillingene.");
-  return normalizeSettings(data.settings);
+  const rawRun = data.lastRun;
+  const lastRun = rawRun && typeof rawRun === "object"
+    && typeof rawRun.at === "string" && (rawRun.status === "success" || rawRun.status === "error")
+    ? { at: rawRun.at, status: rawRun.status, details: rawRun.details && typeof rawRun.details === "object" ? rawRun.details : {} }
+    : null;
+  return { settings: normalizeSettings(data.settings), lastRun };
 }
 
 export async function saveAutopilotSettings(mode: AutopilotMode, maxActionsPerRun: number): Promise<AutopilotSettingsResponse> {
