@@ -20,6 +20,15 @@ export function phaseAt(seconds: number) {
   if (seconds < 7.1) return "Senk pickupen";
   return "45 RPM – avspilling";
 }
+export function phaseAt(seconds: number) {
+  if(seconds<1)return "Velg plate";
+  if(seconds<2.5)return "Grip og trekk ut";
+  if(seconds<4.5)return "Flytt og roter";
+  if(seconds<5.9)return "Senk og plasser";
+  if(seconds<6.35)return "Trekk tilbake armen";
+  if(seconds<7.1)return "Senk pickupen";
+  return "Avspilling";
+}
 export function poseAt(seconds: number) {
   const t = Math.max(0, Math.min(DURATION, seconds));
   const ease = (a: number, b: number) => {
@@ -106,6 +115,7 @@ export default function JukeboxMechanism3D() {
       </Canvas>
     </div>
     <p role="status" aria-live="off">Fase: {phaseAt(time)} · {time.toFixed(2)} / {DURATION.toFixed(2)} sekunder</p>
+    <p role="status">Fase: {phaseAt(time)} · {time.toFixed(2)} sekunder</p>
     <div className="jukebox-3d-controls">
       <button type="button" onClick={()=>{setTime(0);setRunning(true);}}>Test plateveksleren i 3D uten musikk</button>
       <button type="button" onClick={()=>setRunning(v=>!v)}>{running?"Pause mekanikk":"Fortsett mekanikk"}</button>
