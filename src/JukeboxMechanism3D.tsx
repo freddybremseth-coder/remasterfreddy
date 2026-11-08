@@ -6,6 +6,8 @@ import * as THREE from "three";
 /** Independent, inspectable 3D prototype. Does not render MP4 or control audio. */
 export const DURATION = 8;
 export const RECORD_RPM = 45;
+export const MAGAZINE_Z = -1.5;
+export const MAGAZINE_Y = 1.55;
 export function recordRotationAt(seconds: number) {
   return Math.max(0, seconds - 7.1) * (RECORD_RPM / 60) * Math.PI * 2;
 }
@@ -32,22 +34,22 @@ export function poseAt(seconds: number) {
     const u = Math.max(0, Math.min(1, (t - a) / (b - a)));
     return u * u * (3 - 2 * u);
   };
-  // Magazine center at (0,1.55,-1.5), platter at (0,.3,1).
+  // Selected record starts centered on the magazine rail, then moves to the platter.
   const extract = ease(1.3, 2.5);
   const rotate = ease(3.1, 4.5);
   const lower = ease(4.5, 5.6);
   const travel = ease(2.5, 4.5);
   return {
     x: 0,
-    y: 1.55 - 1.335 * lower,
-    z: -1.5 + 0.55 * extract + 1.95 * travel,
+    y: MAGAZINE_Y - 1.335 * lower,
+    z: MAGAZINE_Z + 0.55 * extract + 1.95 * travel,
     tilt: Math.PI / 2 * (1 - rotate),
     gripped: t >= 1.0 && t < 5.9,
     approaching: t < 1.0,
     released: t >= 5.9,
     cue: ease(6.35, 7.1),
     playing: t >= 7.1,
-    carriageZ: -1.5 + 0.55 * extract + 1.95 * travel,
+    carriageZ: MAGAZINE_Z + 0.55 * extract + 1.95 * travel,
   };
 }
 
@@ -82,7 +84,7 @@ function Mechanism({ time }: { time: number }) {
     {Array.from({length:11},(_,i)=>{
       // Records sit vertically in parallel slots. Slot 5 is empty: its record is on the transfer arm.
       const slot=i<5?i:i+1;
-      return <group key={slot} position={[(slot-5.5)*.16,1.55,-1.82]}>
+      return <group key={slot} position={[(slot-5.5)*.16,MAGAZINE_Y,MAGAZINE_Z]}>
         <mesh rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.76,.76,.025,48]}/><meshStandardMaterial color="#151a20" metalness={.22} roughness={.44}/></mesh>
         <mesh rotation={[0,0,Math.PI/2]}><cylinderGeometry args={[.19,.19,.029,36]}/><meshStandardMaterial color={slot%2===0?"#a84d3b":"#477b8c"} roughness={.68}/></mesh>
       </group>;
