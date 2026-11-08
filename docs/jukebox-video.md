@@ -12,6 +12,26 @@ python3 scripts/render-jukebox.py --audio ./my-song.mp3 --title 'My Song' --outp
 python3 scripts/test-jukebox.py
 ```
 
+## Batch rendering (multiple songs)
+
+Use a local JSON file, for example `songs.json` next to your audio files:
+
+```json
+{
+  "songs": [
+    {"slug":"midnight-groove", "title":"Midnight Groove", "audio":"midnight-groove.mp3"},
+    {"slug":"sunset-drive", "title":"Sunset Drive", "audio":"sunset-drive.mp3"}
+  ]
+}
+```
+
+```bash
+python3 scripts/render-jukebox-batch.py --manifest ./songs.json --output-dir ./jukebox-output
+python3 scripts/render-jukebox-batch.py --manifest ./songs.json --output-dir ./jukebox-shorts --portrait --seconds 30
+```
+
+Each completed MP4 has a JSON sidecar containing the audio SHA-256 and template settings. Re-running the identical manifest skips verified output. Changed songs, titles or render settings create a new `-v2` file rather than overwriting an existing video. A failed song does not stop the rest of the batch. Everything runs locally; **no files are uploaded or published**.
+
 The source audio starts at the beginning; no extra sound effect or pitch/speed conversion is applied. The record spins at the correct 45 rpm, and the title appears both on its moving label and in a static caption for readability. The plate slides into view during the first three seconds. The next iteration needs a realistic mechanical arm / jukebox selection sequence, artist-approved visual assets, and a seamless intro-to-loop transition.
 
 ## Integration needed before production
