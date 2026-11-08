@@ -20,15 +20,6 @@ export function phaseAt(seconds: number) {
   if (seconds < 7.1) return "Senk pickupen";
   return "45 RPM – avspilling";
 }
-export function phaseAt(seconds: number) {
-  if(seconds<1)return "Velg plate";
-  if(seconds<2.5)return "Grip og trekk ut";
-  if(seconds<4.5)return "Flytt og roter";
-  if(seconds<5.9)return "Senk og plasser";
-  if(seconds<6.35)return "Trekk tilbake armen";
-  if(seconds<7.1)return "Senk pickupen";
-  return "Avspilling";
-}
 export function poseAt(seconds: number) {
   const t = Math.max(0, Math.min(DURATION, seconds));
   const ease = (a: number, b: number) => {
