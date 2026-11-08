@@ -33,6 +33,8 @@ export interface Recommendation {
   action: RecommendationAction;
   fingerprint?: string;
   execution?: RecommendationExecution | null;
+  /** Tags/description executed by guarded autopilot; the proposed title remains unapproved. */
+  safeMetadataExecution?: RecommendationExecution | null;
 }
 
 export interface RecommendationActionHistory {
