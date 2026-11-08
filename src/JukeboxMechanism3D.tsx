@@ -9,6 +9,17 @@ export const RECORD_RPM = 45;
 export function recordRotationAt(seconds: number) {
   return Math.max(0, seconds - 7.1) * (RECORD_RPM / 60) * Math.PI * 2;
 }
+export function phaseAt(seconds: number) {
+  if (seconds < 1) return "Velg plate";
+  if (seconds < 1.3) return "Grip platen";
+  if (seconds < 2.5) return "Trekk ut fra magasinet";
+  if (seconds < 4.5) return "Flytt og roter platen";
+  if (seconds < 5.6) return "Senk mot tallerkenen";
+  if (seconds < 5.9) return "Plasser platen";
+  if (seconds < 6.35) return "Trekk tilbake gripearmen";
+  if (seconds < 7.1) return "Senk pickupen";
+  return "45 RPM – avspilling";
+}
 export function poseAt(seconds: number) {
   const t = Math.max(0, Math.min(DURATION, seconds));
   const ease = (a: number, b: number) => {
@@ -43,7 +54,9 @@ function Bar({ a, b, radius = .035, color = "#b9c9cf" }: { a: [number,number,num
 function Mechanism({ time }: { time: number }) {
   const p = poseAt(time);
   const pivot: [number,number,number] = [0,2.15,p.carriageZ];
-  const grip: [number,number,number] = [0,p.released ? 1.05 : p.y+.13,p.released ? p.z-.65 : p.z];
+  const retract = Math.max(0,Math.min(1,(time-5.9)/.45));
+  const smoothRetract = retract*retract*(3-2*retract);
+  const grip: [number,number,number] = [0,p.y+.13+(1.05-(p.y+.13))*smoothRetract,p.z-.65*smoothRetract];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
     <mesh position={[0,.08,1]}><cylinderGeometry args={[.98,.98,.16,64]}/><meshStandardMaterial color="#77838c" metalness={.9} roughness={.22}/></mesh>
@@ -54,8 +67,8 @@ function Mechanism({ time }: { time: number }) {
     <Bar a={[1.12,2.28,-2.1]} b={[1.12,2.28,1.15]} radius={.06}/>
     <mesh position={[0,2.27,p.carriageZ]}><boxGeometry args={[2.35,.23,.42]}/><meshStandardMaterial color="#6e8d9d" metalness={.9} roughness={.24}/></mesh>
     <Bar a={pivot} b={grip} radius={.055}/>
-    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,p.y+.13,p.z]} radius={.027}/>
-    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,p.y+.13,p.z]} radius={.027}/>
+    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,grip[1],grip[2]]} radius={.027}/>
+    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,grip[1],grip[2]]} radius={.027}/>
     <group position={grip} rotation={[p.released ? 0 : p.tilt,0,0]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
@@ -92,6 +105,7 @@ export default function JukeboxMechanism3D() {
         <OrbitControls makeDefault target={[0,1,0]} enablePan={false} minDistance={3} maxDistance={12}/>
       </Canvas>
     </div>
+    <p role="status" aria-live="off">Fase: {phaseAt(time)} · {time.toFixed(2)} / {DURATION.toFixed(2)} sekunder</p>
     <div className="jukebox-3d-controls">
       <button type="button" onClick={()=>{setTime(0);setRunning(true);}}>Test plateveksleren i 3D uten musikk</button>
       <button type="button" onClick={()=>setRunning(v=>!v)}>{running?"Pause mekanikk":"Fortsett mekanikk"}</button>
