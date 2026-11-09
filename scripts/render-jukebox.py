@@ -93,6 +93,24 @@ def build_art(title, artist, destination, portrait):
     return width, height, round(radius * 2)
 
 
+def validate_cabinet_image(image, portrait):
+    """Reject unreadable or undersized cabinet assets before starting a render."""
+    probe = subprocess.check_output([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height", "-of", "json", str(image)
+    ], text=True)
+    streams = json.loads(probe).get("streams", [])
+    if not streams:
+        raise ValueError(f"Cabinet image has no readable video/image stream: {image}")
+    width, height = streams[0]["width"], streams[0]["height"]
+    expected = (1080, 1920) if portrait else (1920, 1080)
+    if (width, height) != expected:
+        raise ValueError(
+            f"Cabinet image must be {expected[0]}x{expected[1]} for "
+            f"{'portrait' if portrait else 'landscape'} mode; got {width}x{height}: {image}"
+        )
+
+
 def default_cabinet_image(portrait, assets_root=None):
     """Return an installed format-specific cabinet image or None."""
     root = assets_root if assets_root is not None else Path(__file__).resolve().parent.parent / "assets" / "jukebox"
@@ -110,6 +128,8 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
         cabinet_image = default_cabinet_image(portrait)
     if cabinet_image is not None and not cabinet_image.is_file():
         raise FileNotFoundError(cabinet_image)
+    if cabinet_image is not None:
+        validate_cabinet_image(cabinet_image, portrait)
     if not audio.is_file():
         raise FileNotFoundError(audio)
     probe = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(audio)], text=True)
