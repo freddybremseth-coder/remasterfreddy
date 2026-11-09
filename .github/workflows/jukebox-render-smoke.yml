@@ -1,0 +1,22 @@
+name: Jukebox MP4 render smoke test
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/render-jukebox.py'
+      - 'scripts/render-jukebox-batch.py'
+      - 'scripts/test-jukebox.py'
+      - '.github/workflows/jukebox-render-smoke.yml'
+  workflow_dispatch:
+jobs:
+  render-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg inkscape
+      - name: Render and inspect landscape and portrait MP4
+        run: python3 scripts/test-jukebox.py
