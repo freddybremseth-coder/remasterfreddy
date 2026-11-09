@@ -167,11 +167,24 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
                 f'lengthAdjust="spacingAndGlyphs">{svg_text(title.strip()[:90])}</text></svg>',
                 encoding="utf-8")
             run(["inkscape", str(title_svg), "--export-filename", str(title_image)])
+        # A soft contact shadow gives the photo-mode vinyl a physical seat
+        # on the platter. Keep the illustrated cabinet unchanged.
+        shadow_filter = ""
+        backdrop_label = "bg"
+        if cabinet_image is not None:
+            shadow_filter = (
+                f"color=c=black@0.0:s={width}x{height}:r=25,format=rgba,"
+                f"drawbox=x={x+round(disc_size*.045)}:y={y+round(disc_size*.07)}:"
+                f"w={round(disc_size*.91)}:h={round(disc_size*.91)}:"
+                f"color=black@0.35:t=fill[shadow];"
+                f"[bg][shadow]overlay=0:0:shortest=1[shadowed];")
+            backdrop_label = "shadowed"
         filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
                        f"crop={width}:{height},setsar=1,format=rgba[bg];"
+                       f"{shadow_filter}"
                        f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
-                       f"[bg][record]overlay=x={x}:y={y}:shortest=1[deck];"
+                       f"[{backdrop_label}][record]overlay=x={x}:y={y}:shortest=1[deck];"
                        f"[2:v]format=rgba[tonearm];"
                        f"[deck][tonearm]overlay=0:{photo_y_offset}:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(backdrop),
