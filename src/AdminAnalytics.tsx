@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, Eye, Loader2, RefreshCw, ThumbsUp, TrendingUp, Users, Video } from "lucide-react";
 import { ChannelAnalytics, loadChannelAnalytics } from "./lib/admin-api";
 import "./admin-analytics.css";
+import AdminGrowthMeasurements from "./AdminGrowthMeasurements";
 
 function formatNumber(value?: number) {
   return new Intl.NumberFormat("nb-NO", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
@@ -33,6 +34,7 @@ export default function AdminAnalytics() {
   const analysis = data?.analysis;
 
   return (
+    <>
     <section className="admin-card analytics-panel">
       <div className="analytics-header">
         <div>
@@ -84,5 +86,7 @@ export default function AdminAnalytics() {
         </article>
       </div>
     </section>
+    <AdminGrowthMeasurements />
+    </>
   );
 }
