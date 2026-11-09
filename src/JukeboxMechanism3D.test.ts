@@ -40,8 +40,8 @@ describe("jukebox 3D choreography",()=>{
     expect(poseAt(2.5).z).toBeGreaterThan(-1.5);
   });
   it("keeps gripper anchored before release and retracts smoothly",()=>{
-    const before=gripperPositionAt(5.9);
-    const mid=gripperPositionAt(6.125);
+    const before=gripperPositionAt(6.05);
+    const mid=gripperPositionAt(6.2);
     const after=gripperPositionAt(6.35);
     expect(before.y).toBeCloseTo(poseAt(5.9).y+.13);
     expect(before.z).toBeCloseTo(poseAt(5.9).z);
@@ -51,6 +51,7 @@ describe("jukebox 3D choreography",()=>{
     expect(after.z).toBeCloseTo(poseAt(6.35).z-.65);
   });
   it("reports the release and cue phases separately",()=>{
+    expect(phaseAt(5.95)).toContain("Åpne gripehodet");
     expect(phaseAt(6.1)).toContain("Trekk tilbake");
     expect(phaseAt(6.7)).toContain("pickupen");
   });
