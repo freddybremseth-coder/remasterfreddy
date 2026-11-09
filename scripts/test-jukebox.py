@@ -33,6 +33,17 @@ class JukeboxSmokeTest(unittest.TestCase):
                     self.assertEqual((video["width"], video["height"]), expected)
                     self.assertTrue(any(stream["codec_type"] == "audio" for stream in data["streams"]))
 
+    def test_photographic_cabinet_option(self):
+        """An external image can be composited without changing the vinyl pipeline."""
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            audio, photo, output = path / "test.wav", path / "cabinet.png", path / "photo.mp4"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=darkred:s=800x600", "-frames:v", "1", str(photo)], check=True)
+            renderer.render(audio, "Photo Mode", output, False, seconds=0.5, cabinet_image=photo)
+            self.assertTrue(output.is_file())
+            self.assertGreater(output.stat().st_size, 1000)
+
     def test_simple_template_has_no_record_changer(self):
         """The final renderer must not reintroduce the abandoned mechanical arm."""
         with tempfile.TemporaryDirectory() as temp:
