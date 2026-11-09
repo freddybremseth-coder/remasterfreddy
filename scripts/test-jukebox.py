@@ -50,6 +50,17 @@ class JukeboxSmokeTest(unittest.TestCase):
             self.assertIn("video", [s["codec_type"] for s in streams])
             self.assertIn("audio", [s["codec_type"] for s in streams])
 
+    def test_reject_vinyl_offsets_outside_frame(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            audio = path / "test.wav"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
+            with self.assertRaisesRegex(ValueError, "outside"):
+                renderer.render(audio, "Offset check", path / "invalid.mp4",
+                                False, seconds=0.5, disc_offset_x=2000)
+            self.assertFalse((path / "invalid.mp4").exists())
+
     def test_simple_template_has_no_record_changer(self):
         """The final renderer must not reintroduce the abandoned mechanical arm."""
         with tempfile.TemporaryDirectory() as temp:
