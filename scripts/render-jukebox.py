@@ -150,7 +150,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
             audio_input_index = command.index("-filter_complex") - 2
             command[audio_input_index:audio_input_index] = ["-loop", "1", "-i", str(title_image)]
             command[command.index("-filter_complex") + 1] = filtergraph.replace(
-                "format=yuv420p[v]", "format=rgba[witharm];[4:v]format=rgba[title];"
+                "format=yuv420p[v]", "format=rgba[witharm];[3:v]format=rgba[title];"
                 "[witharm][title]overlay=0:0:shortest=1,format=yuv420p[v]")
             command[command.index("-map") + 3] = "4:a:0"
         run(command)
