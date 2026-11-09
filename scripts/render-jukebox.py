@@ -116,6 +116,23 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
         # An optional photographic cabinet can replace the illustrated backdrop.
         # Keep vinyl and tonearm as separate layers so they remain animated.
         backdrop = cabinet_image if cabinet_image is not None else directory / "background.png"
+        # Photo cabinets deliberately have an empty marquee. Render the current
+        # track title as a separate transparent layer instead of baking it in.
+        title_image = None
+        if cabinet_image is not None:
+            title_svg = directory / "marquee-title.svg"
+            title_image = directory / "marquee-title.png"
+            marquee_y = height * (0.32 if portrait else 0.31)
+            font_size = 55 if portrait else 65
+            title_svg.write_text(
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">'
+                f'<text x="{width/2}" y="{marquee_y}" text-anchor="middle" '
+                f'font-family="DejaVu Serif" font-style="italic" font-weight="bold" '
+                f'font-size="{font_size}" fill="#39170e" '
+                f'textLength="{min(width*.61, max(170, len(title)*font_size*.55))}" '
+                f'lengthAdjust="spacingAndGlyphs">{svg_text(title.strip()[:90])}</text></svg>',
+                encoding="utf-8")
+            run(["inkscape", str(title_svg), "--export-filename", str(title_image)])
         filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
                        f"crop={width}:{height},setsar=1,format=rgba[bg];"
                        f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
@@ -128,6 +145,14 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
                    "-movflags", "+faststart", "-shortest", str(output)]
+        if title_image is not None:
+            # Insert transparent title layer before audio; update the audio index.
+            audio_input_index = command.index("-filter_complex") - 2
+            command[audio_input_index:audio_input_index] = ["-loop", "1", "-i", str(title_image)]
+            command[command.index("-filter_complex") + 1] = filtergraph.replace(
+                "format=yuv420p[v]", "format=rgba[witharm];[4:v]format=rgba[title];"
+                "[witharm][title]overlay=0:0:shortest=1,format=yuv420p[v]")
+            command[command.index("-map") + 3] = "4:a:0"
         run(command)
     return duration
 
