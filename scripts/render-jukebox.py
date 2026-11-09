@@ -93,6 +93,13 @@ def build_art(title, artist, destination, portrait):
     return width, height, round(radius * 2)
 
 
+def default_cabinet_image(portrait, assets_root=None):
+    """Return an installed format-specific cabinet image or None."""
+    root = assets_root if assets_root is not None else Path(__file__).resolve().parent.parent / "assets" / "jukebox"
+    candidate = root / ("cabinet-portrait.png" if portrait else "cabinet-landscape.png")
+    return candidate if candidate.is_file() else None
+
+
 def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
     for tool in ("ffmpeg", "ffprobe", "inkscape"):
         if not shutil.which(tool):
@@ -100,10 +107,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
     # Prefer an approved photo asset when one is installed in the repository.
     # Keep the illustrated fallback for existing installations.
     if cabinet_image is None:
-        candidate = Path(__file__).resolve().parent.parent / "assets" / "jukebox" / (
-            "cabinet-portrait.png" if portrait else "cabinet-landscape.png")
-        if candidate.is_file():
-            cabinet_image = candidate
+        cabinet_image = default_cabinet_image(portrait)
     if cabinet_image is not None and not cabinet_image.is_file():
         raise FileNotFoundError(cabinet_image)
     if not audio.is_file():
