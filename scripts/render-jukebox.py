@@ -93,10 +93,12 @@ def build_art(title, artist, destination, portrait):
     return width, height, round(radius * 2)
 
 
-def render(audio, title, output, portrait, seconds=None):
+def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
     for tool in ("ffmpeg", "ffprobe", "inkscape"):
         if not shutil.which(tool):
             raise RuntimeError(f"Required executable not found: {tool}")
+    if cabinet_image is not None and not cabinet_image.is_file():
+        raise FileNotFoundError(cabinet_image)
     if not audio.is_file():
         raise FileNotFoundError(audio)
     probe = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(audio)], text=True)
@@ -111,13 +113,17 @@ def render(audio, title, output, portrait, seconds=None):
         x, y = (width-disc_size)//2, int(height * (0.53 if portrait else 0.55)-disc_size/2)
         # The vinyl is already on the platter. No mechanical changer or sliding record.
         # A continuous 45 RPM spin avoids unrealistic motion and makes the loop reusable.
-        filtergraph = (f"[0:v]scale={width}:{height},format=rgba[bg];"
+        # An optional photographic cabinet can replace the illustrated backdrop.
+        # Keep vinyl and tonearm as separate layers so they remain animated.
+        backdrop = cabinet_image if cabinet_image is not None else directory / "background.png"
+        filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
+                       f"crop={width}:{height},setsar=1,format=rgba[bg];"
                        f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
                        f"[bg][record]overlay=x={x}:y={y}:shortest=1[deck];"
                        f"[2:v]format=rgba[tonearm];"
                        f"[deck][tonearm]overlay=0:0:shortest=1,format=yuv420p[v]")
-        command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(directory/"background.png"),
+        command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(backdrop),
                    "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"tonearm.png"), "-i", str(audio),
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
@@ -133,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--portrait", action="store_true", help="1080x1920 vertical Short instead of 1920x1080")
     parser.add_argument("--seconds", type=float, default=None, help="Optional preview/Short duration")
+    parser.add_argument("--cabinet-image", type=Path, help="Optional photographic cabinet backdrop (PNG/JPG); original illustrated cabinet remains the default")
     args = parser.parse_args()
-    length = render(args.audio, args.title, args.output, args.portrait, args.seconds)
+    length = render(args.audio, args.title, args.output, args.portrait, args.seconds, args.cabinet_image)
     print(f"Rendered {args.output} ({length:.1f} seconds)")
