@@ -26,7 +26,7 @@ def build_art(title, artist, destination, portrait):
     width, height = (1080, 1920) if portrait else (1920, 1080)
     center_x, center_y = width / 2, height * (0.53 if portrait else 0.55)
     # Preserve margins for the permanent song caption and the jukebox header.
-    radius = min(width * 0.41, height * 0.25)
+    radius = min(width * (0.34 if portrait else 0.41), height * (0.23 if portrait else 0.205))
     short_title = title.strip()[:64]
     if not short_title:
         raise ValueError("Song title cannot be empty")
