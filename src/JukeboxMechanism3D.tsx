@@ -71,7 +71,12 @@ function Mechanism({ time }: { time: number }) {
   const gripVisible: [number,number,number]=[grip[0],grip[1],gripVisibleZ];
   const rimY=p.y+.72*Math.sin(p.tilt);
   const rimZ=p.z+.72*Math.cos(p.tilt);
-  const head: [number,number,number]=p.gripped?[p.x,rimY+.08,rimZ]:gripVisible;
+  // After release, withdraw from the disc rim before returning toward the rail.
+  const releaseU=Math.max(0,Math.min(1,(time-5.9)/.45));
+  const releaseEase=releaseU*releaseU*(3-2*releaseU);
+  const head: [number,number,number]=time<5.9
+    ? (p.gripped?[p.x,rimY+.08,rimZ]:gripVisible)
+    : [p.x,rimY+.08+.42*releaseEase,rimZ-.75*releaseEase];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   // Rim contact moves with the record's changing orientation.
   const rim: [number,number,number]=[p.x,rimY,rimZ];
