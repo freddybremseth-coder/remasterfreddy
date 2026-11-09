@@ -69,6 +69,8 @@ function Mechanism({ time }: { time: number }) {
   const reach=approach*approach*(3-2*approach);
   const gripVisibleZ=grip[2]-(1-reach)*.7;
   const gripVisible: [number,number,number]=[grip[0],grip[1],gripVisibleZ];
+  // Rim contact moves with the record's changing orientation.
+  const rim: [number,number,number]=[discPosition[0],discPosition[1]+.72*Math.sin(p.tilt),discPosition[2]+.72*Math.cos(p.tilt)];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   return <group>
     {/* Open mechanical chassis, not a substitute for the final photographic cabinet. */}
@@ -95,6 +97,7 @@ function Mechanism({ time }: { time: number }) {
     <Bar a={pivot} b={gripVisible} radius={.055}/>
     <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
     <Bar a={[.24,2.13,p.carriageZ]} b={[.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
+    {p.gripped&&<Bar a={gripVisible} b={rim} radius={.025} color="#d6b775"/>}
     <group position={gripVisible} rotation={[0,0,p.released ? 0 : p.tilt]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
