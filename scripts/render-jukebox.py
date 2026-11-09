@@ -146,6 +146,11 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         photo_y_offset = round(height * 0.07) if cabinet_image is not None else 0
         x = (width-disc_size)//2 + disc_offset_x
         y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset + disc_offset_y
+        if not (0 <= x and 0 <= y and x + disc_size <= width and y + disc_size <= height):
+            raise ValueError(
+                f"Vinyl placement ({x}, {y}) with size {disc_size} is outside "
+                f"the {width}x{height} video frame. Reduce disc offsets."
+            )
         # The vinyl is already on the platter. No mechanical changer or sliding record.
         # A continuous 45 RPM spin avoids unrealistic motion and makes the loop reusable.
         # An optional photographic cabinet can replace the illustrated backdrop.
