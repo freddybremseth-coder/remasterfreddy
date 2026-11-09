@@ -42,6 +42,7 @@ class JukeboxSmokeTest(unittest.TestCase):
             renderer.build_art("Test Song", "Re-master Freddy", directory, False)
             self.assertTrue((directory / "disc.png").exists())
             self.assertTrue((directory / "background.png").exists())
+            self.assertTrue((directory / "tonearm.png").exists())
             self.assertFalse((directory / "arm.png").exists())
             self.assertFalse((directory / "arm.svg").exists())
 
