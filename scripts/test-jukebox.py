@@ -39,7 +39,7 @@ class JukeboxSmokeTest(unittest.TestCase):
             path = Path(temp)
             audio, photo, output = path / "test.wav", path / "cabinet.png", path / "photo.mp4"
             subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
-            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=darkred:s=800x600", "-frames:v", "1", str(photo)], check=True)
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=darkred:s=1920x1080", "-frames:v", "1", str(photo)], check=True)
             renderer.render(audio, "Blå natt & kjærlighet", output, False, seconds=0.5, cabinet_image=photo)
             self.assertTrue(output.is_file())
             self.assertGreater(output.stat().st_size, 1000)
@@ -62,6 +62,17 @@ class JukeboxSmokeTest(unittest.TestCase):
             self.assertTrue((directory / "tonearm.png").exists())
             self.assertFalse((directory / "arm.png").exists())
             self.assertFalse((directory / "arm.svg").exists())
+
+    def test_reject_wrong_cabinet_dimensions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            image = Path(temp) / "wrong.png"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "color=c=red:s=800x600", "-frames:v", "1",
+                            str(image)], check=True)
+            with self.assertRaisesRegex(ValueError, "1920x1080"):
+                renderer.validate_cabinet_image(image, False)
+            with self.assertRaisesRegex(ValueError, "1080x1920"):
+                renderer.validate_cabinet_image(image, True)
 
     def test_cabinet_autoselection_and_fallback(self):
         with tempfile.TemporaryDirectory() as temp:
