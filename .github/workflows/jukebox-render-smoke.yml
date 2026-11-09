@@ -20,3 +20,22 @@ jobs:
           sudo apt-get install -y ffmpeg inkscape
       - name: Render and inspect landscape and portrait MP4
         run: python3 scripts/test-jukebox.py
+
+      - name: Generate visual inspection frames
+        if: success()
+        run: |
+          mkdir -p jukebox-review
+          ffmpeg -hide_banner -loglevel error -f lavfi -i sine=frequency=440:duration=3 -c:a pcm_s16le jukebox-review/sample.wav
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Visual Review" --output jukebox-review/landscape.mp4 --seconds 2
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Visual Review" --output jukebox-review/portrait.mp4 --portrait --seconds 2
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/landscape.mp4 -frames:v 1 jukebox-review/landscape.png
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/portrait.mp4 -frames:v 1 jukebox-review/portrait.png
+      - name: Upload review frames
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukebox-review-frames
+          path: |
+            jukebox-review/landscape.png
+            jukebox-review/portrait.png
+          retention-days: 7
