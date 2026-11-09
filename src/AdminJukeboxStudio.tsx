@@ -51,7 +51,7 @@ export default function AdminJukeboxStudio(){
         <option value="landscape">YouTube 16:9</option><option value="portrait">Shorts 9:16</option>
       </select></label>
     </div>
-    <div className={`jukebox-stage jukebox-${format}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
+    <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
       <div className="jukebox-frame">
         <div className="jukebox-header">RE-MASTER FREDDY</div>
         <div className="jukebox-deck">
