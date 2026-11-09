@@ -43,3 +43,21 @@ The source audio starts at the beginning; no extra sound effect or pitch/speed c
 5. Render on a worker with FFmpeg and Inkscape installed, not in the Vercel frontend request lifecycle.
 
 This prototype is intended as the rendering core for issue #55.
+
+## Photographic cabinet option (experimental)
+
+The offline renderer accepts an optional PNG/JPEG cabinet background while retaining
+the independently rotating record and fixed stylus overlay:
+
+```bash
+python3 scripts/render-jukebox.py --audio song.mp3 --title "Song title" \
+  --cabinet-image assets/jukebox-cabinet.png --output song.mp4
+```
+
+Without `--cabinet-image`, the existing illustrated cabinet is unchanged.
+The image is scaled and center-cropped to 1920×1080 or 1080×1920. Use a
+purpose-made image **without an already visible record, tonearm, or baked-in
+song title**, otherwise the overlaid animated components will duplicate them.
+For portrait, use a separately composed vertical source image where possible.
+This feature does not yet install or approve any photographic source asset.
+Review both generated still frames before selecting a production template.
