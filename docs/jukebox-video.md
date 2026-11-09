@@ -73,3 +73,18 @@ illustrated cabinet. `--cabinet-image` explicitly overrides this selection.
 Do not commit an image with a baked-in title, record, or tonearm into these
 locations: the renderer overlays a dynamic title, spinning record, and fixed
 tonearm. The photorealistic design concept has not yet been committed.
+
+## Photo cabinet alignment
+
+For photographic backdrops, calibrate the vinyl and fixed pickup together
+without editing the renderer source. Example:
+
+```bash
+python3 scripts/render-jukebox.py --audio song.mp3 --title "My Song" \
+  --cabinet-image assets/jukebox/cabinet-landscape.png \
+  --disc-offset-x 20 --disc-offset-y -35 --seconds 5 --output preview.mp4
+```
+
+Offsets are in output pixels. Both vinyl and tonearm move by the same
+amount. Use zero offsets for the illustrated cabinet. Photo assets must
+match the output dimensions exactly: 1920x1080 or 1080x1920.
