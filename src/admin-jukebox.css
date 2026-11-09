@@ -27,11 +27,16 @@
 @keyframes jukebox-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.jukebox-controls{grid-template-columns:1fr}.jukebox-frame{border-width:5px}.jukebox-deck{border-width:5px}.jukebox-label{border-width:3px}.jukebox-tonearm{height:7px}.jukebox-tonearm span{height:22px;width:18px;top:-9px}}
 
-/* Optional 3D inspection area; isolated from existing 2D storyboard. */
-.jukebox-3d{max-width:790px;margin:18px auto;color:#dce6ef}
-.jukebox-3d-canvas{height:440px;max-height:65vh;border:1px solid #607a86;border-radius:16px;overflow:hidden;background:#101a25}
-.jukebox-3d-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
-.jukebox-3d-controls button{padding:9px 12px;border:1px solid #7596a4;border-radius:8px;background:#17313d;color:#fff;cursor:pointer}
-.jukebox-3d-controls label{display:flex;flex:1 1 240px;align-items:center;gap:10px;flex-wrap:wrap}
-.jukebox-3d-controls input{flex:1;min-width:130px}
-@media(max-width:600px){.jukebox-3d-canvas{height:330px}}
+
+/* Polished cabinet lighting for the simple vinyl-first video concept. */
+.jukebox-stage{isolation:isolate;background:radial-gradient(ellipse at 50% 35%,#234d62 0%,#10232e 48%,#060b13 100%);box-shadow:inset 0 0 70px #02040c,0 18px 45px #0005}
+.jukebox-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 85%,#46b9d521,transparent 62%);z-index:0}
+.jukebox-frame{z-index:1;border-color:#b7e6e9;border-style:solid;background:radial-gradient(ellipse at 50% 46%,#30465a 0%,#101f2c 62%,#070f1a 100%);box-shadow:inset 0 0 0 8px #7d2635,inset 0 0 0 15px #c7a56d,inset 0 0 55px #f6bb6c3b,0 0 28px #46c5dc66,0 12px 25px #0009}
+.jukebox-frame::before{content:"";position:absolute;inset:3% 3.5%;border-radius:15% 15% 7% 7%;border:2px solid #f4d79b99;box-shadow:0 0 18px #f1bf6b55,inset 0 0 16px #50d4e33d;pointer-events:none}
+.jukebox-frame::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 18%,#ffffff0b 31%,transparent 43%,transparent 65%,#ffffff08 72%,transparent 79%);mix-blend-mode:screen}
+.jukebox-header{color:#b9e5f3;text-shadow:0 1px 0 #07121e,0 2px 0 #386d91,0 3px 0 #07121e,0 0 14px #43bde5,0 0 25px #54c4ef7a}
+.jukebox-deck{border-color:#d6b67a;background:radial-gradient(circle,#1b2933 0%,#080d15 75%);box-shadow:0 0 0 6px #52697a,0 0 0 9px #162632,inset 0 0 24px #000,0 8px 22px #000a}
+.jukebox-record{background:repeating-radial-gradient(circle at center,#0e1218 0 3px,#30323c 4px 5px,#0c1017 6px 9px);box-shadow:inset 0 0 12px #000c,0 2px 8px #000a}
+.jukebox-record::after{content:"";position:absolute;inset:1%;border-radius:50%;background:linear-gradient(125deg,transparent 12%,#b4d9ed15 26%,transparent 40%,transparent 67%,#fff2c311 76%,transparent 88%);pointer-events:none}
+.jukebox-caption{text-shadow:0 2px 7px #000,0 0 16px #e3b97144;letter-spacing:.025em}
+@media(prefers-reduced-motion:reduce){.jukebox-record{animation:none!important}}
