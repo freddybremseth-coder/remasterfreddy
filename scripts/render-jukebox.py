@@ -68,7 +68,7 @@ def build_art(title, artist, destination, portrait):
     </svg>'''
     # Fixed playback tonearm: an independent foreground overlay, not a record changer.
     # The stylus rests at the outer groove while the disc spins beneath it.
-    pivot_x, pivot_y = center_x + radius * 1.04, center_y - radius * 1.10
+    pivot_x, pivot_y = center_x + radius * 1.18, center_y - radius * 0.58
     stylus_x, stylus_y = center_x + radius * .67, center_y - radius * .66
     tonearm = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
       <defs><linearGradient id="tone-metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7f2df"/><stop offset=".48" stop-color="#9cb9c5"/><stop offset="1" stop-color="#425866"/></linearGradient></defs>
