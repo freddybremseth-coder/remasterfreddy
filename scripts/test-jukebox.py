@@ -33,6 +33,18 @@ class JukeboxSmokeTest(unittest.TestCase):
                     self.assertEqual((video["width"], video["height"]), expected)
                     self.assertTrue(any(stream["codec_type"] == "audio" for stream in data["streams"]))
 
+    def test_simple_template_has_no_record_changer(self):
+        """The final renderer must not reintroduce the abandoned mechanical arm."""
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            if not shutil.which("inkscape"):
+                self.skipTest("Inkscape missing")
+            renderer.build_art("Test Song", "Re-master Freddy", directory, False)
+            self.assertTrue((directory / "disc.png").exists())
+            self.assertTrue((directory / "background.png").exists())
+            self.assertFalse((directory / "arm.png").exists())
+            self.assertFalse((directory / "arm.svg").exists())
+
     def test_empty_title_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, "title"):
