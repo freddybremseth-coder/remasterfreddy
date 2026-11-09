@@ -32,7 +32,7 @@ python3 scripts/render-jukebox-batch.py --manifest ./songs.json --output-dir ./j
 
 Each completed MP4 has a JSON sidecar containing the audio SHA-256 and template settings. Re-running the identical manifest skips verified output. Changed songs, titles or render settings create a new `-v2` file rather than overwriting an existing video. A failed song does not stop the rest of the batch. Everything runs locally; **no files are uploaded or published**.
 
-The source audio starts at the beginning; no extra sound effect or pitch/speed conversion is applied. The record spins at the correct 45 rpm, and the title appears both on its moving label and in a static caption for readability. The plate slides into view during the first three seconds. The next iteration needs a realistic mechanical arm / jukebox selection sequence, artist-approved visual assets, and a seamless intro-to-loop transition.
+The source audio starts at the beginning; no extra sound effect or pitch/speed conversion is applied. The record spins at the correct 45 rpm, and the title appears both on its moving label and in a static caption for readability. The vinyl is already on the turntable when the video starts. The complex record-changer arm was deliberately removed from the active video design; its separate 3D prototype remains in source history for reference. The next iteration should prioritize a photorealistic, artist-approved jukebox cabinet, tasteful lighting, a readable title and a seamless spinning-record loop.
 
 ## Integration needed before production
 
