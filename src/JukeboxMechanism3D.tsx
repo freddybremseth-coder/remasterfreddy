@@ -69,9 +69,12 @@ function Mechanism({ time }: { time: number }) {
   const reach=approach*approach*(3-2*approach);
   const gripVisibleZ=grip[2]-(1-reach)*.7;
   const gripVisible: [number,number,number]=[grip[0],grip[1],gripVisibleZ];
+  const rimY=p.y+.72*Math.sin(p.tilt);
+  const rimZ=p.z+.72*Math.cos(p.tilt);
+  const head: [number,number,number]=p.gripped?[p.x,rimY+.08,rimZ]:gripVisible;
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
   // Rim contact moves with the record's changing orientation.
-  const rim: [number,number,number]=[discPosition[0],discPosition[1]+.72*Math.sin(p.tilt),discPosition[2]+.72*Math.cos(p.tilt)];
+  const rim: [number,number,number]=[p.x,rimY,rimZ];
 
   return <group>
     {/* Open mechanical chassis, not a substitute for the final photographic cabinet. */}
@@ -95,11 +98,11 @@ function Mechanism({ time }: { time: number }) {
     <Bar a={[-1.12,2.28,-2.1]} b={[-1.12,2.28,1.15]} radius={.06}/>
     <Bar a={[1.12,2.28,-2.1]} b={[1.12,2.28,1.15]} radius={.06}/>
     <mesh position={[0,2.27,p.carriageZ]}><boxGeometry args={[2.35,.23,.42]}/><meshStandardMaterial color="#6e8d9d" metalness={.9} roughness={.24}/></mesh>
-    <Bar a={pivot} b={gripVisible} radius={.055}/>
-    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
-    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,gripVisible[1],gripVisible[2]]} radius={.027}/>
-    {p.gripped&&<Bar a={gripVisible} b={rim} radius={.025} color="#d6b775"/>}
-    <group position={gripVisible} rotation={[0,0,p.released ? 0 : p.tilt]}>
+    <Bar a={pivot} b={head} radius={.055}/>
+    <Bar a={[-.24,2.13,p.carriageZ]} b={[-.15,head[1],head[2]]} radius={.027}/>
+    <Bar a={[.24,2.13,p.carriageZ]} b={[.15,head[1],head[2]]} radius={.027}/>
+    {p.gripped&&<Bar a={head} b={rim} radius={.025} color="#d6b775"/>}
+    <group position={head} rotation={[0,0,p.released ? 0 : p.tilt]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
       {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
     </group>
