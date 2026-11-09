@@ -118,7 +118,7 @@ def render(audio, title, output, portrait, seconds=None):
                        f"[2:v]format=rgba[tonearm];"
                        f"[deck][tonearm]overlay=0:0:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(directory/"background.png"),
-                   "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"arm.png"), "-i", str(audio),
+                   "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"tonearm.png"), "-i", str(audio),
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
                    "-movflags", "+faststart", "-shortest", str(output)]
