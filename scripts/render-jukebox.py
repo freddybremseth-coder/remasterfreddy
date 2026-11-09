@@ -176,10 +176,12 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
             # rather than drawing a rectangular patch behind the platter.
             shadow_filter = (
                 f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
+                f"pad=iw+{round(disc_size*.20)}:ih+{round(disc_size*.20)}:"
+                f"{round(disc_size*.10)}:{round(disc_size*.10)}:color=black@0,"
                 f"lutrgb=r=0:g=0:b=0,colorchannelmixer=aa=0.38,"
                 f"gblur=sigma={max(3, round(disc_size*.035))}[shadow];"
-                f"[bg][shadow]overlay=x={x+round(disc_size*.018)}:"
-                f"y={y+round(disc_size*.025)}:shortest=1[shadowed];")
+                f"[bg][shadow]overlay=x={x-round(disc_size*.10)+round(disc_size*.018)}:"
+                f"y={y-round(disc_size*.10)+round(disc_size*.025)}:shortest=1[shadowed];")
             backdrop_label = "shadowed"
         filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
                        f"crop={width}:{height},setsar=1,format=rgba[bg];"
