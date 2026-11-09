@@ -156,7 +156,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
         if cabinet_image is not None:
             title_svg = directory / "marquee-title.svg"
             title_image = directory / "marquee-title.png"
-            marquee_y = height * (0.32 if portrait else 0.31)
+            marquee_y = height * (0.24 if portrait else 0.31)
             font_size = 55 if portrait else 65
             title_svg.write_text(
                 f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">'
