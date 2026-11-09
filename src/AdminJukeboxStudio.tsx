@@ -1,5 +1,4 @@
-import {lazy,Suspense,useEffect,useMemo,useRef,useState} from "react";
-const JukeboxMechanism3D=lazy(()=>import("./JukeboxMechanism3D"));
+import {useEffect,useMemo,useRef,useState} from "react";
 import {Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,type AdminSong} from "./lib/admin-api";
 import "./admin-jukebox.css";
@@ -12,7 +11,6 @@ export default function AdminJukeboxStudio(){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
-  const [show3D,setShow3D]=useState(false);
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
@@ -42,7 +40,7 @@ export default function AdminJukeboxStudio(){
   return <section className="admin-card admin-jukebox-studio">
     <p className="admin-eyebrow">Re-master Freddy · musikkvideo</p>
     <h2>60-talls jukeboks</h2>
-    <p>Velg en sang fra ditt eksisterende musikkbibliotek. Her kan du se en animert skisse av platen og spille originalmusikken. Produksjon av MP4 i serverkøen er ennå ikke koblet til.</p>
+    <p>Velg en sang fra ditt eksisterende musikkbibliotek. Her kan du se en enkel jukeboks med roterende vinylplate og spille originalmusikken. Den kompliserte 3D-plateveksleren er tatt ut av forhåndsvisningen. Produksjon av MP4 i serverkøen er ennå ikke koblet til.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
     <div className="jukebox-controls">
       <label><span>Sang</span><select aria-label="Velg sang" value={songId} onChange={event=>setSongId(event.target.value)} disabled={loading}>
@@ -65,8 +63,6 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>
     </div>
-    <div className="jukebox-actions"><button className="admin-secondary" type="button" aria-expanded={show3D} onClick={()=>setShow3D(v=>!v)}>{show3D?"Skjul 3D-prototype":"Vis 3D-plateveksler (prototype)"}</button></div>
-    {show3D&&<Suspense fallback={<p>Laster 3D-mekanikk…</p>}><JukeboxMechanism3D/></Suspense>}
     <audio ref={audio} src={song?.audioUrl} onEnded={()=>setPlaying(false)} preload="none"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
