@@ -118,7 +118,7 @@ def default_cabinet_image(portrait, assets_root=None):
     return candidate if candidate.is_file() else None
 
 
-def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
+def render(audio, title, output, portrait, seconds=None, cabinet_image=None, disc_offset_x=0, disc_offset_y=0):
     for tool in ("ffmpeg", "ffprobe", "inkscape"):
         if not shutil.which(tool):
             raise RuntimeError(f"Required executable not found: {tool}")
@@ -144,7 +144,8 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
         # The photographic cabinet's physical platter sits lower than the
         # illustrated platter. Shift both the vinyl and tonearm together.
         photo_y_offset = round(height * 0.07) if cabinet_image is not None else 0
-        x, y = (width-disc_size)//2, int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset
+        x = (width-disc_size)//2 + disc_offset_x
+        y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset + disc_offset_y
         # The vinyl is already on the platter. No mechanical changer or sliding record.
         # A continuous 45 RPM spin avoids unrealistic motion and makes the loop reusable.
         # An optional photographic cabinet can replace the illustrated backdrop.
@@ -190,7 +191,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
                        f"[{backdrop_label}][record]overlay=x={x}:y={y}:shortest=1[deck];"
                        f"[2:v]format=rgba[tonearm];"
-                       f"[deck][tonearm]overlay=0:{photo_y_offset}:shortest=1,format=yuv420p[v]")
+                       f"[deck][tonearm]overlay={disc_offset_x}:{photo_y_offset+disc_offset_y}:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(backdrop),
                    "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"tonearm.png"), "-i", str(audio),
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
@@ -216,6 +217,8 @@ if __name__ == "__main__":
     parser.add_argument("--portrait", action="store_true", help="1080x1920 vertical Short instead of 1920x1080")
     parser.add_argument("--seconds", type=float, default=None, help="Optional preview/Short duration")
     parser.add_argument("--cabinet-image", type=Path, help="Override photographic cabinet backdrop (PNG/JPG); automatically uses assets/jukebox/cabinet-landscape.png or cabinet-portrait.png when present")
+    parser.add_argument("--disc-offset-x", type=int, default=0, help="Shift record and tonearm horizontally in pixels")
+    parser.add_argument("--disc-offset-y", type=int, default=0, help="Shift record and tonearm vertically in pixels")
     args = parser.parse_args()
-    length = render(args.audio, args.title, args.output, args.portrait, args.seconds, args.cabinet_image)
+    length = render(args.audio, args.title, args.output, args.portrait, args.seconds, args.cabinet_image, args.disc_offset_x, args.disc_offset_y)
     print(f"Rendered {args.output} ({length:.1f} seconds)")
