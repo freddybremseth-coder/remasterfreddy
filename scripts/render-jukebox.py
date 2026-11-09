@@ -53,6 +53,13 @@ def build_art(title, artist, destination, portrait):
       <rect x="{width*.055}" y="{height*.06}" width="{width*.89}" height="{height*.88}" rx="{min(width,height)*.13}" fill="#571c24" stroke="url(#chrome)" stroke-width="22"/>
       <rect x="{width*.09}" y="{height*.095}" width="{width*.82}" height="{height*.81}" rx="{min(width,height)*.10}" fill="#14202a" stroke="#e1b45a" stroke-width="10"/>
       <path d="M {width*.15} {height*.18} Q {width*.5} {height*.02} {width*.85} {height*.18}" fill="none" stroke="#65d5d5" stroke-width="22"/>
+      <path d="M {width*.155} {height*.188} Q {width*.5} {height*.028} {width*.845} {height*.188}" fill="none" stroke="#d4f9fa" stroke-opacity=".75" stroke-width="5"/>
+      <path d="M {width*.115} {height*.23} V {height*.72} Q {width*.115} {height*.83} {width*.23} {height*.83}" fill="none" stroke="#e8bc72" stroke-opacity=".7" stroke-width="7"/>
+      <path d="M {width*.885} {height*.23} V {height*.72} Q {width*.885} {height*.83} {width*.77} {height*.83}" fill="none" stroke="#e8bc72" stroke-opacity=".7" stroke-width="7"/>
+      <path d="M {width*.14} {height*.24} V {height*.67}" fill="none" stroke="#5ce2e7" stroke-opacity=".55" stroke-width="9"/>
+      <path d="M {width*.86} {height*.24} V {height*.67}" fill="none" stroke="#5ce2e7" stroke-opacity=".55" stroke-width="9"/>
+      <rect x="{width*.13}" y="{height*.77}" width="{width*.74}" height="{height*.038}" rx="{height*.012}" fill="#1b2e3b" stroke="#c3a575" stroke-width="3"/>
+      {''.join(f'<rect x="{width*(.155+i*.048)}" y="{height*.779}" width="{width*.024}" height="{height*.016}" rx="3" fill="#e4c78e" opacity=".8"/>' for i in range(15))}
       <text x="{width/2}" y="{height*.15}" fill="#f7d68b" font-family="DejaVu Sans" font-weight="bold" font-size="{48 if portrait else 47}" text-anchor="middle">RE-MASTER FREDDY</text>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.09}" fill="#080a0f" stroke="#e6c570" stroke-width="18"/>
       <circle cx="{center_x}" cy="{center_y}" r="{radius*1.01}" fill="#151721" stroke="#68777f" stroke-width="7"/>
