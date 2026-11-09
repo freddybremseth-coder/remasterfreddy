@@ -61,3 +61,15 @@ song title**, otherwise the overlaid animated components will duplicate them.
 For portrait, use a separately composed vertical source image where possible.
 This feature does not yet install or approve any photographic source asset.
 Review both generated still frames before selecting a production template.
+
+## Automatic cabinet selection
+
+The renderer looks for approved image assets at
+`assets/jukebox/cabinet-landscape.png` (16:9) and
+`assets/jukebox/cabinet-portrait.png` (9:16). If the corresponding image
+exists, the renderer uses it automatically; otherwise it uses the original
+illustrated cabinet. `--cabinet-image` explicitly overrides this selection.
+
+Do not commit an image with a baked-in title, record, or tonearm into these
+locations: the renderer overlays a dynamic title, spinning record, and fixed
+tonearm. The photorealistic design concept has not yet been committed.
