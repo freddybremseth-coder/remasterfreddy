@@ -25,7 +25,7 @@ export function phaseAt(seconds: number) {
 }
 export function gripperPositionAt(seconds: number) {
   const p = poseAt(seconds);
-  const u = Math.max(0,Math.min(1,(seconds-5.9)/.45));
+  const u = Math.max(0,Math.min(1,(seconds-6.05)/.30));
   const retract = u*u*(3-2*u);
   return {x:0,y:p.y+.13+(1.05-(p.y+.13))*retract,z:p.z-.65*retract};
 }
