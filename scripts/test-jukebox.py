@@ -63,6 +63,19 @@ class JukeboxSmokeTest(unittest.TestCase):
             self.assertFalse((directory / "arm.png").exists())
             self.assertFalse((directory / "arm.svg").exists())
 
+    def test_cabinet_autoselection_and_fallback(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.assertIsNone(renderer.default_cabinet_image(False, root))
+            self.assertIsNone(renderer.default_cabinet_image(True, root))
+            landscape = root / "cabinet-landscape.png"
+            landscape.write_bytes(b"placeholder")
+            self.assertEqual(renderer.default_cabinet_image(False, root), landscape)
+            self.assertIsNone(renderer.default_cabinet_image(True, root))
+            portrait = root / "cabinet-portrait.png"
+            portrait.write_bytes(b"placeholder")
+            self.assertEqual(renderer.default_cabinet_image(True, root), portrait)
+
     def test_empty_title_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ValueError, "title"):
