@@ -18,6 +18,7 @@ export function phaseAt(seconds: number) {
   if (seconds < 4.5) return "Flytt og roter platen";
   if (seconds < 5.6) return "Senk mot tallerkenen";
   if (seconds < 5.9) return "Plasser platen";
+  if (seconds < 6.05) return "Åpne gripehodet";
   if (seconds < 6.35) return "Trekk tilbake gripearmen";
   if (seconds < 7.1) return "Senk pickupen";
   return "45 RPM – avspilling";
@@ -72,12 +73,15 @@ function Mechanism({ time }: { time: number }) {
   const rimY=p.y+.72*Math.sin(p.tilt);
   const rimZ=p.z+.72*Math.cos(p.tilt);
   // After release, withdraw from the disc rim before returning toward the rail.
-  const releaseU=Math.max(0,Math.min(1,(time-5.9)/.45));
+  const releaseU=Math.max(0,Math.min(1,(time-6.05)/.30));
   const releaseEase=releaseU*releaseU*(3-2*releaseU);
-  const head: [number,number,number]=time<5.9
-    ? (p.gripped?[p.x,rimY+.08,rimZ]:gripVisible)
+  const head: [number,number,number]=time<6.05
+    ? (time>=1?[p.x,rimY+.08,rimZ]:gripVisible)
     : [p.x,rimY+.08+.42*releaseEase,rimZ-.75*releaseEase];
   const discPosition: [number,number,number] = [p.x,p.y,p.z];
+  const jawOpen=Math.max(0,Math.min(1,(time-5.9)/.15));
+  const jawEase=jawOpen*jawOpen*(3-2*jawOpen);
+  const jawGap=.29+.16*jawEase;
   // Rim contact moves with the record's changing orientation.
   const rim: [number,number,number]=[p.x,rimY,rimZ];
 
@@ -109,7 +113,7 @@ function Mechanism({ time }: { time: number }) {
     {p.gripped&&<Bar a={head} b={rim} radius={.025} color="#d6b775"/>}
     <group position={head} rotation={[0,0,p.released ? 0 : p.tilt]}>
       <mesh><boxGeometry args={[.46,.12,.22]}/><meshStandardMaterial color="#b6c8d0" metalness={.85} roughness={.22}/></mesh>
-      {p.gripped&&[-1,1].map(s=><mesh key={s} position={[s*.29,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
+      {time>=.95&&time<6.35&&[-1,1].map(s=><mesh key={s} position={[s*jawGap,-.08,0]}><boxGeometry args={[.055,.23,.13]}/><meshStandardMaterial color="#d6b775" metalness={.7}/></mesh>)}
     </group>
     <group position={discPosition} rotation={[0,0,p.tilt]}><group rotation={[0,recordRotationAt(time),0]}>
       <mesh rotation={[0,0,0]}><cylinderGeometry args={[.78,.78,.025,72]}/><meshStandardMaterial color="#11151a" metalness={.3} roughness={.36}/></mesh>
