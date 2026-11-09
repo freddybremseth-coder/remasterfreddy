@@ -97,6 +97,13 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
     for tool in ("ffmpeg", "ffprobe", "inkscape"):
         if not shutil.which(tool):
             raise RuntimeError(f"Required executable not found: {tool}")
+    # Prefer an approved photo asset when one is installed in the repository.
+    # Keep the illustrated fallback for existing installations.
+    if cabinet_image is None:
+        candidate = Path(__file__).resolve().parent.parent / "assets" / "jukebox" / (
+            "cabinet-portrait.png" if portrait else "cabinet-landscape.png")
+        if candidate.is_file():
+            cabinet_image = candidate
     if cabinet_image is not None and not cabinet_image.is_file():
         raise FileNotFoundError(cabinet_image)
     if not audio.is_file():
@@ -164,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--portrait", action="store_true", help="1080x1920 vertical Short instead of 1920x1080")
     parser.add_argument("--seconds", type=float, default=None, help="Optional preview/Short duration")
-    parser.add_argument("--cabinet-image", type=Path, help="Optional photographic cabinet backdrop (PNG/JPG); original illustrated cabinet remains the default")
+    parser.add_argument("--cabinet-image", type=Path, help="Override photographic cabinet backdrop (PNG/JPG); automatically uses assets/jukebox/cabinet-landscape.png or cabinet-portrait.png when present")
     args = parser.parse_args()
     length = render(args.audio, args.title, args.output, args.portrait, args.seconds, args.cabinet_image)
     print(f"Rendered {args.output} ({length:.1f} seconds)")
