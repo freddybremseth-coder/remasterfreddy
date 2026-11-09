@@ -40,3 +40,18 @@
 .jukebox-record::after{content:"";position:absolute;inset:1%;border-radius:50%;background:linear-gradient(125deg,transparent 12%,#b4d9ed15 26%,transparent 40%,transparent 67%,#fff2c311 76%,transparent 88%);pointer-events:none}
 .jukebox-caption{text-shadow:0 2px 7px #000,0 0 16px #e3b97144;letter-spacing:.025em}
 @media(prefers-reduced-motion:reduce){.jukebox-record{animation:none!important}}
+
+/* Slow, restrained light breathing while music is actually playing. */
+.jukebox-active .jukebox-frame{animation:jukebox-glow 5s ease-in-out infinite}
+.jukebox-active .jukebox-header{animation:jukebox-sign-glow 6s ease-in-out infinite}
+@keyframes jukebox-glow{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.12)}
+}
+@keyframes jukebox-sign-glow{
+  0%,100%{opacity:1}
+  50%{opacity:.88}
+}
+@media(prefers-reduced-motion:reduce){
+  .jukebox-active .jukebox-frame,.jukebox-active .jukebox-header{animation:none}
+}
