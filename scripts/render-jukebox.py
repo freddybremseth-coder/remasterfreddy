@@ -143,8 +143,13 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         width, height, disc_size = build_art(title, "Re-master Freddy", directory, portrait)
         # The photographic cabinet's physical platter sits lower than the
         # illustrated platter. Shift both the vinyl and tonearm together.
-        photo_y_offset = round(height * 0.07) if cabinet_image is not None else 0
-        x = (width-disc_size)//2 + disc_offset_x
+        # Photo calibration for the approved landscape cabinet: its spindle
+        # is left of frame centre and above the illustrated platter position.
+        # Portrait assets require independent calibration.
+        photo_x_offset = -135 if cabinet_image is not None and not portrait else 0
+        photo_y_offset = -14 if cabinet_image is not None and not portrait else (
+            round(height * 0.07) if cabinet_image is not None else 0)
+        x = (width-disc_size)//2 + photo_x_offset + disc_offset_x
         y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset + disc_offset_y
         if not (0 <= x and 0 <= y and x + disc_size <= width and y + disc_size <= height):
             raise ValueError(
@@ -196,7 +201,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
                        f"[{backdrop_label}][record]overlay=x={x}:y={y}:shortest=1[deck];"
                        f"[2:v]format=rgba[tonearm];"
-                       f"[deck][tonearm]overlay={disc_offset_x}:{photo_y_offset+disc_offset_y}:shortest=1,format=yuv420p[v]")
+                       f"[deck][tonearm]overlay={photo_x_offset+disc_offset_x}:{photo_y_offset+disc_offset_y}:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(backdrop),
                    "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"tonearm.png"), "-i", str(audio),
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
