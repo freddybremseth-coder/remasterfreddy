@@ -40,9 +40,15 @@ class JukeboxSmokeTest(unittest.TestCase):
             audio, photo, output = path / "test.wav", path / "cabinet.png", path / "photo.mp4"
             subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
             subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=darkred:s=800x600", "-frames:v", "1", str(photo)], check=True)
-            renderer.render(audio, "Photo Mode", output, False, seconds=0.5, cabinet_image=photo)
+            renderer.render(audio, "Blå natt & kjærlighet", output, False, seconds=0.5, cabinet_image=photo)
             self.assertTrue(output.is_file())
             self.assertGreater(output.stat().st_size, 1000)
+            # Confirm the finished video has both video and audio streams.
+            streams = json.loads(subprocess.check_output([
+                "ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
+                "-of", "json", str(output)], text=True))["streams"]
+            self.assertIn("video", [s["codec_type"] for s in streams])
+            self.assertIn("audio", [s["codec_type"] for s in streams])
 
     def test_simple_template_has_no_record_changer(self):
         """The final renderer must not reintroduce the abandoned mechanical arm."""
