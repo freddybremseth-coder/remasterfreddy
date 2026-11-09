@@ -68,6 +68,14 @@ export default function AutopilotControl() {
     timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   }).format(new Date(value));
+  // A successful run is not healthy forever. Allow the daily 20:10 UTC job
+  // one hour of processing delay before warning about a missing run.
+  const scheduledRunExpected = settings?.mode === "execute_guarded";
+  const latestExpectedUtc = new Date(nextUtc);
+  latestExpectedUtc.setUTCDate(latestExpectedUtc.getUTCDate() - 1);
+  const deadlineUtc = new Date(latestExpectedUtc.getTime() + 60 * 60 * 1000);
+  const missingScheduledRun = Boolean(scheduledRunExpected && Date.now() > deadlineUtc.getTime()
+    && (!lastRun || new Date(lastRun.at).getTime() < latestExpectedUtc.getTime()));
   const lastDetailCount = (name: string) => {
     const raw = lastRun?.details?.[name];
     return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
@@ -117,8 +125,9 @@ export default function AutopilotControl() {
               <span><strong>{lastDetailCount("skipped_count") ?? "–"}</strong><small>Hoppet over</small></span>
               <span><strong>{lastDetailCount("approval_count") ?? "–"}</strong><small>Foreslått til godkjenning</small></span>
             </div>
-            {lastRun.status === "error" && <p className="admin-error">Den siste planlagte kjøringen feilet. Sjekk loggene før ny kjøring.</p>}
+            {lastRun.status === "error" && <p role="alert" className="admin-error">Den siste planlagte kjøringen feilet. Sjekk loggene før ny kjøring.</p>}
           </> : <p>Ingen registrert planlagt kjøring er tilgjengelig ennå. Dette er ikke en bekreftelse på at autopiloten har kjørt.</p>}
+          {missingScheduledRun && <p role="alert" className="admin-error">Varsel: Den forventede daglige kjøringen er ikke registrert innen én time etter planlagt start. Kontroller cron og serverlogg. Ingen automatisk omstart er utført.</p>}
         </div>
         {settings?.updatedAt && <small className="autopilot-updated">Sist endret {new Date(settings.updatedAt).toLocaleString("nb-NO")}{settings.updatedBy ? ` av ${settings.updatedBy}` : ""}</small>}
         {message && <div className="admin-success autopilot-message">{message}</div>}
