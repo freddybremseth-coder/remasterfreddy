@@ -172,12 +172,14 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None):
         shadow_filter = ""
         backdrop_label = "bg"
         if cabinet_image is not None:
+            # Derive the shadow from the actual circular record alpha mask,
+            # rather than drawing a rectangular patch behind the platter.
             shadow_filter = (
-                f"color=c=black@0.0:s={width}x{height}:r=25,format=rgba,"
-                f"drawbox=x={x+round(disc_size*.045)}:y={y+round(disc_size*.07)}:"
-                f"w={round(disc_size*.91)}:h={round(disc_size*.91)}:"
-                f"color=black@0.35:t=fill[shadow];"
-                f"[bg][shadow]overlay=0:0:shortest=1[shadowed];")
+                f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
+                f"lutrgb=r=0:g=0:b=0,colorchannelmixer=aa=0.38,"
+                f"gblur=sigma={max(3, round(disc_size*.035))}[shadow];"
+                f"[bg][shadow]overlay=x={x+round(disc_size*.018)}:"
+                f"y={y+round(disc_size*.025)}:shortest=1[shadowed];")
             backdrop_label = "shadowed"
         filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
                        f"crop={width}:{height},setsar=1,format=rgba[bg];"
