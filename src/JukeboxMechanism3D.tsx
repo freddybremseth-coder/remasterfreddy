@@ -69,9 +69,10 @@ function Mechanism({ time }: { time: number }) {
   const reach=approach*approach*(3-2*approach);
   const gripVisibleZ=grip[2]-(1-reach)*.7;
   const gripVisible: [number,number,number]=[grip[0],grip[1],gripVisibleZ];
+  const discPosition: [number,number,number] = [p.x,p.y,p.z];
   // Rim contact moves with the record's changing orientation.
   const rim: [number,number,number]=[discPosition[0],discPosition[1]+.72*Math.sin(p.tilt),discPosition[2]+.72*Math.cos(p.tilt)];
-  const discPosition: [number,number,number] = [p.x,p.y,p.z];
+
   return <group>
     {/* Open mechanical chassis, not a substitute for the final photographic cabinet. */}
     <mesh position={[0,-.19,-.15]} receiveShadow><boxGeometry args={[3.25,.24,4.8]}/><meshStandardMaterial color="#24313a" metalness={.78} roughness={.36}/></mesh>
