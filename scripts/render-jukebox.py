@@ -66,10 +66,28 @@ def build_art(title, artist, destination, portrait):
       <text x="{width/2}" y="{height*.845}" fill="#ffffff" font-family="DejaVu Sans" font-weight="bold" text-anchor="middle" font-size="{32 if portrait else 35}" textLength="{min(width*.78, max(180, len(title)*21))}" lengthAdjust="spacingAndGlyphs">{readable_title}</text>
       <text x="{width/2}" y="{height*.895}" fill="#ead6a9" font-family="DejaVu Sans" text-anchor="middle" font-size="{24 if portrait else 24}">JUKEBOX SINGLES · 1960s EDITION</text>
     </svg>'''
+    # Fixed playback tonearm: an independent foreground overlay, not a record changer.
+    # The stylus rests at the outer groove while the disc spins beneath it.
+    pivot_x, pivot_y = center_x + radius * 1.04, center_y - radius * 1.10
+    stylus_x, stylus_y = center_x + radius * .67, center_y - radius * .66
+    tonearm = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+      <defs><linearGradient id="tone-metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7f2df"/><stop offset=".48" stop-color="#9cb9c5"/><stop offset="1" stop-color="#425866"/></linearGradient></defs>
+      <circle cx="{pivot_x}" cy="{pivot_y}" r="{radius*.10}" fill="#14222c" stroke="#d5b77e" stroke-width="{radius*.025}"/>
+      <circle cx="{pivot_x}" cy="{pivot_y}" r="{radius*.055}" fill="#a5c3ca" stroke="#f5e8c8" stroke-width="{radius*.012}"/>
+      <path d="M {pivot_x} {pivot_y} L {pivot_x-radius*.10} {pivot_y+radius*.15} L {stylus_x+radius*.06} {stylus_y-radius*.05}"
+            fill="none" stroke="#08141b" stroke-width="{radius*.095}" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M {pivot_x} {pivot_y} L {pivot_x-radius*.10} {pivot_y+radius*.15} L {stylus_x+radius*.06} {stylus_y-radius*.05}"
+            fill="none" stroke="url(#tone-metal)" stroke-width="{radius*.060}" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="{stylus_x-radius*.095}" y="{stylus_y-radius*.075}" width="{radius*.19}" height="{radius*.15}" rx="{radius*.025}" fill="#c1d3d7" stroke="#273b49" stroke-width="{radius*.015}"/>
+      <path d="M {stylus_x} {stylus_y+radius*.075} v {radius*.055}" stroke="#e4c27c" stroke-width="{radius*.015}" stroke-linecap="round"/>
+    </svg>'''
+    tonearm_svg = destination / "tonearm.svg"
     disc_svg = destination / "disc.svg"
     bg_svg = destination / "background.svg"
+    tonearm_svg.write_text(tonearm, encoding="utf-8")
     disc_svg.write_text(disc, encoding="utf-8")
     bg_svg.write_text(background, encoding="utf-8")
+    run(["inkscape", str(tonearm_svg), "--export-filename", str(destination / "tonearm.png")])
     run(["inkscape", str(disc_svg), "--export-filename", str(destination / "disc.png")])
     run(["inkscape", str(bg_svg), "--export-filename", str(destination / "background.png")])
     return width, height, round(radius * 2)
@@ -96,10 +114,12 @@ def render(audio, title, output, portrait, seconds=None):
         filtergraph = (f"[0:v]scale={width}:{height},format=rgba[bg];"
                        f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
                        f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
-                       f"[bg][record]overlay=x={x}:y={y}:shortest=1,format=yuv420p[v]")
+                       f"[bg][record]overlay=x={x}:y={y}:shortest=1[deck];"
+                       f"[2:v]format=rgba[tonearm];"
+                       f"[deck][tonearm]overlay=0:0:shortest=1,format=yuv420p[v]")
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(directory/"background.png"),
                    "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"arm.png"), "-i", str(audio),
-                   "-filter_complex", filtergraph, "-map", "[v]", "-map", "2:a:0", "-t", f"{duration:.3f}",
+                   "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
                    "-r", "25", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "192k",
                    "-movflags", "+faststart", "-shortest", str(output)]
         run(command)
