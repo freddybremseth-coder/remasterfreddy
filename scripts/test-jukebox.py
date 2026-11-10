@@ -50,6 +50,20 @@ class JukeboxSmokeTest(unittest.TestCase):
             self.assertIn("video", [s["codec_type"] for s in streams])
             self.assertIn("audio", [s["codec_type"] for s in streams])
 
+    def test_photo_calibration_offsets_render(self):
+        """Exercise nonzero X/Y calibration through the real FFmpeg graph."""
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            audio, photo, output = path / "tone.wav", path / "photo.png", path / "calibrated.mp4"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "color=c=beige:s=1920x1080", "-frames:v", "1",
+                            str(photo)], check=True)
+            renderer.render(audio, "Calibration", output, False, seconds=0.5,
+                            cabinet_image=photo, disc_offset_x=22, disc_offset_y=-18)
+            self.assertGreater(output.stat().st_size, 1000)
+
     def test_reject_vinyl_offsets_outside_frame(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)
