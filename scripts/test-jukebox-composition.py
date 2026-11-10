@@ -80,6 +80,31 @@ class HybridVideoSmokeTest(unittest.TestCase):
             self.assertAlmostEqual(intro + middle + outro, 2.0)
             self.assertLess(abs(composer.media_duration(output) - 2), .5)
 
+    def test_preflight_rejects_wrong_stream_types_and_corrupt_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            audio = directory / "sound.wav"
+            video = directory / "silent.mp4"
+            corrupt = directory / "broken.mp4"
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+                audio], check=True)
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=blue:s=320x180:d=1",
+                "-an", "-c:v", "libx264", video], check=True)
+            corrupt.write_bytes(b"not a media file")
+            self.assertGreater(composer.probe_media(audio, "audio"), 0)
+            self.assertGreater(composer.probe_media(video, "video"), 0)
+            with self.assertRaisesRegex(ValueError, "Missing valid video"):
+                composer.probe_media(audio, "video")
+            with self.assertRaisesRegex(ValueError, "Missing valid audio"):
+                composer.probe_media(video, "audio")
+            with self.assertRaisesRegex(ValueError, "Cannot read video"):
+                composer.probe_media(corrupt, "video")
+            with self.assertRaisesRegex(ValueError, "Missing valid video"):
+                composer.compose(audio, audio, [video], directory / "out.mp4",
+                                 False, seconds=1)
+
     def test_requires_approved_middle_clips(self):
         with self.assertRaises(ValueError):
             composer.compose(Path("audio.wav"), Path("jukebox.mp4"), [],
