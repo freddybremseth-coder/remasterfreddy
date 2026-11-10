@@ -12,6 +12,7 @@ export default function AdminJukeboxStudio(){
   const [sceneCount,setSceneCount]=useState(3);
   const [audioDuration,setAudioDuration]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string}[]>([]);
+  const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
@@ -61,7 +62,7 @@ export default function AdminJukeboxStudio(){
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
-  useEffect(()=>()=>{for(const clip of localClips)URL.revokeObjectURL(clip.url);},[localClips]);
+  useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
   function moveLocalClip(index:number,direction:-1|1){
     setLocalClips(previous=>{
       const nextIndex=index+direction;
@@ -74,7 +75,10 @@ export default function AdminJukeboxStudio(){
   function chooseLocalClips(files:FileList|null){
     if(!files)return;
     const chosen=Array.from(files).slice(0,12).filter(file=>file.type.startsWith("video/"));
-    setLocalClips(chosen.map(file=>({name:file.name,url:URL.createObjectURL(file)})));
+    const replacements=chosen.map(file=>({name:file.name,url:URL.createObjectURL(file)}));
+    for(const url of localClipUrls.current)URL.revokeObjectURL(url);
+    localClipUrls.current=replacements.map(clip=>clip.url);
+    setLocalClips(replacements);
     if(chosen.length)setSceneCount(chosen.length);
   }
 
