@@ -180,6 +180,10 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
             run(["inkscape", str(title_svg), "--export-filename", str(title_image)])
         # A soft contact shadow gives the photo-mode vinyl a physical seat
         # on the platter. Keep the illustrated cabinet unchanged.
+        # Note: the generated record is a flat top-down circle. The photo
+        # background must show a similarly front-facing platter; otherwise
+        # the compositing will look pasted-on. Never treat a green render
+        # test as visual approval of the artwork.
         shadow_filter = ""
         backdrop_label = "bg"
         if cabinet_image is not None:
