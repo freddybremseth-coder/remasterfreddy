@@ -9,6 +9,8 @@ export default function AdminJukeboxStudio(){
   const [songId,setSongId]=useState("");
   const [format,setFormat]=useState<"landscape"|"portrait">("landscape");
   const [style,setStyle]=useState<"jukebox"|"hybrid">("jukebox");
+  const [sceneCount,setSceneCount]=useState(3);
+  const [audioDuration,setAudioDuration]=useState(0);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
@@ -22,6 +24,12 @@ export default function AdminJukeboxStudio(){
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
   const hybridIntro=format==="portrait"?"inntil 3 sekunder":"inntil 30 sekunder";
   const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
+  const plannedDuration=audioDuration>0?Math.min(audioDuration,seconds==="full"?audioDuration:Number(seconds)):0;
+  const introTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(30,plannedDuration*.20);
+  const outroTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10);
+  const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
+  const clipTime=middleTime/sceneCount;
+  const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
   async function refresh(){
     setLoading(true);setError("");
@@ -48,7 +56,7 @@ export default function AdminJukeboxStudio(){
     finally{setJobBusy(false);}
   }
   useEffect(()=>{
-    setPlaying(false);setSceneKey(value=>value+1);
+    setPlaying(false);setAudioDuration(0);setSceneKey(value=>value+1);
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
@@ -80,9 +88,21 @@ export default function AdminJukeboxStudio(){
       <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"60")}>
         <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
+      {style==="hybrid"&&<label><span>Antall musikkvideoscener</span><select aria-label="Antall musikkvideoscener" value={sceneCount} onChange={event=>setSceneCount(Number(event.target.value))}>
+        {Array.from({length:12},(_,index)=>index+1).map(value=><option key={value} value={value}>{value} {value===1?"scene":"scener"}</option>)}
+      </select></label>}
     </div>
     {style==="hybrid"&&<div className="admin-warning" role="status">
       <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Avspillingen under viser foreløpig jukebox-delen.
+    </div>}
+    {style==="hybrid"&&<div className="jukebox-timeline" aria-label="Klippplan for hybridvideo">
+      <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
+      {plannedDuration>0?<div className="jukebox-timeline-track">
+        <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
+        {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
+        <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
+      </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. Scenene er foreløpig plassholdere, ikke genererte videoer.</p>}
     </div>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
       <div className="jukebox-frame">
@@ -96,7 +116,7 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>
     </div>
-    <audio ref={audio} src={song?.audioUrl} onEnded={()=>setPlaying(false)} preload="none"/>
+    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onEnded={()=>setPlaying(false)} preload="metadata"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
