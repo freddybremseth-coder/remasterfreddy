@@ -6,6 +6,7 @@ on:
       - 'scripts/render-jukebox.py'
       - 'scripts/render-jukebox-batch.py'
       - 'scripts/test-jukebox.py'
+      - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
   workflow_dispatch:
 jobs:
@@ -30,9 +31,17 @@ jobs:
           python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Visual Review" --output jukebox-review/portrait.mp4 --portrait --seconds 2
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/landscape.mp4 -frames:v 1 jukebox-review/landscape.png
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/portrait.mp4 -frames:v 1 jukebox-review/portrait.png
-          # Exercise the photo/title path with a generated blank cabinet placeholder.
-          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1920x1080 -frames:v 1 jukebox-review/photo-placeholder.png
-          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image jukebox-review/photo-placeholder.png --output jukebox-review/photo-title.mp4 --seconds 2
+          # Use the real approved photo once committed; otherwise keep the
+          # placeholder test without implying that the photo is installed.
+          if [ -f assets/jukebox/cabinet-landscape.png ]; then
+            PHOTO=assets/jukebox/cabinet-landscape.png
+            echo "Reviewing approved landscape photo asset"
+          else
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1920x1080 -frames:v 1 jukebox-review/photo-placeholder.png
+            PHOTO=jukebox-review/photo-placeholder.png
+            echo "::warning::Approved photo asset missing; using placeholder"
+          fi
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO" --output jukebox-review/photo-title.mp4 --seconds 2
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title.mp4 -frames:v 1 jukebox-review/photo-title.png
           ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1080x1920 -frames:v 1 jukebox-review/photo-placeholder-portrait.png
           python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image jukebox-review/photo-placeholder-portrait.png --output jukebox-review/photo-title-portrait.mp4 --portrait --seconds 2
