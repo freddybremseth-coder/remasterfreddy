@@ -56,4 +56,8 @@ jobs:
             jukebox-review/portrait.png
             jukebox-review/photo-title.png
             jukebox-review/photo-title-portrait.png
+            jukebox-review/landscape.mp4
+            jukebox-review/portrait.mp4
+            jukebox-review/photo-title.mp4
+            jukebox-review/photo-title-portrait.mp4
           retention-days: 7
