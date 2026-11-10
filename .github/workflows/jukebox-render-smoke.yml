@@ -36,6 +36,9 @@ jobs:
           if [ -f assets/jukebox/cabinet-landscape.png ]; then
             PHOTO=assets/jukebox/cabinet-landscape.png
             echo "Reviewing approved landscape photo asset"
+          elif [ -f assets/jukebox/candidates/landscape-v1.jpg ]; then
+            PHOTO=assets/jukebox/candidates/landscape-v1.jpg
+            echo "Reviewing unapproved landscape photo candidate"
           else
             ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1920x1080 -frames:v 1 jukebox-review/photo-placeholder.png
             PHOTO=jukebox-review/photo-placeholder.png
@@ -43,8 +46,14 @@ jobs:
           fi
           python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO" --output jukebox-review/photo-title.mp4 --seconds 2
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title.mp4 -frames:v 1 jukebox-review/photo-title.png
-          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1080x1920 -frames:v 1 jukebox-review/photo-placeholder-portrait.png
-          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image jukebox-review/photo-placeholder-portrait.png --output jukebox-review/photo-title-portrait.mp4 --portrait --seconds 2
+          if [ -f assets/jukebox/candidates/portrait-v1.jpg ]; then
+            PHOTO_PORTRAIT=assets/jukebox/candidates/portrait-v1.jpg
+            echo "Reviewing unapproved portrait photo candidate"
+          else
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1080x1920 -frames:v 1 jukebox-review/photo-placeholder-portrait.png
+            PHOTO_PORTRAIT=jukebox-review/photo-placeholder-portrait.png
+          fi
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO_PORTRAIT" --output jukebox-review/photo-title-portrait.mp4 --portrait --seconds 2
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title-portrait.mp4 -frames:v 1 jukebox-review/photo-title-portrait.png
       - name: Upload review frames
         if: success()
