@@ -169,7 +169,7 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>}
     </div>
-    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>setPlayhead(event.currentTarget.currentTime)} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
+    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=0;}else setPlayhead(position);}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
