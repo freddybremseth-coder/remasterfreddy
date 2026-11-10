@@ -59,6 +59,12 @@ jobs:
           fi
           python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO_PORTRAIT" --output jukebox-review/photo-title-portrait.mp4 --portrait --seconds 2
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title-portrait.mp4 -frames:v 1 jukebox-review/photo-title-portrait.png
+          # Assemble a visual-only hybrid sample. All colors are synthetic;
+          # this is QA footage, not a real Re-master Freddy music video.
+          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0x245a83:s=320x180:d=1:r=25 -c:v libx264 -pix_fmt yuv420p jukebox-review/scene-blue.mp4
+          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xd19a45:s=320x180:d=1:r=25 -c:v libx264 -pix_fmt yuv420p jukebox-review/scene-gold.mp4
+          python3 scripts/compose-jukebox-video.py --audio jukebox-review/sample.wav --jukebox jukebox-review/landscape.mp4 --video jukebox-review/scene-blue.mp4 --video jukebox-review/scene-gold.mp4 --output jukebox-review/hybrid-sample.mp4 --seconds 2
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/hybrid-sample.mp4 -frames:v 1 jukebox-review/hybrid-sample.png
       - name: Upload review frames
         if: success()
         uses: actions/upload-artifact@v4
@@ -73,4 +79,6 @@ jobs:
             jukebox-review/portrait.mp4
             jukebox-review/photo-title.mp4
             jukebox-review/photo-title-portrait.mp4
+            jukebox-review/hybrid-sample.mp4
+            jukebox-review/hybrid-sample.png
           retention-days: 7
