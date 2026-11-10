@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Guardrail tests for the approval-gated, hash-pinned local job runner."""
 import importlib.util
+import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -67,6 +70,57 @@ class JobValidationTests(unittest.TestCase):
         self.manifest["clips"] *= 7
         with self.assertRaisesRegex(ValueError, "1–12"):
             runner.prepare(self.manifest, self.root)
+
+
+@unittest.skipUnless(all(shutil.which(x) for x in ("ffmpeg", "ffprobe")),
+                     "FFmpeg unavailable")
+class JobEndToEndTest(unittest.TestCase):
+    def test_approved_manifest_renders_real_mp4_and_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            media = workspace / "inputs"
+            media.mkdir()
+            sound = media / "audio.wav"
+            jukebox = media / "jukebox.mp4"
+            clip = media / "middle.mp4"
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "sine=frequency=330:duration=3",
+                str(sound)
+            ], check=True)
+            for path, color in ((jukebox, "red"), (clip, "blue")):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"color=c={color}:s=320x180:d=2:r=25",
+                    "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                    str(path)
+                ], check=True)
+            item = lambda path: {"file": path.name, "sha256": runner.digest(path)}
+            manifest = {
+                "schema_version": 1, "approved_for_render": True,
+                "publish": False, "format": "landscape",
+                "audio": item(sound), "jukebox": item(jukebox),
+                "clips": [item(clip)], "seconds": 2
+            }
+            job_file = workspace / "job.json"
+            job_file.write_text(json.dumps(manifest), encoding="utf-8")
+            output = workspace / "finished.mp4"
+            preflight = runner.render(job_file, media, output, plan_only=True)
+            self.assertEqual(preflight["status"], "validated")
+            self.assertFalse(output.exists())
+            result = runner.render(job_file, media, output)
+            self.assertEqual(result["status"], "rendered")
+            self.assertFalse(result["published"])
+            self.assertEqual(result["sha256"], runner.digest(output))
+            self.assertLess(abs(result["duration_seconds"] - 2), .5)
+            streams = subprocess.check_output([
+                "ffprobe", "-v", "error", "-show_entries",
+                "stream=codec_type", "-of", "csv=p=0", str(output)
+            ], text=True).splitlines()
+            self.assertIn("audio", streams)
+            self.assertIn("video", streams)
+            with self.assertRaises(FileExistsError):
+                runner.render(job_file, media, output)
 
 
 if __name__ == "__main__":
