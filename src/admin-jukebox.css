@@ -76,3 +76,8 @@
 .jukebox-local-grid figure{margin:0;min-width:0;background:#07141d;border:1px solid #365969;border-radius:10px;overflow:hidden}
 .jukebox-local-grid video{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:black}
 .jukebox-local-grid figcaption{padding:8px 10px;font-size:12px;overflow-wrap:anywhere}
+
+.jukebox-clip-order{display:flex;gap:8px;justify-content:space-between;padding:0 8px 8px}
+.jukebox-clip-order button{display:inline-flex;align-items:center;gap:5px;background:#1f546b;color:white;border:1px solid #56869c;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:12px}
+.jukebox-clip-order button:disabled{opacity:.4;cursor:not-allowed}
+.jukebox-clip-order button:focus-visible{outline:2px solid #f2ca80;outline-offset:2px}
