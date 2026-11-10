@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
-import {ArrowDown,ArrowUp,Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
+import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import "./admin-jukebox.css";
 
@@ -73,6 +73,29 @@ export default function AdminJukeboxStudio(){
     else sceneVideo.current.pause();
   },[playing,activeClipIndex]);
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
+  function downloadStoryboard(){
+    if(!song||plannedDuration<=0||style!=="hybrid")return;
+    const entries=[
+      {type:"jukebox_intro",start:0,duration:introTime},
+      ...Array.from({length:sceneCount},(_,index)=>({
+        type:"music_video_scene",sequence:index+1,
+        filename:localClips[index]?.name||null,
+        start:introTime+index*clipTime,duration:clipTime,
+      })),
+      {type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime},
+    ];
+    const manifest={
+      version:1,renderStatus:"planning_only",songId:song.id,songTitle:song.title,
+      format,seconds:plannedDuration,style,localMediaIncluded:false,
+      entries:entries.map(entry=>({...entry,start:Number(entry.start.toFixed(3)),duration:Number(entry.duration.toFixed(3))})),
+    };
+    const file=new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(file);
+    const link=document.createElement("a");
+    link.href=url;link.download="remaster-jukebox-storyboard.json";
+    document.body.appendChild(link);link.click();link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   function moveLocalClip(index:number,direction:-1|1){
     setLocalClips(previous=>{
       const nextIndex=index+direction;
@@ -133,6 +156,7 @@ export default function AdminJukeboxStudio(){
         {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
         <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
+      {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
       {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. {localClips.length?"De valgte filene vises nå under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
