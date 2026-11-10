@@ -11,6 +11,7 @@ export default function AdminJukeboxStudio(){
   const [style,setStyle]=useState<"jukebox"|"hybrid">("jukebox");
   const [sceneCount,setSceneCount]=useState(3);
   const [audioDuration,setAudioDuration]=useState(0);
+  const [playhead,setPlayhead]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string}[]>([]);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
@@ -23,6 +24,7 @@ export default function AdminJukeboxStudio(){
   const renderEnabled=import.meta.env.VITE_JUKEBOX_RENDER_ENABLED==="true";
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
+  const sceneVideo=useRef<HTMLVideoElement|null>(null);
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
   const hybridIntro=format==="portrait"?"inntil 3 sekunder":"inntil 30 sekunder";
   const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
@@ -31,6 +33,9 @@ export default function AdminJukeboxStudio(){
   const outroTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10);
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
   const clipTime=middleTime/sceneCount;
+  const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
+  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/localClips.length))):-1;
+  const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
   async function refresh(){
@@ -58,10 +63,15 @@ export default function AdminJukeboxStudio(){
     finally{setJobBusy(false);}
   }
   useEffect(()=>{
-    setPlaying(false);setAudioDuration(0);setSceneKey(value=>value+1);
+    setPlaying(false);setPlayhead(0);setAudioDuration(0);setSceneKey(value=>value+1);
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
+  useEffect(()=>{
+    if(!sceneVideo.current)return;
+    if(playing){void sceneVideo.current.play().catch(()=>{});}
+    else sceneVideo.current.pause();
+  },[playing,activeClipIndex]);
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
   function moveLocalClip(index:number,direction:-1|1){
     setLocalClips(previous=>{
@@ -84,7 +94,7 @@ export default function AdminJukeboxStudio(){
 
   async function togglePlayback(){
     if(!audio.current||!song?.audioUrl)return;
-    if(playing){audio.current.pause();setPlaying(false);return;}
+    if(playing){audio.current.pause();sceneVideo.current?.pause();setPlaying(false);return;}
     try{await audio.current.play();setPlaying(true);}
     catch{setError("Lydfilen kunne ikke avspilles. Velg en annen sang eller kontroller tilgangen.");}
   }
@@ -123,7 +133,7 @@ export default function AdminJukeboxStudio(){
         {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
         <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. Scenene er foreløpig plassholdere, ikke genererte videoer.</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. {localClips.length?"De valgte filene vises nå under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Se gjennom egne videoscener</h3>
@@ -142,7 +152,12 @@ export default function AdminJukeboxStudio(){
         </figure>)}
       </div>}
     </section>}
-    <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
+    <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} aria-label={`Forhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
+      {activeClip&&<div className="jukebox-scene-player">
+        <video key={activeClip.url} ref={sceneVideo} src={activeClip.url} muted playsInline loop autoPlay={playing} preload="auto" aria-label={`Musikkvideoscene ${activeClipIndex+1}`}/>
+        <div className="jukebox-scene-label">Musikkvideo · scene {activeClipIndex+1} av {localClips.length}</div>
+      </div>}
+      {!activeClip&&
       <div className="jukebox-frame">
         <div className="jukebox-header">RE-MASTER FREDDY</div>
         <div className="jukebox-deck">
@@ -152,9 +167,9 @@ export default function AdminJukeboxStudio(){
           <div className="jukebox-tonearm"><span/></div>
         </div>
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
-      </div>
+      </div>}
     </div>
-    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onEnded={()=>setPlaying(false)} preload="metadata"/>
+    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>setPlayhead(event.currentTarget.currentTime)} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
