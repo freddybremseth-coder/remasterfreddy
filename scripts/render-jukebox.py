@@ -143,11 +143,11 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         width, height, disc_size = build_art(title, "Re-master Freddy", directory, portrait)
         # The photographic cabinet's physical platter sits lower than the
         # illustrated platter. Shift both the vinyl and tonearm together.
-        # Photo calibration for the approved landscape cabinet: its spindle
-        # is left of frame centre and above the illustrated platter position.
-        # Portrait assets require independent calibration.
-        photo_x_offset = -135 if cabinet_image is not None and not portrait else 0
-        photo_y_offset = -14 if cabinet_image is not None and not portrait else (
+        # The approved 1920x1080 photo has a centered spindle at roughly
+        # (960, 655). Its platter is below the illustrated version's center.
+        # Portrait assets require their own visual calibration.
+        photo_x_offset = 0
+        photo_y_offset = 60 if cabinet_image is not None and not portrait else (
             round(height * 0.07) if cabinet_image is not None else 0)
         x = (width-disc_size)//2 + photo_x_offset + disc_offset_x
         y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset + disc_offset_y
