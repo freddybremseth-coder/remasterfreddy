@@ -3,6 +3,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { getAdminSession } from "./lib/supabase";
 
 type Counters = { viewCount: number; likeCount: number; commentCount: number };
+type MilestoneSnapshot = Counters & { observedAt: string; elapsedDays: number; scheduledDay: number };
 type Measurement = {
   actionId: string;
   videoId: string;
@@ -12,6 +13,7 @@ type Measurement = {
   elapsedDays: number;
   change: { views: number; likes: number; comments: number } | null;
   milestoneEligibility: { day7: boolean; day14: boolean; day30: boolean };
+  milestoneSnapshots?: Record<string, MilestoneSnapshot>;
   measurementType: "cumulative_observation";
 };
 
@@ -71,7 +73,22 @@ export default function AdminGrowthMeasurements() {
               {row.current && row.change ? (
                 <p><strong>{row.current.viewCount.toLocaleString("nb-NO")} visninger ({number(row.change.views)})</strong> · Likerklikk {number(row.change.likes)} · Kommentarer {number(row.change.comments)}</p>
               ) : <p>Videoens oppdaterte tall er ikke tilgjengelige.</p>}
-              <small>7 dager: {row.milestoneEligibility.day7 ? "passert" : "venter"} · 14 dager: {row.milestoneEligibility.day14 ? "passert" : "venter"} · 30 dager: {row.milestoneEligibility.day30 ? "passert" : "venter"}. Egne historiske målepunkter kommer senere.</small>
+              <div className="analytics-points">
+                {([7, 14, 30] as const).map((day) => {
+                  const snapshot = row.milestoneSnapshots?.[`day${day}`];
+                  return (
+                    <p key={day}>
+                      <strong>Dag {day}:</strong>{" "}
+                      {snapshot
+                        ? `${snapshot.viewCount.toLocaleString("nb-NO")} visninger (${number(snapshot.viewCount - row.baseline.viewCount)}), målt etter ${snapshot.elapsedDays.toFixed(1)} dager`
+                        : row.elapsedDays >= day
+                          ? "Målepunkt mangler / avventer daglig jobb"
+                          : "Ikke nådd ennå"}
+                    </p>
+                  );
+                })}
+              </div>
+              <small>Resultater er observasjoner, ikke bevis på at metadataendringen forårsaket vekst.</small>
             </article>
           ))}
         </div>
