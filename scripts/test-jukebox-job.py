@@ -147,5 +147,39 @@ class ManifestPreparationTest(unittest.TestCase):
                 self.assertEqual(len(runner.prepare(manifest, root)[2]), 1)
 
 
+class AdminStoryboardBridgeTest(unittest.TestCase):
+    def test_imports_order_and_rejects_missing_scene(self):
+        spec = importlib.util.spec_from_file_location(
+            "job_preparer", Path(__file__).with_name("prepare-jukebox-job.py"))
+        preparer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(preparer)
+        storyboard = {
+            "version": 1, "renderStatus": "planning_only",
+            "localMediaIncluded": False, "style": "hybrid",
+            "format": "portrait", "seconds": 30,
+            "entries": [
+                {"type": "jukebox_intro"},
+                {"type": "music_video_scene", "sequence": 1, "filename": "first.mp4"},
+                {"type": "music_video_scene", "sequence": 2, "filename": "second.mp4"},
+                {"type": "jukebox_outro"},
+            ]
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            file = Path(temp) / "storyboard.json"
+            file.write_text(json.dumps(storyboard), encoding="utf-8")
+            self.assertEqual(
+                preparer.clips_from_storyboard(file),
+                (["first.mp4", "second.mp4"], True, 30))
+            storyboard["entries"][2]["filename"] = None
+            file.write_text(json.dumps(storyboard), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "real local video"):
+                preparer.clips_from_storyboard(file)
+            storyboard["entries"][2]["filename"] = "second.mp4"
+            storyboard["entries"][2]["sequence"] = 3
+            file.write_text(json.dumps(storyboard), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "contiguous"):
+                preparer.clips_from_storyboard(file)
+
+
 if __name__ == "__main__":
     unittest.main()
