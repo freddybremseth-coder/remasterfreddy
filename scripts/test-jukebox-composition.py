@@ -28,6 +28,25 @@ class HybridTimingTest(unittest.TestCase):
             self.assertGreater(middle, 0)
             self.assertAlmostEqual(opening + middle + ending, 20)
 
+    def test_storyboard_cuts_cover_entire_song(self):
+        plan = composer.scene_plan(240, False, [
+            Path("scene-a.mp4"), Path("scene-b.mp4"), Path("scene-c.mp4")
+        ])
+        self.assertEqual([entry["kind"] for entry in plan],
+                         ["jukebox_intro", "music_video", "music_video",
+                          "music_video", "jukebox_outro"])
+        self.assertEqual(plan[0]["duration"], 30)
+        self.assertEqual(plan[-1]["start"], 225)
+        self.assertEqual(plan[-1]["duration"], 15)
+        for current, following in zip(plan, plan[1:]):
+            self.assertAlmostEqual(current["start"] + current["duration"],
+                                   following["start"], places=2)
+        self.assertEqual(plan[2]["clip"], "scene-b.mp4")
+
+    def test_storyboard_rejects_missing_scenes(self):
+        with self.assertRaises(ValueError):
+            composer.scene_plan(240, False, [])
+
     def test_invalid_audio_duration(self):
         with self.assertRaises(ValueError):
             composer.timings(.01, False)
