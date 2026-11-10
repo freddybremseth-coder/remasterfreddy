@@ -55,3 +55,13 @@
 @media(prefers-reduced-motion:reduce){
   .jukebox-active .jukebox-frame,.jukebox-active .jukebox-header{animation:none}
 }
+
+/* Storyboard timeline: proportional to the original song duration. */
+.jukebox-timeline{margin:18px 0;padding:16px;border:1px solid #3c6373;border-radius:14px;background:#10202b;color:#e8f5fa}
+.jukebox-timeline h3{margin:0 0 10px;font-size:16px}
+.jukebox-timeline p{margin:10px 0 0;font-size:13px;line-height:1.5;color:#c6dbe4}
+.jukebox-timeline-track{display:flex;gap:3px;width:100%;min-height:46px;overflow:hidden;border-radius:8px}
+.jukebox-timeline-endcap,.jukebox-timeline-scene{flex-basis:0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;font-size:12px;font-weight:700}
+.jukebox-timeline-endcap{background:#e7bc70;color:#182532}
+.jukebox-timeline-scene{background:#206e85;color:white;border-left:1px solid #ffffff33}
+@media(max-width:600px){.jukebox-timeline{padding:12px}.jukebox-timeline-endcap,.jukebox-timeline-scene{font-size:9px}.jukebox-timeline-track{min-height:38px}}
