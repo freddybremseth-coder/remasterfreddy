@@ -38,6 +38,27 @@ def timings(duration: float, portrait: bool) -> tuple[float, float, float]:
     return intro, middle, outro
 
 
+def scene_plan(duration: float, portrait: bool, clips: Sequence[Path]) -> list[dict]:
+    """Return a timeline that reviewers can inspect before rendering."""
+    if not clips or len(clips) > 12:
+        raise ValueError("Provide between 1 and 12 approved music-video clips")
+    intro, middle, outro = timings(duration, portrait)
+    plan = [{"kind": "jukebox_intro", "start": 0.0, "duration": intro}]
+    for index, clip in enumerate(clips):
+        start = intro + middle * index / len(clips)
+        end = intro + middle * (index + 1) / len(clips)
+        plan.append({
+            "kind": "music_video", "clip": clip.name,
+            "start": round(start, 3), "duration": round(end - start, 3)
+        })
+    plan.append({
+        "kind": "jukebox_outro", "start": round(duration - outro, 3),
+        "duration": round(outro, 3),
+        "visual_stop_seconds": min(2.0 if not portrait else .7, outro * .35)
+    })
+    return plan
+
+
 def compose(audio: Path, jukebox: Path, middle_video: Path | Sequence[Path],
             output: Path, portrait: bool, seconds: float | None = None) -> tuple[float, float, float]:
     middle_clips = [middle_video] if isinstance(middle_video, Path) else list(middle_video)
@@ -107,6 +128,15 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--portrait", action="store_true")
     parser.add_argument("--seconds", type=float)
+    parser.add_argument("--plan-only", action="store_true", help="Show exact cut timeline as JSON without rendering")
     args = parser.parse_args()
-    result = compose(args.audio, args.jukebox, args.video, args.output, args.portrait, args.seconds)
-    print("Jukebox intro %.1fs · music video %.1fs · Jukebox outro %.1fs" % result)
+    if args.plan_only:
+        duration = media_duration(args.audio)
+        if args.seconds is not None:
+            if not math.isfinite(args.seconds) or args.seconds <= 0:
+                parser.error("--seconds must be positive")
+            duration = min(duration, args.seconds)
+        print(json.dumps(scene_plan(duration, args.portrait, args.video), indent=2))
+    else:
+        result = compose(args.audio, args.jukebox, args.video, args.output, args.portrait, args.seconds)
+        print("Jukebox intro %.1fs · music video %.1fs · Jukebox outro %.1fs" % result)
