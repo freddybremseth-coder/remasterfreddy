@@ -64,6 +64,23 @@ class JukeboxSmokeTest(unittest.TestCase):
                             cabinet_image=photo, disc_offset_x=22, disc_offset_y=-18)
             self.assertGreater(output.stat().st_size, 1000)
 
+    def test_portrait_photographic_cabinet_render(self):
+        """Shorts photo path uses the perspective-compressed spinning disc."""
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            audio, photo, output = path / "test.wav", path / "portrait.png", path / "short.mp4"
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "sine=frequency=440:duration=1", str(audio)], check=True)
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "color=c=darkred:s=1080x1920", "-frames:v", "1", str(photo)], check=True)
+            renderer.render(audio, "Short & Sweet", output, True, seconds=0.5, cabinet_image=photo)
+            streams = json.loads(subprocess.check_output([
+                "ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height",
+                "-of", "json", str(output)], text=True))["streams"]
+            video = next(s for s in streams if s["codec_type"] == "video")
+            self.assertEqual((video["width"], video["height"]), (1080, 1920))
+            self.assertIn("audio", [s["codec_type"] for s in streams])
+
     def test_reject_vinyl_offsets_outside_frame(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)
