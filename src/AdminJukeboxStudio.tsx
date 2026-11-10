@@ -3,7 +3,7 @@ import {Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import "./admin-jukebox.css";
 
-/** A safe, browser-only storyboard preview. It does not queue or publish videos. */
+/** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
 export default function AdminJukeboxStudio(){
   const [songs,setSongs]=useState<AdminSong[]>([]);
   const [songId,setSongId]=useState("");
@@ -60,7 +60,7 @@ export default function AdminJukeboxStudio(){
   return <section className="admin-card admin-jukebox-studio">
     <p className="admin-eyebrow">Re-master Freddy · musikkvideo</p>
     <h2>60-talls jukeboks</h2>
-    <p>Velg en sang fra ditt eksisterende musikkbibliotek. Her kan du se en enkel jukeboks med roterende vinylplate og spille originalmusikken. Den kompliserte 3D-plateveksleren er tatt ut av forhåndsvisningen. Produksjon av MP4 i serverkøen er ennå ikke koblet til.</p>
+    <p>Velg en sang fra ditt eksisterende musikkbibliotek. Her kan du se en enkel jukeboks med roterende vinylplate og spille originalmusikken. Den kompliserte 3D-plateveksleren er tatt ut av forhåndsvisningen. Produksjonsvalg og status er klargjort. MP4-rendering aktiveres først etter verifisert serverarbeider og godkjent videomal.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
     <div className="jukebox-controls">
       <label><span>Sang</span><select aria-label="Velg sang" value={songId} onChange={event=>setSongId(event.target.value)} disabled={loading}>
