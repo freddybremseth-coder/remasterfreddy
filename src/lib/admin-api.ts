@@ -293,3 +293,37 @@ export async function startSongPipeline(
     }
   }
 }
+
+export interface JukeboxJob {
+  id: string;
+  song_id: string;
+  song_title: string;
+  format: "landscape" | "portrait";
+  duration_seconds: number | null;
+  state: "queued" | "rendering" | "ready" | "failed" | "cancelled";
+  error?: string | null;
+  previewUrl?: string | null;
+  approved_at?: string | null;
+  published_at?: string | null;
+  youtube_video_id?: string | null;
+  created_at: string;
+}
+
+export async function loadJukeboxJobs(): Promise<JukeboxJob[]> {
+  const response = await adminFetch("/api/neural-beat-jukebox?limit=20", { method: "GET" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Kunne ikke hente Jukebox-jobber.");
+  return Array.isArray(data.jobs) ? data.jobs : [];
+}
+
+/** Queue only; does not trigger YouTube publication. */
+export async function queueJukeboxVideo(input: {
+  songId: string; format: "landscape" | "portrait"; seconds?: 15 | 30 | 60;
+}): Promise<{ job: JukeboxJob; reused: boolean }> {
+  const response = await adminFetch("/api/neural-beat-jukebox", {
+    method: "POST", body: JSON.stringify(input),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.job) throw new Error(data.error || "Kunne ikke legge Jukebox-video i kø.");
+  return { job: data.job as JukeboxJob, reused: Boolean(data.reused) };
+}
