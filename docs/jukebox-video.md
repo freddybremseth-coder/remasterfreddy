@@ -88,3 +88,15 @@ python3 scripts/render-jukebox.py --audio song.mp3 --title "My Song" \
 Offsets are in output pixels. Both vinyl and tonearm move by the same
 amount. Use zero offsets for the illustrated cabinet. Photo assets must
 match the output dimensions exactly: 1920x1080 or 1080x1920.
+
+### Photographic perspective update
+
+Photo-mode vinyl is now rotated in its own square texture and then projected
+onto an elliptical horizontal platter, with a soft contact shadow. The static
+tonearm is intentionally suppressed in photo mode: a 2D top-down pickup arm
+cannot be composited credibly into a frontal photo. The illustrated fallback
+still retains its existing tonearm. Current candidate spindle positions are
+1920x1080: `(960, 621)` and 1080x1920: `(540, 865)`; use offset flags to
+calibrate any future cabinet photography. Both portrait and landscape photo
+paths have independent render smoke tests. Candidates remain unapproved until
+the resulting videos are visually reviewed.
