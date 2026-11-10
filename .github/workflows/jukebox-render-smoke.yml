@@ -6,6 +6,8 @@ on:
       - 'scripts/render-jukebox.py'
       - 'scripts/render-jukebox-batch.py'
       - 'scripts/test-jukebox.py'
+      - 'scripts/compose-jukebox-video.py'
+      - 'scripts/test-jukebox-composition.py'
       - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
   workflow_dispatch:
@@ -20,7 +22,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg inkscape
       - name: Render and inspect landscape and portrait MP4
-        run: python3 scripts/test-jukebox.py
+        run: |
+          python3 scripts/test-jukebox.py
+          python3 scripts/test-jukebox-composition.py
 
       - name: Generate visual inspection frames
         if: success()
