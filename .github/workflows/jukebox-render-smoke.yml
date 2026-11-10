@@ -9,6 +9,7 @@ on:
       - 'scripts/compose-jukebox-video.py'
       - 'scripts/test-jukebox-composition.py'
       - 'scripts/render-jukebox-job.py'
+      - 'scripts/prepare-jukebox-job.py'
       - 'scripts/test-jukebox-job.py'
       - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
