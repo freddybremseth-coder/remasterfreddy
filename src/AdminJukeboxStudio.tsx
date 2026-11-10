@@ -11,6 +11,7 @@ export default function AdminJukeboxStudio(){
   const [style,setStyle]=useState<"jukebox"|"hybrid">("jukebox");
   const [sceneCount,setSceneCount]=useState(3);
   const [audioDuration,setAudioDuration]=useState(0);
+  const [localClips,setLocalClips]=useState<{name:string;url:string}[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
@@ -60,6 +61,13 @@ export default function AdminJukeboxStudio(){
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
+  useEffect(()=>()=>{for(const clip of localClips)URL.revokeObjectURL(clip.url);},[localClips]);
+  function chooseLocalClips(files:FileList|null){
+    if(!files)return;
+    const chosen=Array.from(files).slice(0,12).filter(file=>file.type.startsWith("video/"));
+    setLocalClips(chosen.map(file=>({name:file.name,url:URL.createObjectURL(file)})));
+    if(chosen.length)setSceneCount(chosen.length);
+  }
 
   async function togglePlayback(){
     if(!audio.current||!song?.audioUrl)return;
@@ -104,6 +112,19 @@ export default function AdminJukeboxStudio(){
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. Scenene er foreløpig plassholdere, ikke genererte videoer.</p>}
     </div>}
+    {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
+      <h3>Se gjennom egne videoscener</h3>
+      <p>Velg opptil 12 videoer fra enheten for lokal forhåndsvisning. Filene lastes ikke opp, lagres ikke i kontoen og brukes ikke i produksjonskøen. Klippene spilles av uten lyd her.</p>
+      <label className="jukebox-file-picker">Velg videoklipp
+        <input type="file" accept="video/*" multiple onChange={event=>chooseLocalClips(event.currentTarget.files)}/>
+      </label>
+      {localClips.length>0&&<div className="jukebox-local-grid">
+        {localClips.map((clip,index)=><figure key={clip.url}>
+          <video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>
+          <figcaption>Scene {index+1} · {clip.name}</figcaption>
+        </figure>)}
+      </div>}
+    </section>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
       <div className="jukebox-frame">
         <div className="jukebox-header">RE-MASTER FREDDY</div>
