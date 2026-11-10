@@ -34,7 +34,7 @@ export default function AdminJukeboxStudio(){
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
   const clipTime=middleTime/sceneCount;
   const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
-  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/localClips.length))):-1;
+  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/sceneCount))):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
@@ -119,12 +119,12 @@ export default function AdminJukeboxStudio(){
       <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"60")}>
         <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
-      {style==="hybrid"&&<label><span>Antall musikkvideoscener</span><select aria-label="Antall musikkvideoscener" value={sceneCount} onChange={event=>setSceneCount(Number(event.target.value))}>
+      {style==="hybrid"&&<label><span>Antall musikkvideoscener</span><select aria-label="Antall musikkvideoscener" value={sceneCount} disabled={localClips.length>0} onChange={event=>setSceneCount(Number(event.target.value))}>
         {Array.from({length:12},(_,index)=>index+1).map(value=><option key={value} value={value}>{value} {value===1?"scene":"scener"}</option>)}
       </select></label>}
     </div>
     {style==="hybrid"&&<div className="admin-warning" role="status">
-      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Avspillingen under viser foreløpig jukebox-delen.
+      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Med valgte lokale klipp vises også scenene i tidslinjen under avspilling.
     </div>}
     {style==="hybrid"&&<div className="jukebox-timeline" aria-label="Klippplan for hybridvideo">
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
