@@ -8,6 +8,8 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import tempfile
 from pathlib import Path
 
 from importlib.util import module_from_spec, spec_from_file_location
@@ -87,12 +89,26 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
         raise ValueError("Output must be outside the media input directory")
     if target.exists():
         raise FileExistsError(f"Output already exists: {target}")
-    composer.compose(audio, jukebox, clips, target, portrait, seconds)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # Render into a sibling temporary file. Never expose an incomplete final MP4.
+    with tempfile.NamedTemporaryFile(
+        dir=target.parent, prefix=".jukebox-render-", suffix=".mp4",
+        delete=False
+    ) as temporary:
+        staged = Path(temporary.name)
+    try:
+        composer.compose(audio, jukebox, clips, staged, portrait, seconds)
+        output_hash = digest(staged)
+        output_duration = composer.media_duration(staged)
+        # Hard link fails if target exists, avoiding accidental replacement.
+        os.link(staged, target)
+    finally:
+        staged.unlink(missing_ok=True)
     return {
         "status": "rendered",
         "output": str(target),
-        "sha256": digest(target),
-        "duration_seconds": composer.media_duration(target),
+        "sha256": output_hash,
+        "duration_seconds": output_duration,
         "scene_plan": plan,
         "published": False,
     }
