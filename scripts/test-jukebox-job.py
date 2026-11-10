@@ -123,5 +123,29 @@ class JobEndToEndTest(unittest.TestCase):
                 runner.render(job_file, media, output)
 
 
+class ManifestPreparationTest(unittest.TestCase):
+    def test_creator_defaults_to_unapproved_nonpublishing_job(self):
+        spec = importlib.util.spec_from_file_location(
+            "job_preparer", Path(__file__).with_name("prepare-jukebox-job.py"))
+        preparer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(preparer)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for name in ("song.wav", "cabinet.mp4", "scene.mp4"):
+                (root / name).write_bytes(name.encode())
+            with patch.object(preparer.runner.composer, "probe_media", return_value=30):
+                manifest = preparer.build_manifest(
+                    root, "song.wav", "cabinet.mp4", ["scene.mp4"], False, 25)
+            self.assertFalse(manifest["approved_for_render"])
+            self.assertFalse(manifest["publish"])
+            self.assertEqual(manifest["clips"][0]["sha256"],
+                             runner.digest(root / "scene.mp4"))
+            with patch.object(runner.composer, "probe_media", return_value=30):
+                with self.assertRaisesRegex(ValueError, "approval"):
+                    runner.prepare(manifest, root)
+                manifest["approved_for_render"] = True
+                self.assertEqual(len(runner.prepare(manifest, root)[2]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
