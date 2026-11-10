@@ -8,6 +8,7 @@ export default function AdminJukeboxStudio(){
   const [songs,setSongs]=useState<AdminSong[]>([]);
   const [songId,setSongId]=useState("");
   const [format,setFormat]=useState<"landscape"|"portrait">("landscape");
+  const [style,setStyle]=useState<"jukebox"|"hybrid">("jukebox");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
@@ -19,6 +20,8 @@ export default function AdminJukeboxStudio(){
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
+  const hybridIntro=format==="portrait"?"inntil 3 sekunder":"inntil 30 sekunder";
+  const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
 
   async function refresh(){
     setLoading(true);setError("");
@@ -34,7 +37,7 @@ export default function AdminJukeboxStudio(){
   }
   useEffect(()=>{if(renderEnabled)void refreshJobs();},[renderEnabled]);
   async function queueVideo(){
-    if(!songId||!renderEnabled||jobBusy)return;
+    if(!songId||!renderEnabled||jobBusy||style==="hybrid")return;
     setJobBusy(true);setError("");setJobNotice("");
     try{
       const request={songId,format,...(seconds==="full"?{}:{seconds:Number(seconds) as 15|30|60})};
@@ -60,7 +63,7 @@ export default function AdminJukeboxStudio(){
   return <section className="admin-card admin-jukebox-studio">
     <p className="admin-eyebrow">Re-master Freddy · musikkvideo</p>
     <h2>60-talls jukeboks</h2>
-    <p>Velg en sang fra ditt eksisterende musikkbibliotek. Her kan du se en enkel jukeboks med roterende vinylplate og spille originalmusikken. Den kompliserte 3D-plateveksleren er tatt ut av forhåndsvisningen. Produksjonsvalg og status er klargjort. MP4-rendering aktiveres først etter verifisert serverarbeider og godkjent videomal.</p>
+    <p>Velg en sang fra musikkbiblioteket og en videostil. Jukeboxen har roterende vinyl og originalmusikk, uten den kompliserte plateveksleren. Videoer lagres privat for kontroll før eventuell publisering.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
     <div className="jukebox-controls">
       <label><span>Sang</span><select aria-label="Velg sang" value={songId} onChange={event=>setSongId(event.target.value)} disabled={loading}>
@@ -70,10 +73,17 @@ export default function AdminJukeboxStudio(){
       <label><span>Videoformat</span><select aria-label="Videoformat" value={format} onChange={event=>setFormat(event.target.value as "landscape"|"portrait")}>
         <option value="landscape">YouTube 16:9</option><option value="portrait">Shorts 9:16</option>
       </select></label>
+      <label><span>Videostil</span><select aria-label="Videostil" value={style} onChange={event=>setStyle(event.target.value as "jukebox"|"hybrid")}>
+        <option value="jukebox">Jukebox hele veien</option>
+        <option value="hybrid">Jukebox + musikkvideo</option>
+      </select></label>
       <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"60")}>
         <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
     </div>
+    {style==="hybrid"&&<div className="admin-warning" role="status">
+      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Avspillingen under viser foreløpig jukebox-delen.
+    </div>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} role="img" aria-label={`Jukeboksforhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
       <div className="jukebox-frame">
         <div className="jukebox-header">RE-MASTER FREDDY</div>
@@ -94,11 +104,12 @@ export default function AdminJukeboxStudio(){
       <button className="admin-secondary" type="button" onClick={()=>{setSceneKey(value=>value+1);void refresh();}} disabled={loading}><RefreshCw size={16}/> Oppdater sanger</button>
     </div>
     <div className="jukebox-actions">
-      <button className="admin-primary" type="button" disabled={!renderEnabled||!songId||jobBusy} onClick={()=>void queueVideo()}>
-        <Clapperboard size={17}/> {jobBusy?"Oppretter jobb…":"Lag Jukebox-video"}
+      <button className="admin-primary" type="button" disabled={!renderEnabled||!songId||jobBusy||style==="hybrid"} onClick={()=>void queueVideo()}>
+        <Clapperboard size={17}/> {jobBusy?"Oppretter jobb…":style==="hybrid"?"Hybrid venter på musikkvideo":"Lag Jukebox-video"}
       </button>
       {renderEnabled&&<button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater produksjonsstatus</button>}
     </div>
+    {style==="hybrid"&&<p className="jukebox-hybrid-note">Hybridkomposisjon er testet som MP4, men kan ikke settes i produksjonskø før en godkjent musikkvideo og en renderarbeider er tilgjengelig. Ingen publisering skjer automatisk.</p>}
     {jobNotice&&<p role="status">{jobNotice}</p>}
     {renderEnabled&&jobs.length>0&&<div aria-label="Jukebox-jobber">
       <h3>Produksjonsstatus</h3>
