@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
-import {Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
+import {ArrowDown,ArrowUp,Clapperboard,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import "./admin-jukebox.css";
 
@@ -62,6 +62,15 @@ export default function AdminJukeboxStudio(){
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
   useEffect(()=>()=>{for(const clip of localClips)URL.revokeObjectURL(clip.url);},[localClips]);
+  function moveLocalClip(index:number,direction:-1|1){
+    setLocalClips(previous=>{
+      const nextIndex=index+direction;
+      if(index<0||nextIndex<0||index>=previous.length||nextIndex>=previous.length)return previous;
+      const reordered=[...previous];
+      [reordered[index],reordered[nextIndex]]=[reordered[nextIndex],reordered[index]];
+      return reordered;
+    });
+  }
   function chooseLocalClips(files:FileList|null){
     if(!files)return;
     const chosen=Array.from(files).slice(0,12).filter(file=>file.type.startsWith("video/"));
@@ -107,14 +116,14 @@ export default function AdminJukeboxStudio(){
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
       {plannedDuration>0?<div className="jukebox-timeline-track">
         <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
-        {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
+        {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
         <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. Scenene er foreløpig plassholdere, ikke genererte videoer.</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Se gjennom egne videoscener</h3>
-      <p>Velg opptil 12 videoer fra enheten for lokal forhåndsvisning. Filene lastes ikke opp, lagres ikke i kontoen og brukes ikke i produksjonskøen. Klippene spilles av uten lyd her.</p>
+      <p>Velg opptil 12 videoer fra enheten for lokal forhåndsvisning. Bruk «Før» og «Etter» for å endre rekkefølge. Filene lastes ikke opp, lagres ikke i kontoen og brukes ikke i produksjonskøen. Klippene spilles av uten lyd her.</p>
       <label className="jukebox-file-picker">Velg videoklipp
         <input type="file" accept="video/*" multiple onChange={event=>chooseLocalClips(event.currentTarget.files)}/>
       </label>
@@ -122,6 +131,10 @@ export default function AdminJukeboxStudio(){
         {localClips.map((clip,index)=><figure key={clip.url}>
           <video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>
           <figcaption>Scene {index+1} · {clip.name}</figcaption>
+          <div className="jukebox-clip-order">
+            <button type="button" disabled={index===0} onClick={()=>moveLocalClip(index,-1)} aria-label={`Flytt scene ${index+1} opp`}><ArrowUp size={15}/> Før</button>
+            <button type="button" disabled={index===localClips.length-1} onClick={()=>moveLocalClip(index,1)} aria-label={`Flytt scene ${index+1} ned`}><ArrowDown size={15}/> Etter</button>
+          </div>
         </figure>)}
       </div>}
     </section>}
