@@ -15,6 +15,34 @@ from pathlib import Path
 from collections.abc import Sequence
 
 
+def probe_media(path: Path, stream_type: str) -> float:
+    """Reject missing, corrupt, or wrong-kind inputs before starting FFmpeg."""
+    try:
+        raw = subprocess.check_output([
+            "ffprobe", "-v", "error", "-show_entries",
+            "format=duration:stream=codec_type,width,height",
+            "-of", "json", str(path)
+        ], text=True, stderr=subprocess.PIPE, timeout=30)
+        metadata = json.loads(raw)
+        duration = float(metadata.get("format", {}).get("duration", 0))
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            ValueError, TypeError, KeyError, OSError) as error:
+        raise ValueError(f"Cannot read {stream_type} input: {path.name}") from error
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError(f"Invalid duration in {path.name}")
+    streams = metadata.get("streams", [])
+    valid = any(
+        stream.get("codec_type") == stream_type
+        and (stream_type != "video"
+             or (int(stream.get("width") or 0) > 0
+                 and int(stream.get("height") or 0) > 0))
+        for stream in streams
+    )
+    if not valid:
+        raise ValueError(f"Missing valid {stream_type} stream in {path.name}")
+    return duration
+
+
 def media_duration(path: Path) -> float:
     raw = subprocess.check_output([
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -67,7 +95,10 @@ def compose(audio: Path, jukebox: Path, middle_video: Path | Sequence[Path],
     for source in (audio, jukebox, *middle_clips):
         if not source.is_file():
             raise FileNotFoundError(source)
-    length = media_duration(audio)
+    length = probe_media(audio, "audio")
+    probe_media(jukebox, "video")
+    for clip in middle_clips:
+        probe_media(clip, "video")
     if seconds is not None:
         if not math.isfinite(seconds) or seconds <= 0:
             raise ValueError("Invalid requested duration")
@@ -131,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument("--plan-only", action="store_true", help="Show exact cut timeline as JSON without rendering")
     args = parser.parse_args()
     if args.plan_only:
-        duration = media_duration(args.audio)
+        duration = probe_media(args.audio, "audio")
         if args.seconds is not None:
             if not math.isfinite(args.seconds) or args.seconds <= 0:
                 parser.error("--seconds must be positive")
