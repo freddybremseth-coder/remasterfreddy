@@ -42,9 +42,10 @@ class HybridVideoSmokeTest(unittest.TestCase):
             jukebox = directory / "jukebox.mp4"
             content = directory / "visual.mp4"
             output = directory / "hybrid.mp4"
+            second_content = directory / "visual-second.mp4"
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                 "-f", "lavfi", "-i", "sine=frequency=440:duration=3", audio], check=True)
-            for target, color in ((jukebox, "red"), (content, "blue")):
+            for target, color in ((jukebox, "red"), (content, "blue"), (second_content, "green")):
                 subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                     "-f", "lavfi", "-i", f"color=c={color}:s=320x180:d=1:r=25",
                     "-c:v", "libx264", "-pix_fmt", "yuv420p", target], check=True)
@@ -54,6 +55,16 @@ class HybridVideoSmokeTest(unittest.TestCase):
             self.assertTrue(output.is_file())
             self.assertGreater(output.stat().st_size, 20_000)
             self.assertLess(abs(composer.media_duration(output) - 2), .5)
+            # A varied middle must also render with two distinct supplied clips.
+            intro, middle, outro = composer.compose(
+                audio, jukebox, [content, second_content], output, False, seconds=2.0)
+            self.assertAlmostEqual(intro + middle + outro, 2.0)
+            self.assertLess(abs(composer.media_duration(output) - 2), .5)
+
+    def test_requires_approved_middle_clips(self):
+        with self.assertRaises(ValueError):
+            composer.compose(Path("audio.wav"), Path("jukebox.mp4"), [],
+                             Path("hybrid.mp4"), False)
 
 
 if __name__ == "__main__":
