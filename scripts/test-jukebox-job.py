@@ -181,5 +181,58 @@ class AdminStoryboardBridgeTest(unittest.TestCase):
                 preparer.clips_from_storyboard(file)
 
 
+@unittest.skipUnless(all(shutil.which(x) for x in ("ffmpeg", "ffprobe")),
+                     "FFmpeg unavailable")
+class StoryboardCommandFlowTest(unittest.TestCase):
+    def test_storyboard_to_manifest_requires_explicit_render_approval(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            media = base / "media"
+            media.mkdir()
+            audio, jukebox, scene = (media / name for name in
+                                     ("audio.wav", "jukebox.mp4", "scene.mp4"))
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                str(audio)], check=True)
+            for file, color in ((jukebox, "red"), (scene, "blue")):
+                subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"color=c={color}:s=320x180:d=2:r=25",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", str(file)],
+                    check=True)
+            storyboard = {
+                "version": 1, "renderStatus": "planning_only",
+                "localMediaIncluded": False, "style": "hybrid",
+                "format": "landscape", "seconds": 2,
+                "entries": [
+                    {"type": "jukebox_intro"},
+                    {"type": "music_video_scene", "sequence": 1,
+                     "filename": "scene.mp4"},
+                    {"type": "jukebox_outro"}
+                ]
+            }
+            storyboard_file = base / "storyboard.json"
+            storyboard_file.write_text(json.dumps(storyboard), encoding="utf-8")
+            manifest_file = base / "manifest.json"
+            subprocess.run([
+                "python3", str(Path(__file__).with_name("prepare-jukebox-job.py")),
+                "--media-dir", str(media), "--audio", audio.name,
+                "--jukebox", jukebox.name, "--storyboard", str(storyboard_file),
+                "--output", str(manifest_file)
+            ], check=True, capture_output=True, text=True)
+            manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+            self.assertFalse(manifest["approved_for_render"])
+            self.assertFalse(manifest["publish"])
+            with self.assertRaisesRegex(ValueError, "approval"):
+                runner.render(manifest_file, media, base / "video.mp4", plan_only=True)
+            # Operator approval is explicit and only authorizes rendering.
+            manifest["approved_for_render"] = True
+            manifest_file.write_text(json.dumps(manifest), encoding="utf-8")
+            result = runner.render(manifest_file, media, base / "video.mp4",
+                                   plan_only=True)
+            self.assertEqual(result["status"], "validated")
+            self.assertEqual(result["scene_plan"][1]["clip"], scene.name)
+            self.assertFalse((base / "video.mp4").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
