@@ -65,3 +65,14 @@
 .jukebox-timeline-endcap{background:#e7bc70;color:#182532}
 .jukebox-timeline-scene{background:#206e85;color:white;border-left:1px solid #ffffff33}
 @media(max-width:600px){.jukebox-timeline{padding:12px}.jukebox-timeline-endcap,.jukebox-timeline-scene{font-size:9px}.jukebox-timeline-track{min-height:38px}}
+
+/* Browser-only scene inspection: never uploads to a server. */
+.jukebox-local-clips{padding:16px;margin:18px 0;border:1px solid #496875;border-radius:14px;background:#10202b;color:#e8f5fa}
+.jukebox-local-clips h3{margin:0 0 8px}
+.jukebox-local-clips p{font-size:13px;color:#c6dbe4;line-height:1.5}
+.jukebox-file-picker{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap;font-weight:700;margin:10px 0}
+.jukebox-file-picker input{max-width:100%;font:inherit;font-size:13px}
+.jukebox-local-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.jukebox-local-grid figure{margin:0;min-width:0;background:#07141d;border:1px solid #365969;border-radius:10px;overflow:hidden}
+.jukebox-local-grid video{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:black}
+.jukebox-local-grid figcaption{padding:8px 10px;font-size:12px;overflow-wrap:anywhere}
