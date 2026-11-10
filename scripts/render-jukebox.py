@@ -146,12 +146,20 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         # The approved 1920x1080 photo has a centered spindle at roughly
         # (960, 655). Its platter is below the illustrated version's center.
         # Portrait assets require their own visual calibration.
-        photo_x_offset = 0
-        photo_y_offset = 60 if cabinet_image is not None and not portrait else (
-            round(height * 0.07) if cabinet_image is not None else 0)
-        x = (width-disc_size)//2 + photo_x_offset + disc_offset_x
-        y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + photo_y_offset + disc_offset_y
-        if not (0 <= x and 0 <= y and x + disc_size <= width and y + disc_size <= height):
+        # The photographed platter is an ellipse seen from the front, not a
+        # top-down circle. Rotate the source vinyl first, then compress the
+        # rendered disc into the platter's perspective. Offsets remain useful
+        # for final calibration of individual cabinet photographs.
+        if cabinet_image is not None:
+            record_width, record_height = ((590, 175) if portrait else (700, 185))
+            spindle_x, spindle_y = ((540, 865) if portrait else (960, 621))
+            x = spindle_x - record_width // 2 + disc_offset_x
+            y = spindle_y - record_height // 2 + disc_offset_y
+        else:
+            record_width = record_height = disc_size
+            x = (width-disc_size)//2 + disc_offset_x
+            y = int(height * (0.53 if portrait else 0.55)-disc_size/2) + disc_offset_y
+        if not (0 <= x and 0 <= y and x + record_width <= width and y + record_height <= height):
             raise ValueError(
                 f"Vinyl placement ({x}, {y}) with size {disc_size} is outside "
                 f"the {width}x{height} video frame. Reduce disc offsets."
@@ -167,7 +175,7 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         if cabinet_image is not None:
             title_svg = directory / "marquee-title.svg"
             title_image = directory / "marquee-title.png"
-            marquee_y = height * (0.24 if portrait else 0.31)
+            marquee_y = height * (0.17 if portrait else 0.165)
             font_size = 55 if portrait else 65
             title_svg.write_text(
                 f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">'
@@ -175,7 +183,12 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
                 f'font-family="DejaVu Serif" font-style="italic" font-weight="bold" '
                 f'font-size="{font_size}" fill="#39170e" '
                 f'textLength="{min(width*.61, max(170, len(title)*font_size*.55))}" '
-                f'lengthAdjust="spacingAndGlyphs">{svg_text(title.strip()[:90])}</text></svg>',
+                f'lengthAdjust="spacingAndGlyphs">{svg_text(title.strip()[:90])}</text>'
+                f'<text x="{width/2}" y="{height*(0.805 if portrait else 0.93)}" '
+                f'text-anchor="middle" font-family="DejaVu Sans" font-weight="bold" '
+                f'font-size="{32 if portrait else 30}" fill="#ffe4ad" '
+                f'stroke="#2a0b0a" stroke-width="2" paint-order="stroke">'
+                f'RE-MASTER FREDDY</text></svg>',
                 encoding="utf-8")
             run(["inkscape", str(title_svg), "--export-filename", str(title_image)])
         # A soft contact shadow gives the photo-mode vinyl a physical seat
@@ -187,25 +200,25 @@ def render(audio, title, output, portrait, seconds=None, cabinet_image=None, dis
         shadow_filter = ""
         backdrop_label = "bg"
         if cabinet_image is not None:
-            # Derive the shadow from the actual circular record alpha mask,
-            # rather than drawing a rectangular patch behind the platter.
+            # Elliptical contact shadow that follows the calibrated platter.
             shadow_filter = (
-                f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
-                f"pad=iw+{round(disc_size*.20)}:ih+{round(disc_size*.20)}:"
-                f"{round(disc_size*.10)}:{round(disc_size*.10)}:color=black@0,"
+                f"[1:v]scale={record_width}:{record_height},format=rgba,"
+                f"pad=iw+40:ih+40:20:20:color=black@0,"
                 f"lutrgb=r=0:g=0:b=0,colorchannelmixer=aa=0.38,"
-                f"gblur=sigma={max(3, round(disc_size*.035))}[shadow];"
-                f"[bg][shadow]overlay=x={x-round(disc_size*.10)+round(disc_size*.018)}:"
-                f"y={y-round(disc_size*.10)+round(disc_size*.025)}:shortest=1[shadowed];")
+                f"gblur=sigma=14[shadow];"
+                f"[bg][shadow]overlay=x={x-16}:y={y-12}:shortest=1[shadowed];")
             backdrop_label = "shadowed"
+        record_filter = (f"[1:v]scale={record_width}:{record_width},format=rgba,"
+                         f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none"
+                         + (f",scale={record_width}:{record_height}" if cabinet_image is not None else "")
+                         + "[record];")
         filtergraph = (f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
                        f"crop={width}:{height},setsar=1,format=rgba[bg];"
                        f"{shadow_filter}"
-                       f"[1:v]scale={disc_size}:{disc_size},format=rgba,"
-                       f"rotate='-1.5*PI*t':ow=iw:oh=ih:c=none[record];"
+                       f"{record_filter}"
                        f"[{backdrop_label}][record]overlay=x={x}:y={y}:shortest=1[deck];"
-                       f"[2:v]format=rgba[tonearm];"
-                       f"[deck][tonearm]overlay={photo_x_offset+disc_offset_x}:{photo_y_offset+disc_offset_y}:shortest=1,format=yuv420p[v]")
+                       + ("[deck]format=yuv420p[v]" if cabinet_image is not None else
+                          f"[2:v]format=rgba[tonearm];[deck][tonearm]overlay={disc_offset_x}:{disc_offset_y}:shortest=1,format=yuv420p[v]"))
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-loop", "1", "-i", str(backdrop),
                    "-loop", "1", "-i", str(directory/"disc.png"), "-loop", "1", "-i", str(directory/"tonearm.png"), "-i", str(audio),
                    "-filter_complex", filtergraph, "-map", "[v]", "-map", "3:a:0", "-t", f"{duration:.3f}",
