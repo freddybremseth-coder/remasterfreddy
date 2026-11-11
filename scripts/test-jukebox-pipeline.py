@@ -119,7 +119,7 @@ class SyntheticPipelineTest(unittest.TestCase):
                                "https://example.supabase.co", "test-only-key")
                 self.assertFalse((root / "forbidden").exists())
             with_images = dict(export)
-            with_images["handoff"] = {**export["handoff"],
+            with_images["handoff"] = {**export["handoff"], "seconds": 15,
                                       "imagePaths": ["neural-beat/photo.jpg"]}
             export_file.write_text(json.dumps(with_images), encoding="utf-8")
             # Image jobs are allowed through preflight, and must pass the
