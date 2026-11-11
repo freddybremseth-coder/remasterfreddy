@@ -80,6 +80,26 @@ def clips_from_storyboard(path: Path) -> tuple[list[str], bool, float]:
         raise ValueError("Invalid storyboard duration")
     return names, plan["format"] == "portrait", seconds
 
+def clips_from_stage_receipt(path: Path, media_dir: Path) -> list[str]:
+    """Turn the worker's SHA-pinned staging receipt into ordered local sources."""
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    if (not isinstance(receipt, dict) or receipt.get("version") != 1
+            or receipt.get("publish") is not False
+            or receipt.get("approved_for_render") is not False):
+        raise ValueError("Expected an unapproved private staging receipt")
+    items = receipt.get("clips")
+    if not isinstance(items, list) or not 1 <= len(items) <= 12:
+        raise ValueError("Expected 1–12 staged clips")
+    result = []
+    for index, item in enumerate(items):
+        if (not isinstance(item, dict) or item.get("sceneIndex") != index
+                or not isinstance(item.get("file"), str)
+                or not isinstance(item.get("sha256"), str)
+                or item.get("sha256") != prepare_entry(media_dir.resolve(), item["file"])["sha256"]):
+            raise ValueError("Staged clip ordering or SHA-256 does not match")
+        result.append(item["file"])
+    return result
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -88,16 +108,21 @@ if __name__ == "__main__":
     parser.add_argument("--jukebox", required=True, help="Filename relative to media directory")
     parser.add_argument("--video", action="append", help="Ordered middle clip; repeat 1–12 times")
     parser.add_argument("--storyboard", type=Path, help="Planning-only JSON downloaded from admin editor")
+    parser.add_argument("--staged-clips", type=Path, help="Private worker receipt with ordered SHA-pinned clips")
     parser.add_argument("--portrait", action="store_true")
     parser.add_argument("--seconds", type=float)
     parser.add_argument("--approve-render", action="store_true",
                         help="Explicit operator approval for rendering only, never publication")
     parser.add_argument("--output", type=Path, required=True, help="New JSON manifest path")
     args = parser.parse_args()
+    if args.staged_clips and (args.storyboard or args.video):
+        parser.error("--staged-clips cannot be combined with --storyboard or --video")
     if args.storyboard and (args.video or args.portrait or args.seconds is not None):
         parser.error("--storyboard cannot be combined with --video, --portrait or --seconds")
     if args.storyboard:
         clips, portrait, seconds = clips_from_storyboard(args.storyboard)
+    elif args.staged_clips:
+        clips, portrait, seconds = clips_from_stage_receipt(args.staged_clips, args.media_dir), args.portrait, args.seconds
     else:
         clips, portrait, seconds = args.video or [], args.portrait, args.seconds
     manifest = build_manifest(args.media_dir, args.audio, args.jukebox,
