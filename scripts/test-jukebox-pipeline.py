@@ -117,6 +117,19 @@ class SyntheticPipelineTest(unittest.TestCase):
                                False, 2, True,
                                "https://example.supabase.co", "test-only-key")
                 self.assertFalse((root / "forbidden").exists())
+            # Positive control: a correctly pinned queued handoff reaches
+            # staging. The stage call is mocked to prevent any network access.
+            queued = dict(export)
+            queued["handoff"] = {**export["handoff"], "seconds": 15}
+            export_file.write_text(json.dumps(queued), encoding="utf-8")
+            with patch.object(worker.stager, "stage", side_effect=RuntimeError("STAGE_CALLED")):
+                with self.assertRaisesRegex(RuntimeError, "STAGE_CALLED"):
+                    worker.run(export_file, song, jukebox,
+                               root / "matched", root / "matched.mp4",
+                               False, 15, True,
+                               "https://example.supabase.co", "test-only-key")
+            self.assertFalse((root / "matched").exists())
+
             # Existing legacy synthetic worker test uses a 2-second sample,
             # which is not an allowed server-side queue duration.
             export.pop("handoff")
