@@ -93,6 +93,34 @@ def verify_complete_video(path: Path) -> None:
         raise ValueError(f"Video failed full decoding validation: {path.name}") from error
 
 
+def verify_rendered_mp4(path: Path, portrait: bool, expected_length: float) -> None:
+    """Reject wrong codecs, missing soundtrack, wrong geometry or bad length."""
+    try:
+        raw = subprocess.check_output([
+            "ffprobe", "-v", "error", "-show_entries",
+            "format=duration:stream=codec_type,codec_name,width,height",
+            "-of", "json", str(path)
+        ], text=True, stderr=subprocess.PIPE, timeout=30)
+        metadata = json.loads(raw)
+        duration = float(metadata["format"]["duration"])
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+            ValueError, KeyError, TypeError, OSError) as error:
+        raise ValueError("Cannot inspect rendered MP4") from error
+    expected_width, expected_height = (1080, 1920) if portrait else (1920, 1080)
+    tracks = metadata.get("streams", [])
+    video = [track for track in tracks if track.get("codec_type") == "video"]
+    audio = [track for track in tracks if track.get("codec_type") == "audio"]
+    if len(video) != 1 or len(audio) != 1:
+        raise ValueError("Rendered MP4 must contain exactly one video and audio stream")
+    if (video[0].get("codec_name") != "h264"
+            or video[0].get("width") != expected_width
+            or video[0].get("height") != expected_height
+            or audio[0].get("codec_name") != "aac"):
+        raise ValueError("Rendered MP4 has unexpected codecs or dimensions")
+    if not math.isfinite(duration) or abs(duration - expected_length) > .5:
+        raise ValueError("Rendered MP4 duration does not match source audio")
+
+
 def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool = False):
     root = media_dir.resolve(strict=True)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -124,6 +152,7 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
         composer.compose(audio, jukebox, clips, staged, portrait, seconds)
         output_hash = digest(staged)
         output_duration = composer.media_duration(staged)
+        verify_rendered_mp4(staged, portrait, length)
         # Hard link fails if target exists, avoiding accidental replacement.
         os.link(staged, target)
     finally:
