@@ -129,7 +129,7 @@ class SyntheticPipelineTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "CLIP_STAGE_CALLED"):
                     worker.run(export_file, song, jukebox,
                                root / "with-images", root / "with-images.mp4",
-                               False, 2, True,
+                               False, 15, True,
                                "https://example.supabase.co", "test-only-key")
             self.assertFalse((root / "with-images").exists())
             export_file.write_text(json.dumps(export), encoding="utf-8")
