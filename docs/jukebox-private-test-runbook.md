@@ -56,3 +56,23 @@ Dette er fortsatt **ikke YouTube-opplasting**. Videoen lastes opp til privat lag
 ## Testdekning
 
 `test-jukebox-claim.py`, `test-jukebox-finalization.py` og `test-jukebox-private-test.py` er lagt til `jukebox-render-smoke.yml`. De kjører uten nettverk og verifiserer låsing av jobber, korrekt renderforsøk, filintegritet og privat opplastingsgjerde.
+
+## Avgrenset køkjøring (ikke driftsatt)
+
+`scripts/run-jukebox-spool-worker.py` kan kjøre én avgrenset batch av manuelt klargjorte, private jobber på en betrodd arbeidervert. Ingen kontinuerlig scheduler installeres av denne PR-en. Dette er et mellomsteg for å teste automatisert jobbvalg, og **ikke** automatisk nedlasting av katalogmaster, videomotiv eller hele RealtyFlow-køen.
+
+Opprett en mappe under en beskyttet spool-rot med eksakt jobb-UUID som navn. Legg inn:
+
+- `job.json` med kun `{"jobId":"<UUID>","audio":"master.wav","jukebox":"cabinet.mp4"}`
+- `clip-export.json` hentet fra den administratorbeskyttede eksporten mens jobben står som `queued`
+- En lokalt verifisert original masterfil og et godkjent, lokalt jukebox-motiv med filnavnene fra `job.json`
+
+Bruk separat hemmelighetslager på arbeiderverten, og sett `REMASTER_JUKEBOX_PRIVATE_RENDER_ENABLED=true`, `REMASTER_JUKEBOX_PRIVATE_SPOOL_ENABLED=true`, `SUPABASE_URL` og `SUPABASE_SERVICE_ROLE_KEY`. Kjør:
+
+```bash
+python3 scripts/run-jukebox-spool-worker.py --spool /privat/jukebox-spool --limit 1 --run-once
+```
+
+Uten `--upload-private-preview` skjer **ingen** MP4-opplasting til Storage, og aldri YouTube-opplasting. Privat Storage kan bare brukes separat når `REMASTER_JUKEBOX_PRIVATE_UPLOADS_ENABLED=true` og flagget `--upload-private-preview` er gitt. Ved tvetydig feil stopper jobben uten automatisk forsøk på nytt; en operatør må kontrollere jobbstaten, renderforsøket og lokale filer.
+
+Køarbeideren kjører med maksimalt fem jobbmapper per kall; bruk aldri en ubeskyttet katalog. Fremtidig fullt automatisert drift krever en godkjent server-side produsent som knytter katalogmaster og jukebox-asset til jobb-ID, laster dem ned med autentiserte rettigheter, verifiserer SHA-256 og gjør en transaksjonssikker overgang til den betrodde køen. **Den komponenten er ikke implementert her.**
