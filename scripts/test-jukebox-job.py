@@ -94,6 +94,42 @@ class JobValidationTests(unittest.TestCase):
             runner.verify_complete_video(self.root / "clip-a.mp4")
 
 
+    @patch.object(runner.subprocess, "check_output")
+    def test_finished_mp4_rejects_missing_audio(self, probe):
+        probe.return_value = json.dumps({
+            "format": {"duration": "30"},
+            "streams": [{"codec_type": "video", "codec_name": "h264",
+                         "width": 1920, "height": 1080}]
+        })
+        with self.assertRaisesRegex(ValueError, "audio stream"):
+            runner.verify_rendered_mp4(self.root / "clip-a.mp4", False, 30)
+
+    @patch.object(runner.subprocess, "check_output")
+    def test_finished_mp4_rejects_wrong_geometry(self, probe):
+        probe.return_value = json.dumps({
+            "format": {"duration": "30"},
+            "streams": [
+                {"codec_type": "video", "codec_name": "h264",
+                 "width": 1920, "height": 1080},
+                {"codec_type": "audio", "codec_name": "aac"}
+            ]
+        })
+        with self.assertRaisesRegex(ValueError, "codecs or dimensions"):
+            runner.verify_rendered_mp4(self.root / "clip-a.mp4", True, 30)
+
+    @patch.object(runner.subprocess, "check_output")
+    def test_finished_mp4_accepts_expected_streams(self, probe):
+        probe.return_value = json.dumps({
+            "format": {"duration": "30.03"},
+            "streams": [
+                {"codec_type": "video", "codec_name": "h264",
+                 "width": 1920, "height": 1080},
+                {"codec_type": "audio", "codec_name": "aac"}
+            ]
+        })
+        runner.verify_rendered_mp4(self.root / "clip-a.mp4", False, 30)
+
+
 @unittest.skipUnless(all(shutil.which(x) for x in ("ffmpeg", "ffprobe")),
                      "FFmpeg unavailable")
 class JobEndToEndTest(unittest.TestCase):
