@@ -79,20 +79,29 @@ jobs:
           test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "1920"
           test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "1080"
           ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/hybrid-sample.mp4 -frames:v 1 jukebox-review/hybrid-sample.png
-      - name: Upload review frames
+      - name: Upload playable QA videos
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: jukebox-review-frames
+          name: jukebox-playable-test-videos
           path: |
-            jukebox-review/landscape.png
-            jukebox-review/portrait.png
-            jukebox-review/photo-title.png
-            jukebox-review/photo-title-portrait.png
             jukebox-review/landscape.mp4
             jukebox-review/portrait.mp4
             jukebox-review/photo-title.mp4
             jukebox-review/photo-title-portrait.mp4
             jukebox-review/hybrid-sample.mp4
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload inspection stills
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukebox-inspection-stills
+          path: |
+            jukebox-review/landscape.png
+            jukebox-review/portrait.png
+            jukebox-review/photo-title.png
+            jukebox-review/photo-title-portrait.png
             jukebox-review/hybrid-sample.png
           retention-days: 7
+          if-no-files-found: error
