@@ -72,6 +72,28 @@ class JobValidationTests(unittest.TestCase):
             runner.prepare(self.manifest, self.root)
 
 
+    @patch.object(runner.composer, "probe_media", return_value=5)
+    @patch.object(runner.subprocess, "run")
+    def test_full_video_decode_is_required(self, run_command, _probe):
+        runner.verify_complete_video(self.root / "clip-a.mp4")
+        command = run_command.call_args.args[0]
+        self.assertIn("-xerror", command)
+        self.assertEqual(command[-3:], ["-f", "null", "-"])
+        self.assertEqual(run_command.call_args.kwargs["check"], True)
+
+    @patch.object(runner.composer, "probe_media", return_value=5)
+    @patch.object(runner.subprocess, "run",
+                  side_effect=subprocess.CalledProcessError(1, "ffmpeg"))
+    def test_corrupt_video_is_rejected_before_render(self, _run, _probe):
+        with self.assertRaisesRegex(ValueError, "full decoding"):
+            runner.verify_complete_video(self.root / "clip-b.mp4")
+
+    @patch.object(runner.composer, "probe_media", return_value=1801)
+    def test_unbounded_video_decode_is_rejected(self, _probe):
+        with self.assertRaisesRegex(ValueError, "30-minute"):
+            runner.verify_complete_video(self.root / "clip-a.mp4")
+
+
 @unittest.skipUnless(all(shutil.which(x) for x in ("ffmpeg", "ffprobe")),
                      "FFmpeg unavailable")
 class JobEndToEndTest(unittest.TestCase):
