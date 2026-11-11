@@ -119,13 +119,19 @@ class SyntheticPipelineTest(unittest.TestCase):
                                "https://example.supabase.co", "test-only-key")
                 self.assertFalse((root / "forbidden").exists())
             with_images = dict(export)
-            with_images["handoff"] = {**export["handoff"], "imagePaths": ["neural-beat/photo.jpg"]}
+            with_images["handoff"] = {**export["handoff"],
+                                      "imagePaths": ["neural-beat/photo.jpg"]}
             export_file.write_text(json.dumps(with_images), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "photo-aware renderer"):
-                worker.run(export_file, song, jukebox,
-                           root / "unrenderable", root / "unrenderable.mp4",
-                           False, 2, True, "https://example.supabase.co", "test-only-key")
-            self.assertFalse((root / "unrenderable").exists())
+            # Image jobs are allowed through preflight, and must pass the
+            # same authorized private clip stage before accessing photos.
+            with patch.object(worker.stager, "stage",
+                              side_effect=RuntimeError("CLIP_STAGE_CALLED")):
+                with self.assertRaisesRegex(RuntimeError, "CLIP_STAGE_CALLED"):
+                    worker.run(export_file, song, jukebox,
+                               root / "with-images", root / "with-images.mp4",
+                               False, 2, True,
+                               "https://example.supabase.co", "test-only-key")
+            self.assertFalse((root / "with-images").exists())
             export_file.write_text(json.dumps(export), encoding="utf-8")
 
             # Positive control: a correctly pinned queued handoff reaches
