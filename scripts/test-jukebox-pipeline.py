@@ -21,6 +21,7 @@ def load(name, module):
 stager = load("stage-jukebox-clips.py", "clip_stager")
 preparer = load("prepare-jukebox-job.py", "job_preparer")
 renderer = load("render-jukebox-job.py", "job_runner")
+worker = load("run-jukebox-offline-worker.py", "offline_worker")
 
 
 class Response(io.BytesIO):
@@ -92,6 +93,22 @@ class SyntheticPipelineTest(unittest.TestCase):
             self.assertFalse(result["published"])
             renderer.verify_rendered_mp4(root / "output.mp4", False, 2.0)
             self.assertEqual(result["sha256"], renderer.digest(root / "output.mp4"))
+
+            # One-command worker must refuse to touch private storage without
+            # explicit approval, then run the same pipeline when authorized.
+            with self.assertRaisesRegex(ValueError, "approve-render"):
+                worker.run(export_file, song, jukebox, root / "worker", root / "worker.mp4",
+                           False, 2, False, "https://example.supabase.co", "test-only-key")
+            self.assertFalse((root / "worker").exists())
+            with patch.object(worker.stager.urllib.request, "build_opener") as opener:
+                opener.return_value.open.return_value = Response(payload)
+                assembled = worker.run(
+                    export_file, song, jukebox, root / "worker", root / "worker.mp4",
+                    False, 2, True, "https://example.supabase.co", "test-only-key")
+            self.assertEqual(assembled["scene_count"], 1)
+            self.assertFalse(assembled["published"])
+            renderer.verify_rendered_mp4(root / "worker.mp4", False, 2)
+
 
 
 if __name__ == "__main__":
