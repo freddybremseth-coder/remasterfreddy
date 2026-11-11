@@ -101,7 +101,7 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
     length = min(length, seconds) if seconds is not None else length
     plan = composer.scene_plan(length, portrait, clips)
     if plan_only:
-        return {"status": "metadata_validated", "scene_plan": plan,
+        return {"status": "validated", "scene_plan": plan,
                 "full_decode_checked": False}
     # Validate all frames before generating any output. This is not a review
     # of content rights or visual suitability, which requires human approval.
