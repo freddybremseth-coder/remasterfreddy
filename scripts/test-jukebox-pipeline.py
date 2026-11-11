@@ -108,6 +108,18 @@ class SyntheticPipelineTest(unittest.TestCase):
             self.assertEqual(assembled["scene_count"], 1)
             self.assertFalse(assembled["published"])
             renderer.verify_rendered_mp4(root / "worker.mp4", False, 2)
+            private_receipt = json.loads((root / "worker" / "render-receipt.json").read_text())
+            self.assertEqual(private_receipt["job_id"], job_id)
+            self.assertEqual(private_receipt["status"], "rendered_private")
+            self.assertEqual(private_receipt["output"]["sha256"],
+                             renderer.digest(root / "worker.mp4"))
+            self.assertEqual(private_receipt["output"]["bytes"],
+                             (root / "worker.mp4").stat().st_size)
+            self.assertEqual(private_receipt["source"]["audio_sha256"],
+                             renderer.digest(song))
+            self.assertEqual(len(private_receipt["source"]["clips"]), 1)
+            self.assertFalse(private_receipt["approved_for_upload"])
+            self.assertFalse(private_receipt["approved_for_publication"])
 
 
 
