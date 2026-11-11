@@ -13,6 +13,11 @@ spec = importlib.util.spec_from_file_location(
 stager = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stager)
 
+uploader_spec = importlib.util.spec_from_file_location(
+    "private_uploader", Path(__file__).with_name("upload-jukebox-private-preview.py"))
+private_uploader = importlib.util.module_from_spec(uploader_spec)
+uploader_spec.loader.exec_module(private_uploader)
+
 JOB = "12345678-1234-1234-1234-123456789abc"
 OBJECT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
@@ -35,6 +40,23 @@ class Response(io.BytesIO):
 
 
 class StagingTest(unittest.TestCase):
+    def test_private_upload_is_off_by_default(self):
+        with patch.object(private_uploader.urllib.request, "build_opener") as opener:
+            with self.assertRaisesRegex(ValueError, "explicit approval"):
+                private_uploader.upload(Path("missing.json"), Path("missing.mp4"), JOB,
+                    "0" * 64, "https://project.supabase.co", "test-key", False, False)
+            opener.assert_not_called()
+
+    def test_private_upload_rejects_untrusted_origins(self):
+        self.assertEqual(
+            private_uploader.endpoint("https://project.supabase.co"),
+            "https://project.storage.supabase.co/storage/v1/upload/resumable")
+        for origin in ("https://evil.test", "https://project.supabase.co.evil.test",
+                       "http://project.supabase.co", "https://project.supabase.co:8080"):
+            with self.subTest(origin=origin):
+                with self.assertRaises(ValueError):
+                    private_uploader.endpoint(origin)
+
     def test_reservations_reject_wrong_job_and_duplicate_scene(self):
         export = sample()
         export["clips"][0]["path"] = export["clips"][0]["path"].replace(JOB, OBJECT)
