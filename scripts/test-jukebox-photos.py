@@ -112,7 +112,11 @@ class PhotoRenderTests(unittest.TestCase):
             master = hashlib.sha256(audio.read_bytes()).hexdigest()
             export = {
                 "version": 1, "jobId": "12345678-1234-1234-1234-123456789abc",
-                "clips": [],
+                "clips": [{
+                    "sceneIndex": 0,
+                    "path": "staging/12345678-1234-1234-1234-123456789abc/scene-0/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.mp4",
+                    "contentType": "video/mp4", "bytes": source.stat().st_size,
+                }],
                 "handoff": {
                     "masterSha256": master, "format": "landscape",
                     "seconds": 15, "templateVersion": "photo-v1-perspective-2026-11",
