@@ -95,6 +95,30 @@ class SyntheticPipelineTest(unittest.TestCase):
             renderer.verify_rendered_mp4(root / "output.mp4", False, 2.0)
             self.assertEqual(result["sha256"], renderer.digest(root / "output.mp4"))
 
+            # A new RealtyFlow export pins the exact song master, format and
+            # duration before any private Storage fetch. Reject mismatches.
+            export["handoff"] = {
+                "masterSha256": renderer.digest(song),
+                "format": "landscape", "seconds": 2,
+                "templateVersion": "photo-v1-perspective-2026-11",
+            }
+            export_file.write_text(json.dumps(export), encoding="utf-8")
+            for change, message in [
+                ({"masterSha256": "0" * 64}, "song master SHA-256"),
+                ({"format": "portrait"}, "Queued format"),
+                ({"seconds": 30}, "Queued duration"),
+            ]:
+                wrong = dict(export)
+                wrong["handoff"] = {**export["handoff"], **change}
+                export_file.write_text(json.dumps(wrong), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    worker.run(export_file, song, jukebox,
+                               root / "forbidden", root / "forbidden.mp4",
+                               False, 2, True,
+                               "https://example.supabase.co", "test-only-key")
+                self.assertFalse((root / "forbidden").exists())
+            export_file.write_text(json.dumps(export), encoding="utf-8")
+
             # One-command worker must refuse to touch private storage without
             # explicit approval, then run the same pipeline when authorized.
             with self.assertRaisesRegex(ValueError, "approve-render"):
