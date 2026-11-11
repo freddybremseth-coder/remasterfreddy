@@ -178,6 +178,77 @@ class StagingTest(unittest.TestCase):
                         "fake-service-key", True, True)
             self.assertEqual(requests, ["GET", "GET", "PATCH"])
 
+
+    def test_private_upload_rejects_cross_project_resume_without_network(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            with patch.object(private_uploader.urllib.request, "build_opener") as factory:
+                with self.assertRaisesRegex(ValueError, "Invalid private resumable"):
+                    private_uploader.upload(
+                        receipt, video, JOB, master, "https://project.supabase.co",
+                        "fake-service-key", True, True,
+                        "https://another.storage.supabase.co/storage/v1/upload/resumable/token")
+                factory.return_value.open.assert_not_called()
+
+    def test_private_upload_uses_verified_bytes_and_exact_offsets(self):
+        class TusResponse(Response):
+            def __init__(self, payload=b"", status=200, headers=None):
+                super().__init__(payload)
+                self.status = status
+                self.headers = headers or {}
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            session = ("https://project.storage.supabase.co"
+                       "/storage/v1/upload/resumable/synthetic-token")
+            requests = []
+            def open_request(request, timeout=45):
+                requests.append(request)
+                if len(requests) == 1:
+                    return TusResponse(status=201, headers={"Location": session})
+                if len(requests) == 2:
+                    return TusResponse(headers={"Upload-Offset": "0",
+                                                "Upload-Length": str(video.stat().st_size)})
+                return TusResponse(status=204, headers={
+                    "Upload-Offset": str(video.stat().st_size)})
+            with patch.object(private_uploader.urllib.request, "build_opener") as factory:
+                factory.return_value.open.side_effect = open_request
+                result = private_uploader.upload(
+                    receipt, video, JOB, master, "https://project.supabase.co",
+                    "fake-service-key", True, True)
+            self.assertEqual([r.get_method() for r in requests], ["POST", "HEAD", "PATCH"])
+            self.assertEqual(requests[2].data, video.read_bytes())
+            self.assertEqual(requests[2].get_header("Upload-offset"), "0")
+            self.assertEqual(result["status"], "uploaded_private_unregistered")
+            self.assertTrue(result["requires_server_verification"])
+            self.assertFalse(result["published"])
+
+    def test_private_upload_rejects_bad_server_chunk_offset(self):
+        class TusResponse(Response):
+            def __init__(self, status=200, headers=None):
+                super().__init__()
+                self.status = status
+                self.headers = headers or {}
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            session = ("https://project.storage.supabase.co"
+                       "/storage/v1/upload/resumable/synthetic-token")
+            requests = []
+            def open_request(request, timeout=45):
+                requests.append(request.get_method())
+                if len(requests) == 1:
+                    return TusResponse(201, {"Location": session})
+                if len(requests) == 2:
+                    return TusResponse(200, {"Upload-Offset": "0",
+                                             "Upload-Length": str(video.stat().st_size)})
+                return TusResponse(204, {"Upload-Offset": "1"})
+            with patch.object(private_uploader.urllib.request, "build_opener") as factory:
+                factory.return_value.open.side_effect = open_request
+                with self.assertRaisesRegex(ValueError, "Server offset differs"):
+                    private_uploader.upload(
+                        receipt, video, JOB, master, "https://project.supabase.co",
+                        "fake-service-key", True, True)
+            self.assertEqual(requests, ["POST", "HEAD", "PATCH"])
+
     def test_private_upload_is_off_by_default(self):
         with patch.object(private_uploader.urllib.request, "build_opener") as opener:
             with self.assertRaisesRegex(ValueError, "explicit approval"):
