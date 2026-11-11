@@ -117,6 +117,9 @@ class SyntheticPipelineTest(unittest.TestCase):
                                False, 2, True,
                                "https://example.supabase.co", "test-only-key")
                 self.assertFalse((root / "forbidden").exists())
+            # Existing legacy synthetic worker test uses a 2-second sample,
+            # which is not an allowed server-side queue duration.
+            export.pop("handoff")
             export_file.write_text(json.dumps(export), encoding="utf-8")
 
             # One-command worker must refuse to touch private storage without
