@@ -75,7 +75,7 @@ class StagingTest(unittest.TestCase):
             base = Path(directory)
             manifest = base / "export.json"
             manifest.write_text(json.dumps(sample()), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "reserved size"):
+            with self.assertRaisesRegex(ValueError, "clip reservation"):
                 stager.stage(manifest, base / "clips", "https://sample.supabase.co", "fake-test-key")
             self.assertFalse((base / "clips").exists())
 
