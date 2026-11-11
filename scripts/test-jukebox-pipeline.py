@@ -101,6 +101,7 @@ class SyntheticPipelineTest(unittest.TestCase):
                 "masterSha256": renderer.digest(song),
                 "format": "landscape", "seconds": 2,
                 "templateVersion": "photo-v1-perspective-2026-11",
+                "imagePaths": [],
             }
             export_file.write_text(json.dumps(export), encoding="utf-8")
             for change, message in [
@@ -117,6 +118,16 @@ class SyntheticPipelineTest(unittest.TestCase):
                                False, 2, True,
                                "https://example.supabase.co", "test-only-key")
                 self.assertFalse((root / "forbidden").exists())
+            with_images = dict(export)
+            with_images["handoff"] = {**export["handoff"], "imagePaths": ["neural-beat/photo.jpg"]}
+            export_file.write_text(json.dumps(with_images), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "photo-aware renderer"):
+                worker.run(export_file, song, jukebox,
+                           root / "unrenderable", root / "unrenderable.mp4",
+                           False, 2, True, "https://example.supabase.co", "test-only-key")
+            self.assertFalse((root / "unrenderable").exists())
+            export_file.write_text(json.dumps(export), encoding="utf-8")
+
             # Positive control: a correctly pinned queued handoff reaches
             # staging. The stage call is mocked to prevent any network access.
             queued = dict(export)
