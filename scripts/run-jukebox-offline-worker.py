@@ -24,6 +24,8 @@ def load(filename, name):
 stager = load("stage-jukebox-clips.py", "clip_stager")
 preparer = load("prepare-jukebox-job.py", "job_preparer")
 renderer = load("render-jukebox-job.py", "job_runner")
+photo_stager = load("stage-jukebox-photos.py", "photo_stager")
+photo_renderer = load("render-jukebox-photos.py", "photo_renderer")
 
 
 def run(reservations: Path, audio: Path, jukebox: Path,
@@ -50,14 +52,11 @@ def run(reservations: Path, audio: Path, jukebox: Path,
         if not isinstance(handoff, dict) or set(handoff) != {
                 "masterSha256", "format", "seconds", "templateVersion", "imagePaths"}:
             raise ValueError("Invalid server-owned Jukebox handoff")
-        # The renderer currently stages video clips only, not standalone
-        # photos. Fail closed until a verified image-to-video adapter is ready.
+        # The server pins an ordered list, never arbitrary remote URLs.
         images = handoff["imagePaths"]
         if (not isinstance(images, list) or len(images) > 12
                 or any(not isinstance(p, str) for p in images)):
             raise ValueError("Invalid queued image selection")
-        if images:
-            raise ValueError("Queued Jukebox images require a photo-aware renderer")
         expected_digest = handoff["masterSha256"]
         if (not isinstance(expected_digest, str)
                 or len(expected_digest) != 64
@@ -92,6 +91,18 @@ def run(reservations: Path, audio: Path, jukebox: Path,
         with source.open("rb") as reader, (clip_root / name).open("xb") as writer:
             shutil.copyfileobj(reader, writer, 1024 * 1024)
     clip_names = [item["file"] for item in receipt["clips"]]
+    photos = []
+    if handoff and handoff["imagePaths"]:
+        photos = photo_stager.stage_images(
+            handoff["imagePaths"], clip_root, storage_url, storage_key)
+        original_length = renderer.composer.probe_media(
+            clip_root / ("song" + audio.suffix.lower()), "audio")
+        effective_length = (min(original_length, seconds)
+                            if seconds is not None else original_length)
+        photo_videos = photo_renderer.render_photos(
+            clip_root, photos, effective_length, portrait,
+            min(len(clip_names), 12 - len(photos)))
+        clip_names = photo_renderer.interleave_visuals(clip_names, photo_videos)
     manifest = preparer.build_manifest(
         clip_root, "song" + audio.suffix.lower(),
         "jukebox" + jukebox.suffix.lower(), clip_names, portrait, seconds,
@@ -113,7 +124,7 @@ def run(reservations: Path, audio: Path, jukebox: Path,
                    "duration_seconds": result["duration_seconds"]},
         "source": {"audio_sha256": master_hash,
                    "render_manifest_sha256": manifest_hash,
-                   "clips": receipt["clips"]},
+                   "clips": receipt["clips"], "photos": photos},
         "scene_count": len(clip_names),
         "approved_for_render": True,
         "approved_for_upload": False,
