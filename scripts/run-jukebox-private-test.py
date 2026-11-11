@@ -10,6 +10,8 @@ import argparse
 import hashlib
 import json
 import os
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 from importlib.util import module_from_spec, spec_from_file_location
 
@@ -72,6 +74,38 @@ def preflight(export: Path, audio: Path, jukebox: Path,
     }
 
 
+
+@contextmanager
+def active_render_lease(job_id: str, attempt: int, origin: str, key: str):
+    """Heartbeat through render/upload; reject lease loss before marking ready."""
+    stopped = threading.Event()
+    failures = []
+
+    # Verify the claim remains active before any expensive media work starts.
+    claim_worker.heartbeat(job_id, attempt, origin, key)
+
+    def refresh():
+        while not stopped.wait(30):
+            try:
+                claim_worker.heartbeat(job_id, attempt, origin, key)
+            except Exception as error:
+                failures.append(error)
+                stopped.set()
+                break
+
+    thread = threading.Thread(target=refresh, name="jukebox-render-lease", daemon=True)
+    thread.start()
+    try:
+        def check():
+            if failures:
+                raise ValueError("Jukebox render lease lost; do not finalize") from failures[0]
+        yield check
+        check()
+    finally:
+        stopped.set()
+        thread.join(timeout=5)
+
+
 def run_private_test(export: Path, audio: Path, jukebox: Path, workspace: Path,
                      output: Path, job_id: str, approve: bool,
                      upload: bool, project_origin: str, service_key: str,
@@ -90,26 +124,31 @@ def run_private_test(export: Path, audio: Path, jukebox: Path, workspace: Path,
     if (claimed["format"] != ("portrait" if values["portrait"] else "landscape")
             or claimed["seconds"] != values["seconds"]):
         raise ValueError("Queued output changed during render claim")
-    rendered = render_worker.run(
-        export, audio, jukebox, workspace, output,
-        values["portrait"], values["seconds"], True,
-        project_origin, service_key)
-    result = {
-        "job_id": job_id, "attempt": claimed["attempt"],
-        "mp4": str(output), "sha256": rendered["sha256"],
-        "state": "rendered_private", "youtube_published": False,
-    }
-    if upload:
-        upload_worker.upload(
-            workspace / "render-receipt.json", output, job_id,
-            values["master"], project_origin, service_key, True, upload_enabled)
-        verified = finalize_worker.finalize(
-            workspace / "render-receipt.json", output, job_id,
-            values["master"], project_origin, service_key,
-            True, upload_enabled, claimed["attempt"])
-        result["state"] = verified["status"]
-        result["storage_verified"] = True
-    return result
+    with active_render_lease(
+        job_id, claimed["attempt"], project_origin, service_key
+    ) as check_lease:
+        rendered = render_worker.run(
+            export, audio, jukebox, workspace, output,
+            values["portrait"], values["seconds"], True,
+            project_origin, service_key)
+        check_lease()
+        result = {
+            "job_id": job_id, "attempt": claimed["attempt"],
+            "mp4": str(output), "sha256": rendered["sha256"],
+            "state": "rendered_private", "youtube_published": False,
+        }
+        if upload:
+            upload_worker.upload(
+                workspace / "render-receipt.json", output, job_id,
+                values["master"], project_origin, service_key, True, upload_enabled)
+            check_lease()
+            verified = finalize_worker.finalize(
+                workspace / "render-receipt.json", output, job_id,
+                values["master"], project_origin, service_key,
+                True, upload_enabled, claimed["attempt"])
+            result["state"] = verified["status"]
+            result["storage_verified"] = True
+        return result
 
 
 if __name__ == "__main__":
