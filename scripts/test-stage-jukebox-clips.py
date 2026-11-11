@@ -214,7 +214,7 @@ class StagingTest(unittest.TestCase):
                 factory.return_value.open.side_effect = open_request
                 result = private_uploader.upload(
                     receipt, video, JOB, master, "https://project.supabase.co",
-                    "fake-service-key", True, True, 2)
+                    "fake-service-key", True, True)
             self.assertEqual([r.get_method() for r in requests], ["POST", "HEAD", "PATCH"])
             self.assertEqual(requests[2].data, video.read_bytes())
             self.assertEqual(requests[2].get_header("Upload-offset"), "0")
@@ -246,7 +246,7 @@ class StagingTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Server offset differs"):
                     private_uploader.upload(
                         receipt, video, JOB, master, "https://project.supabase.co",
-                        "fake-service-key", True, True, 2)
+                        "fake-service-key", True, True)
             self.assertEqual(requests, ["POST", "HEAD", "PATCH"])
 
     def test_private_upload_is_off_by_default(self):
