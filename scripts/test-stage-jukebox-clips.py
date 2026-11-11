@@ -55,6 +55,25 @@ class StagingTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             stager.validate_manifest(export)
 
+    def test_rejects_untrusted_storage_origin_before_network(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            manifest = base / "export.json"
+            manifest.write_text(json.dumps(sample()), encoding="utf-8")
+            for origin in (
+                "https://sample.supabase.co.evil.test",
+                "https://evil.test",
+                "https://sample.supabase.co:8443",
+                "http://sample.supabase.co",
+                "https://sample.supabase.co@evil.test",
+            ):
+                with self.subTest(origin=origin):
+                    with patch.object(stager.urllib.request, "build_opener") as opener:
+                        with self.assertRaisesRegex(ValueError, "project origin"):
+                            stager.stage(manifest, base / "clips", origin, "fake-test-key")
+                        opener.assert_not_called()
+                    self.assertFalse((base / "clips").exists())
+
     @patch.object(stager.urllib.request, "build_opener")
     def test_stages_exact_bytes_and_returns_hashes(self, opener_factory):
         opener_factory.return_value.open.return_value = Response(b"x" * 1024)
