@@ -4,6 +4,7 @@ import {
   loadAutopilotSettings,
   runAutopilot,
   saveAutopilotSettings,
+  type AutopilotLastRun,
   type AutopilotMode,
   type AutopilotRunResult,
   type AutopilotSettings,
@@ -14,11 +15,12 @@ const modes: Array<{ id: AutopilotMode; label: string; description: string }> = 
   { id: "off", label: "Av", description: "Ingen automatiske handlinger eller planlagring." },
   { id: "preview", label: "Kun forhåndsvisning", description: "AI analyserer og foreslår tiltak, men utfører og lagrer ingenting." },
   { id: "plan_non_destructive", label: "Lag trygge planer", description: "Lagrer strategi-, innholds- og publiseringsplaner uten å endre YouTube-metadata." },
-  { id: "execute_guarded", label: "Utfør og mål", description: "Utfører beskrivelser og tags ved manuell kjøring. Tittelendringer krever egen godkjenning; lagring starter ikke en tidsplan." },
+  { id: "execute_guarded", label: "Utfør og mål", description: "Trygge beskrivelser og tags kjøres daglig når modusen er lagret, eller manuelt med «Kjør». Titler krever egen godkjenning." },
 ];
 
 export default function AutopilotControl() {
   const [settings, setSettings] = useState<AutopilotSettings | null>(null);
+  const [lastRun, setLastRun] = useState<AutopilotLastRun | null>(null);
   const [mode, setMode] = useState<AutopilotMode>("off");
   const [maxActions, setMaxActions] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function AutopilotControl() {
 
   useEffect(() => {
     loadAutopilotSettings()
-      .then((result) => { setSettings(result); setMode(result.mode); setMaxActions(result.maxActionsPerRun); })
+      .then((result) => { setSettings(result.settings); setLastRun(result.lastRun); setMode(result.settings.mode); setMaxActions(result.settings.maxActionsPerRun); })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Kunne ikke hente autopilot-innstillingene."))
       .finally(() => setLoading(false));
   }, []);
@@ -58,6 +60,26 @@ export default function AutopilotControl() {
   }
 
   const allowsActionBudget = mode === "plan_non_destructive" || mode === "execute_guarded";
+  const unsavedChanges = Boolean(settings && (mode !== settings.mode || maxActions !== settings.maxActionsPerRun));
+  const nextUtc = new Date();
+  nextUtc.setUTCHours(20, 10, 0, 0);
+  if (nextUtc.getTime() <= Date.now()) nextUtc.setUTCDate(nextUtc.getUTCDate() + 1);
+  const formatSpanishTime = (value: Date | string) => new Intl.DateTimeFormat("nb-NO", {
+    timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  }).format(new Date(value));
+  // A successful run is not healthy forever. Allow the daily 20:10 UTC job
+  // one hour of processing delay before warning about a missing run.
+  const scheduledRunExpected = settings?.mode === "execute_guarded";
+  const latestExpectedUtc = new Date(nextUtc);
+  latestExpectedUtc.setUTCDate(latestExpectedUtc.getUTCDate() - 1);
+  const deadlineUtc = new Date(latestExpectedUtc.getTime() + 60 * 60 * 1000);
+  const missingScheduledRun = Boolean(scheduledRunExpected && Date.now() > deadlineUtc.getTime()
+    && (!lastRun || new Date(lastRun.at).getTime() < latestExpectedUtc.getTime()));
+  const lastDetailCount = (name: string) => {
+    const raw = lastRun?.details?.[name];
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  };
 
   return (
     <section className="autopilot-control">
@@ -65,7 +87,7 @@ export default function AutopilotControl() {
         <div>
           <p className="admin-eyebrow">Sikker automatisering</p>
           <h3>Autopilot</h3>
-          <p>Velg handlingsnivå. Lagre valget, og trykk deretter «Kjør» for å starte. Ingen automatisk tidsplan er konfigurert her.</p>
+          <p>Velg og lagre handlingsnivået. «Utfør og mål» har en daglig sikker kjøring kl. 20:10 UTC (21:10 vintertid / 22:10 sommertid i Spania). «Kjør» starter en ekstra, manuell kjøring.</p>
         </div>
         <div className="autopilot-shield"><ShieldCheck size={22} /></div>
       </div>
@@ -92,6 +114,21 @@ export default function AutopilotControl() {
           </div>
         </div>
 
+        <div className="autopilot-run-result" aria-label="Status for planlagt autopilot">
+          <p><strong>Planlagt autopilot</strong> · {settings?.mode === "execute_guarded" ? "Aktiv" : "Ikke aktiv i Utfør og mål"}</p>
+          <p>Neste planlagte tidspunkt: {formatSpanishTime(nextUtc)} (Spania).</p>
+          {lastRun ? <>
+            <p>Siste registrerte planlagte kjøring: {formatSpanishTime(lastRun.at)} · {lastRun.status === "success" ? "Vellykket" : "Feilet"}.</p>
+            <div className="autopilot-run-stats">
+              <span><strong>{lastDetailCount("executed_count") ?? "–"}</strong><small>Utført</small></span>
+              <span><strong>{lastDetailCount("saved_count") ?? "–"}</strong><small>Planlagt</small></span>
+              <span><strong>{lastDetailCount("skipped_count") ?? "–"}</strong><small>Hoppet over</small></span>
+              <span><strong>{lastDetailCount("approval_count") ?? "–"}</strong><small>Foreslått til godkjenning</small></span>
+            </div>
+            {lastRun.status === "error" && <p role="alert" className="admin-error">Den siste planlagte kjøringen feilet. Sjekk loggene før ny kjøring.</p>}
+          </> : <p>Ingen registrert planlagt kjøring er tilgjengelig ennå. Dette er ikke en bekreftelse på at autopiloten har kjørt.</p>}
+          {missingScheduledRun && <p role="alert" className="admin-error">Varsel: Den forventede daglige kjøringen er ikke registrert innen én time etter planlagt start. Kontroller cron og serverlogg. Ingen automatisk omstart er utført.</p>}
+        </div>
         {settings?.updatedAt && <small className="autopilot-updated">Sist endret {new Date(settings.updatedAt).toLocaleString("nb-NO")}{settings.updatedBy ? ` av ${settings.updatedBy}` : ""}</small>}
         {message && <div className="admin-success autopilot-message">{message}</div>}
         {error && <div className="admin-error autopilot-message">{error}</div>}
@@ -100,9 +137,10 @@ export default function AutopilotControl() {
           {saving ? <Loader2 className="admin-spinner" size={16} /> : <Save size={16} />} Lagre autopilot-innstillinger
         </button>
 
-        <p className="autopilot-updated">Viktig: Å velge og lagre «Utfør og mål» utfører ikke eksisterende anbefalinger. Trykk «Kjør utfør og mål». Titler må godkjennes med knappen på hvert tiltak.</p>
+        <p className="autopilot-updated">Viktig: Lagring utfører ikke tiltak umiddelbart. Når «Utfør og mål» er lagret, brukes denne modusen ved neste daglige kjøring. Titler og thumbnails krever fortsatt egen godkjenning.</p>
+        {unsavedChanges && <p className="autopilot-updated">Du har ulagrede endringer. Lagre før du starter en manuell kjøring.</p>}
         <div className="autopilot-run">
-          <button className="admin-secondary" type="button" onClick={run} disabled={running || saving || mode === "off"}>
+          <button className="admin-secondary" type="button" onClick={run} disabled={running || saving || loading || unsavedChanges || mode === "off"}>
             {running ? <Loader2 className="admin-spinner" size={16} /> : <PlayCircle size={16} />} {mode === "execute_guarded" ? "Kjør utfør og mål" : "Kjør sikker autopilot"}
           </button>
 

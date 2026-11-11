@@ -6,14 +6,22 @@ const control = fs.readFileSync(path.join(process.cwd(), "src/AutopilotControl.t
 const card = fs.readFileSync(path.join(process.cwd(), "src/RecommendationCard.tsx"), "utf8");
 
 describe("Re-Master autopilot consent clarity", () => {
-  it("explains that saving a mode does not start a background execution", () => {
-    expect(control).toContain("Ingen automatisk tidsplan er konfigurert her");
-    expect(control).toContain("Lagre valget");
+  it("distinguishes scheduled guarded runs from saving or manual execution", () => {
+    expect(control).toContain("20:10 UTC");
+    expect(control).toContain("Lagring utfører ikke tiltak umiddelbart");
+    expect(control).toContain("unsavedChanges || mode === \"off\"");
     expect(control).toContain("metadataRequiresApprovalCount");
+  });
+  it("only calls a scheduler run successful when there is a recorded result", () => {
+    expect(control).toContain("Ingen registrert planlagt kjøring");
+    expect(control).toContain("lastRun.status === \"success\"");
+    expect(control).toContain("lastRun.status === \"error\"");
+    expect(control).toContain("Foreslått til godkjenning");
+    expect(control).toContain("Europe/Madrid");
   });
   it("marks title changes as requiring a separate confirmation", () => {
     expect(card).toContain("Krever godkjenning");
-    expect(card).toContain("Godkjenn og utfør tittelendring");
+    expect(card).toContain("Godkjenn metadataforslag inkl. tittel");
     expect(card).toContain("Autopilot endrer ikke tittelen");
   });
 });
