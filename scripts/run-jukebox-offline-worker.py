@@ -48,8 +48,16 @@ def run(reservations: Path, audio: Path, jukebox: Path,
     handoff = exported.get("handoff")
     if handoff is not None:
         if not isinstance(handoff, dict) or set(handoff) != {
-                "masterSha256", "format", "seconds", "templateVersion"}:
+                "masterSha256", "format", "seconds", "templateVersion", "imagePaths"}:
             raise ValueError("Invalid server-owned Jukebox handoff")
+        # The renderer currently stages video clips only, not standalone
+        # photos. Fail closed until a verified image-to-video adapter is ready.
+        images = handoff["imagePaths"]
+        if (not isinstance(images, list) or len(images) > 12
+                or any(not isinstance(p, str) for p in images)):
+            raise ValueError("Invalid queued image selection")
+        if images:
+            raise ValueError("Queued Jukebox images require a photo-aware renderer")
         expected_digest = handoff["masterSha256"]
         if (not isinstance(expected_digest, str)
                 or len(expected_digest) != 64
