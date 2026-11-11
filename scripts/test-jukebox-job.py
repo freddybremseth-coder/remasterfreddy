@@ -130,6 +130,23 @@ class JobValidationTests(unittest.TestCase):
         runner.verify_rendered_mp4(self.root / "clip-a.mp4", False, 30)
 
 
+    def test_staged_receipt_is_bound_to_local_hash(self):
+        spec = importlib.util.spec_from_file_location(
+            "job_preparer", Path(__file__).with_name("prepare-jukebox-job.py"))
+        preparer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(preparer)
+        clip = self.root / "clip-a.mp4"
+        receipt = self.root / "receipt.json"
+        body = {"version": 1, "publish": False, "approved_for_render": False,
+                "clips": [{"sceneIndex": 0, "file": clip.name,
+                           "sha256": runner.digest(clip), "bytes": clip.stat().st_size}]}
+        receipt.write_text(json.dumps(body), encoding="utf-8")
+        self.assertEqual(preparer.clips_from_stage_receipt(receipt, self.root), ["clip-a.mp4"])
+        clip.write_bytes(b"modified")
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            preparer.clips_from_stage_receipt(receipt, self.root)
+
+
 @unittest.skipUnless(all(shutil.which(x) for x in ("ffmpeg", "ffprobe")),
                      "FFmpeg unavailable")
 class JobEndToEndTest(unittest.TestCase):
