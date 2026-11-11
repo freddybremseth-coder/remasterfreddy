@@ -51,7 +51,7 @@ class StagingTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "explicit approval"):
                 private_finalizer.finalize(Path("missing.json"), Path("missing.mp4"),
                     JOB, "0" * 64, "https://project.supabase.co",
-                    "test-key", False, False)
+                    "test-key", False, False, 2)
             opener.assert_not_called()
 
 
@@ -77,7 +77,7 @@ class StagingTest(unittest.TestCase):
     def test_private_finalization_checks_storage_and_conditionally_marks_ready(self):
         with tempfile.TemporaryDirectory() as directory:
             receipt, video, master = self.make_private_render(directory)
-            job = {"id": JOB, "state": "queued", "master_sha256": master,
+            job = {"id": JOB, "state": "rendering", "attempts": 2, "master_sha256": master,
                    "approved_at": None, "published_at": None}
             requests = []
             def open_request(request, timeout=45):
@@ -91,12 +91,12 @@ class StagingTest(unittest.TestCase):
                 factory.return_value.open.side_effect = open_request
                 result = private_finalizer.finalize(
                     receipt, video, JOB, master, "https://project.supabase.co",
-                    "fake-service-key", True, True)
+                    "fake-service-key", True, True, 2)
             self.assertEqual(result["status"], "ready_for_private_review")
             self.assertFalse(result["published"])
             self.assertEqual([r.get_method() for r in requests], ["GET", "GET", "PATCH"])
             self.assertIn("/storage/v1/object/authenticated/remaster-jukebox/", requests[1].full_url)
-            self.assertIn("state=eq.queued", requests[2].full_url)
+            self.assertIn("state=eq.rendering", requests[2].full_url)
             body = json.loads(requests[2].data)
             self.assertEqual(body["state"], "ready")
             self.assertEqual(body["video_path"], JOB + ".mp4")
@@ -107,23 +107,23 @@ class StagingTest(unittest.TestCase):
     def test_private_finalization_rejects_wrong_job_state_or_master_before_storage(self):
         with tempfile.TemporaryDirectory() as directory:
             receipt, video, master = self.make_private_render(directory)
-            for state, persisted_master in (("ready", master), ("queued", "f" * 64)):
+            for state, persisted_master in (("ready", master), ("rendering", "f" * 64)):
                 with self.subTest(state=state, master=persisted_master):
                     job = {"id": JOB, "state": state, "master_sha256": persisted_master,
                            "approved_at": None, "published_at": None}
                     with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
                         factory.return_value.open.return_value = Response(
                             json.dumps([job]).encode())
-                        with self.assertRaisesRegex(ValueError, "Queued job state"):
+                        with self.assertRaisesRegex(ValueError, "Active render lease"):
                             private_finalizer.finalize(
                                 receipt, video, JOB, master,
-                                "https://project.supabase.co", "fake-service-key", True, True)
+                                "https://project.supabase.co", "fake-service-key", True, True, 2)
                         self.assertEqual(factory.return_value.open.call_count, 1)
 
     def test_private_finalization_rejects_tampered_storage_without_patching_job(self):
         with tempfile.TemporaryDirectory() as directory:
             receipt, video, master = self.make_private_render(directory)
-            job = {"id": JOB, "state": "queued", "master_sha256": master,
+            job = {"id": JOB, "state": "rendering", "attempts": 2, "master_sha256": master,
                    "approved_at": None, "published_at": None}
             calls = []
             def open_request(request, timeout=45):
@@ -136,7 +136,7 @@ class StagingTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "hash or size"):
                     private_finalizer.finalize(
                         receipt, video, JOB, master, "https://project.supabase.co",
-                        "fake-service-key", True, True)
+                        "fake-service-key", True, True, 2)
             self.assertEqual(calls, ["GET", "GET"])
 
 
@@ -145,22 +145,22 @@ class StagingTest(unittest.TestCase):
             receipt, video, master = self.make_private_render(directory)
             for field in ("approved_at", "published_at"):
                 with self.subTest(field=field):
-                    job = {"id": JOB, "state": "queued", "master_sha256": master,
+                    job = {"id": JOB, "state": "rendering", "attempts": 2, "master_sha256": master,
                            "approved_at": None, "published_at": None}
                     job[field] = "2026-11-11T12:00:00Z"
                     with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
                         factory.return_value.open.return_value = Response(
                             json.dumps([job]).encode())
-                        with self.assertRaisesRegex(ValueError, "Queued job state"):
+                        with self.assertRaisesRegex(ValueError, "Active render lease"):
                             private_finalizer.finalize(
                                 receipt, video, JOB, master, "https://project.supabase.co",
-                                "fake-service-key", True, True)
+                                "fake-service-key", True, True, 2)
                         self.assertEqual(factory.return_value.open.call_count, 1)
 
     def test_private_finalization_rejects_concurrent_update_during_patch(self):
         with tempfile.TemporaryDirectory() as directory:
             receipt, video, master = self.make_private_render(directory)
-            job = {"id": JOB, "state": "queued", "master_sha256": master,
+            job = {"id": JOB, "state": "rendering", "attempts": 2, "master_sha256": master,
                    "approved_at": None, "published_at": None}
             requests = []
             def open_request(request, timeout=45):
@@ -175,7 +175,7 @@ class StagingTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "changed during private verification"):
                     private_finalizer.finalize(
                         receipt, video, JOB, master, "https://project.supabase.co",
-                        "fake-service-key", True, True)
+                        "fake-service-key", True, True, 2)
             self.assertEqual(requests, ["GET", "GET", "PATCH"])
 
 
@@ -214,7 +214,7 @@ class StagingTest(unittest.TestCase):
                 factory.return_value.open.side_effect = open_request
                 result = private_uploader.upload(
                     receipt, video, JOB, master, "https://project.supabase.co",
-                    "fake-service-key", True, True)
+                    "fake-service-key", True, True, 2)
             self.assertEqual([r.get_method() for r in requests], ["POST", "HEAD", "PATCH"])
             self.assertEqual(requests[2].data, video.read_bytes())
             self.assertEqual(requests[2].get_header("Upload-offset"), "0")
@@ -246,14 +246,14 @@ class StagingTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Server offset differs"):
                     private_uploader.upload(
                         receipt, video, JOB, master, "https://project.supabase.co",
-                        "fake-service-key", True, True)
+                        "fake-service-key", True, True, 2)
             self.assertEqual(requests, ["POST", "HEAD", "PATCH"])
 
     def test_private_upload_is_off_by_default(self):
         with patch.object(private_uploader.urllib.request, "build_opener") as opener:
             with self.assertRaisesRegex(ValueError, "explicit approval"):
                 private_uploader.upload(Path("missing.json"), Path("missing.mp4"), JOB,
-                    "0" * 64, "https://project.supabase.co", "test-key", False, False)
+                    "0" * 64, "https://project.supabase.co", "test-key", False, False, 2)
             opener.assert_not_called()
 
     def test_private_upload_rejects_untrusted_origins(self):
