@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -74,6 +75,24 @@ def prepare(manifest: dict, root: Path):
     return audio, jukebox, visuals, format_value == "portrait", seconds
 
 
+def verify_complete_video(path: Path) -> None:
+    """Decode the whole first video stream; probe headers alone cannot catch
+    truncated frames or damaged media after an otherwise valid container header.
+    Work stays local, without uploads or external media services.
+    """
+    duration = composer.probe_media(path, "video")
+    if duration > 1800:
+        raise ValueError(f"Video exceeds 30-minute validation limit: {path.name}")
+    try:
+        subprocess.run([
+            "ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
+            "-xerror", "-i", str(path), "-map", "0:v:0",
+            "-f", "null", "-"
+        ], check=True, capture_output=True, timeout=max(60, min(600, int(duration * 3))))
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
+        raise ValueError(f"Video failed full decoding validation: {path.name}") from error
+
+
 def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool = False):
     root = media_dir.resolve(strict=True)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -82,7 +101,12 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
     length = min(length, seconds) if seconds is not None else length
     plan = composer.scene_plan(length, portrait, clips)
     if plan_only:
-        return {"status": "validated", "scene_plan": plan}
+        return {"status": "metadata_validated", "scene_plan": plan,
+                "full_decode_checked": False}
+    # Validate all frames before generating any output. This is not a review
+    # of content rights or visual suitability, which requires human approval.
+    for source in (jukebox, *clips):
+        verify_complete_video(source)
     # Keep the output out of the input directory; protect staged source files.
     target = output.resolve()
     if target.is_relative_to(root):
