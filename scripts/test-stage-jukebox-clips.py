@@ -139,6 +139,45 @@ class StagingTest(unittest.TestCase):
                         "fake-service-key", True, True)
             self.assertEqual(calls, ["GET", "GET"])
 
+
+    def test_private_finalization_rejects_already_approved_or_published_jobs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            for field in ("approved_at", "published_at"):
+                with self.subTest(field=field):
+                    job = {"id": JOB, "state": "queued", "master_sha256": master,
+                           "approved_at": None, "published_at": None}
+                    job[field] = "2026-11-11T12:00:00Z"
+                    with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
+                        factory.return_value.open.return_value = Response(
+                            json.dumps([job]).encode())
+                        with self.assertRaisesRegex(ValueError, "Queued job state"):
+                            private_finalizer.finalize(
+                                receipt, video, JOB, master, "https://project.supabase.co",
+                                "fake-service-key", True, True)
+                        self.assertEqual(factory.return_value.open.call_count, 1)
+
+    def test_private_finalization_rejects_concurrent_update_during_patch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            job = {"id": JOB, "state": "queued", "master_sha256": master,
+                   "approved_at": None, "published_at": None}
+            requests = []
+            def open_request(request, timeout=45):
+                requests.append(request.get_method())
+                if len(requests) == 1:
+                    return Response(json.dumps([job]).encode())
+                if len(requests) == 2:
+                    return Response(video.read_bytes())
+                return Response(b"[]")
+            with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
+                factory.return_value.open.side_effect = open_request
+                with self.assertRaisesRegex(ValueError, "changed during private verification"):
+                    private_finalizer.finalize(
+                        receipt, video, JOB, master, "https://project.supabase.co",
+                        "fake-service-key", True, True)
+            self.assertEqual(requests, ["GET", "GET", "PATCH"])
+
     def test_private_upload_is_off_by_default(self):
         with patch.object(private_uploader.urllib.request, "build_opener") as opener:
             with self.assertRaisesRegex(ValueError, "explicit approval"):
