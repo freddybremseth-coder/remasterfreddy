@@ -25,6 +25,9 @@ on:
       - 'scripts/test-jukebox-private-test.py'
       - 'scripts/run-jukebox-spool-worker.py'
       - 'scripts/test-jukebox-spool-worker.py'
+      - 'scripts/stage-jukebox-master.py'
+      - 'scripts/prepare-jukebox-catalog-spool.py'
+      - 'scripts/test-jukebox-catalog-spool.py'
       - 'scripts/run-jukebox-offline-worker.py'
       - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
@@ -50,6 +53,7 @@ jobs:
           python3 scripts/test-jukebox-claim.py
           python3 scripts/test-jukebox-private-test.py
           python3 scripts/test-jukebox-spool-worker.py
+          python3 scripts/test-jukebox-catalog-spool.py
           python3 scripts/test-jukebox-photos.py
 
       - name: Generate visual inspection frames
