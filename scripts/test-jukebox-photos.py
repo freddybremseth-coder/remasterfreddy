@@ -136,8 +136,8 @@ class PhotoRenderTests(unittest.TestCase):
                          "bytes": photo.stat().st_size,
                          "sha256": hashlib.sha256(photo.read_bytes()).hexdigest()}]
 
-            with patch.object(worker.stager, "stage", side_effect=stage_clips), \\
-                 patch.object(worker.photo_stager, "stage_images", side_effect=stage_photos):
+            with (patch.object(worker.stager, "stage", side_effect=stage_clips),
+                  patch.object(worker.photo_stager, "stage_images", side_effect=stage_photos)):
                 result = worker.run(
                     manifest, audio, jukebox, root / "work", root / "finished.mp4",
                     False, 15, True, "https://example.supabase.co", "test-only")
