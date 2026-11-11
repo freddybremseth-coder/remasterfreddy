@@ -152,6 +152,25 @@ class PhotoRenderTests(unittest.TestCase):
             self.assertTrue((root / "finished.mp4").is_file())
             self.assertGreater(composer.probe_media(root / "finished.mp4", "audio"), 2)
 
+            # The same verified user photo must also support a photo-only
+            # Jukebox video, without any fake clip reservations.
+            export["clips"] = []
+            manifest.write_text(json.dumps(export), encoding="utf-8")
+            with (patch.object(worker.stager, "stage",
+                               side_effect=AssertionError("No clip stage expected")),
+                  patch.object(worker.photo_stager, "stage_images",
+                               side_effect=stage_photos)):
+                only_photo = worker.run(
+                    manifest, audio, jukebox,
+                    root / "photo-only-work", root / "photo-only.mp4",
+                    False, 15, True, "https://example.supabase.co", "test-only")
+            self.assertEqual(only_photo["scene_count"], 1)
+            photo_manifest = json.loads(
+                (root / "photo-only-work" / "render-manifest.json").read_text())
+            self.assertEqual(len(photo_manifest["clips"]), 1)
+            self.assertTrue(photo_manifest["clips"][0]["file"].startswith("photo-scene-"))
+            self.assertGreater(composer.probe_media(root / "photo-only.mp4", "audio"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
