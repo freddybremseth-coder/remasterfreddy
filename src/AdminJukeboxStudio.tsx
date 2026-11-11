@@ -210,10 +210,14 @@ export default function AdminJukeboxStudio(){
     {jobNotice&&<p role="status">{jobNotice}</p>}
     {renderEnabled&&jobs.length>0&&<div aria-label="Jukebox-jobber">
       <h3>Produksjonsstatus</h3>
-      {jobs.slice(0,10).map(job=><div key={job.id} className="admin-warning">
-        <Clapperboard size={16}/> {job.song_title} · {job.format==="portrait"?"Short":"Video"} · {job.state}
-        {job.previewUrl&&<a href={job.previewUrl} target="_blank" rel="noopener noreferrer">Se ferdig MP4</a>}
-      </div>)}
+      {jobs.slice(0,10).map(job=><article key={job.id} className="admin-warning jukebox-job">
+        <div><Clapperboard size={16}/> <strong>{job.song_title}</strong> · {job.format==="portrait"?"Shorts 9:16":"YouTube 16:9"}</div>
+        <p role="status">{job.state==="ready"?"Ferdig video – avventer din gjennomgang":job.state==="failed"?"Rendering feilet":job.state==="rendering"?"Videoen produseres":job.state==="queued"?"Venter i kø":job.state==="cancelled"?"Avbrutt":job.state}</p>
+        {job.previewUrl?<div className="jukebox-private-review">
+          <video controls playsInline preload="metadata" src={job.previewUrl} aria-label={`Privat MP4-forhåndsvisning: ${job.song_title}`}/>
+          <p>Kun privat forhåndsvisning. Ingen godkjenning eller YouTube-publisering skjer ved avspilling. Lenken utløper etter kort tid; bruk «Oppdater produksjonsstatus» om den ikke virker.</p>
+        </div>:job.state==="ready"?<p>Privat video er ikke tilgjengelig ennå. Oppdater status eller kontroller lagringen.</p>:null}
+      </article>)}
     </div>}
     <div className="admin-warning"><Clapperboard size={16}/> {renderEnabled?"Videoer går til privat produksjonskø og må godkjennes før YouTube-publisering.":"Jukebox-produksjon aktiveres etter at rendereren og lagringen er verifisert. Forhåndsvisning fungerer nå; ingen video sendes til YouTube."}</div>
   </section>;
