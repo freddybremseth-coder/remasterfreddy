@@ -2,6 +2,7 @@
 """Offline tests for the private clip staging handoff."""
 import importlib.util
 import io
+import hashlib
 import json
 import tempfile
 import unittest
@@ -52,6 +53,91 @@ class StagingTest(unittest.TestCase):
                     JOB, "0" * 64, "https://project.supabase.co",
                     "test-key", False, False)
             opener.assert_not_called()
+
+
+    def make_private_render(self, directory):
+        base = Path(directory)
+        video = base / (JOB + ".mp4")
+        video.write_bytes(b"local-video-test" * 2000)
+        master = "c" * 64
+        receipt = base / "render-receipt.json"
+        receipt.write_text(json.dumps({
+            "schema_version": 1, "job_id": JOB,
+            "status": "rendered_private", "scene_count": 1,
+            "approved_for_upload": False, "approved_for_publication": False,
+            "published": False,
+            "source": {"audio_sha256": master, "render_manifest_sha256": "d" * 64,
+                       "clips": [{"sceneIndex": 0, "sha256": "e" * 64,
+                                  "bytes": 1024}]},
+            "output": {"file": video.name, "bytes": video.stat().st_size,
+                       "sha256": hashlib.sha256(video.read_bytes()).hexdigest()},
+        }), encoding="utf-8")
+        return receipt, video, master
+
+    def test_private_finalization_checks_storage_and_conditionally_marks_ready(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            job = {"id": JOB, "state": "queued", "master_sha256": master,
+                   "approved_at": None, "published_at": None}
+            requests = []
+            def open_request(request, timeout=45):
+                requests.append(request)
+                if len(requests) == 1:
+                    return Response(json.dumps([job]).encode())
+                if len(requests) == 2:
+                    return Response(video.read_bytes())
+                return Response(json.dumps([{"id": JOB, "state": "ready"}]).encode())
+            with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
+                factory.return_value.open.side_effect = open_request
+                result = private_finalizer.finalize(
+                    receipt, video, JOB, master, "https://project.supabase.co",
+                    "fake-service-key", True, True)
+            self.assertEqual(result["status"], "ready_for_private_review")
+            self.assertFalse(result["published"])
+            self.assertEqual([r.get_method() for r in requests], ["GET", "GET", "PATCH"])
+            self.assertIn("/storage/v1/object/authenticated/remaster-jukebox/", requests[1].full_url)
+            self.assertIn("state=eq.queued", requests[2].full_url)
+            body = json.loads(requests[2].data)
+            self.assertEqual(body["state"], "ready")
+            self.assertEqual(body["video_path"], JOB + ".mp4")
+            self.assertEqual(body["video_sha256"], result["sha256"])
+            self.assertNotIn("approved_at", body)
+            self.assertNotIn("published_at", body)
+
+    def test_private_finalization_rejects_wrong_job_state_or_master_before_storage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            for state, persisted_master in (("ready", master), ("queued", "f" * 64)):
+                with self.subTest(state=state, master=persisted_master):
+                    job = {"id": JOB, "state": state, "master_sha256": persisted_master,
+                           "approved_at": None, "published_at": None}
+                    with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
+                        factory.return_value.open.return_value = Response(
+                            json.dumps([job]).encode())
+                        with self.assertRaisesRegex(ValueError, "Queued job state"):
+                            private_finalizer.finalize(
+                                receipt, video, JOB, master,
+                                "https://project.supabase.co", "fake-service-key", True, True)
+                        self.assertEqual(factory.return_value.open.call_count, 1)
+
+    def test_private_finalization_rejects_tampered_storage_without_patching_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt, video, master = self.make_private_render(directory)
+            job = {"id": JOB, "state": "queued", "master_sha256": master,
+                   "approved_at": None, "published_at": None}
+            calls = []
+            def open_request(request, timeout=45):
+                calls.append(request.get_method())
+                if len(calls) == 1:
+                    return Response(json.dumps([job]).encode())
+                return Response(b"z" * video.stat().st_size)
+            with patch.object(private_finalizer.urllib.request, "build_opener") as factory:
+                factory.return_value.open.side_effect = open_request
+                with self.assertRaisesRegex(ValueError, "hash or size"):
+                    private_finalizer.finalize(
+                        receipt, video, JOB, master, "https://project.supabase.co",
+                        "fake-service-key", True, True)
+            self.assertEqual(calls, ["GET", "GET"])
 
     def test_private_upload_is_off_by_default(self):
         with patch.object(private_uploader.urllib.request, "build_opener") as opener:
