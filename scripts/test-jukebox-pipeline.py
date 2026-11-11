@@ -22,6 +22,7 @@ stager = load("stage-jukebox-clips.py", "clip_stager")
 preparer = load("prepare-jukebox-job.py", "job_preparer")
 renderer = load("render-jukebox-job.py", "job_runner")
 worker = load("run-jukebox-offline-worker.py", "offline_worker")
+preview_gate = load("verify-jukebox-preview.py", "private_preview_gate")
 
 
 class Response(io.BytesIO):
@@ -120,6 +121,22 @@ class SyntheticPipelineTest(unittest.TestCase):
             self.assertEqual(len(private_receipt["source"]["clips"]), 1)
             self.assertFalse(private_receipt["approved_for_upload"])
             self.assertFalse(private_receipt["approved_for_publication"])
+            verified = preview_gate.verify(
+                root / "worker" / "render-receipt.json", root / "worker.mp4",
+                job_id, renderer.digest(song))
+            self.assertEqual(verified["status"], "verified_for_private_review")
+            self.assertFalse(verified["upload_approved"])
+            with self.assertRaisesRegex(ValueError, "Song master"):
+                preview_gate.verify(root / "worker" / "render-receipt.json",
+                                    root / "worker.mp4", job_id, "0" * 64)
+            with self.assertRaisesRegex(ValueError, "queued"):
+                preview_gate.verify(root / "worker" / "render-receipt.json",
+                                    root / "worker.mp4",
+                                    "ffffffff-ffff-ffff-ffff-ffffffffffff",
+                                    renderer.digest(song))
+            with self.assertRaisesRegex(ValueError, "another output"):
+                preview_gate.verify(root / "worker" / "render-receipt.json",
+                                    root / "output.mp4", job_id, renderer.digest(song))
 
 
 
