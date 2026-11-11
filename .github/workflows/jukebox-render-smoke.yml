@@ -13,6 +13,7 @@ on:
       - 'scripts/test-jukebox-job.py'
       - 'scripts/stage-jukebox-clips.py'
       - 'scripts/test-stage-jukebox-clips.py'
+      - 'scripts/test-jukebox-pipeline.py'
       - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
   workflow_dispatch:
@@ -32,6 +33,7 @@ jobs:
           python3 scripts/test-jukebox-composition.py
           python3 scripts/test-jukebox-job.py
           python3 scripts/test-stage-jukebox-clips.py
+          python3 scripts/test-jukebox-pipeline.py
 
       - name: Generate visual inspection frames
         if: success()
