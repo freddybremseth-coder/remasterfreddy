@@ -14,6 +14,7 @@ on:
       - 'scripts/stage-jukebox-clips.py'
       - 'scripts/test-stage-jukebox-clips.py'
       - 'scripts/test-jukebox-pipeline.py'
+      - 'scripts/run-jukebox-offline-worker.py'
       - 'assets/jukebox/**'
       - '.github/workflows/jukebox-render-smoke.yml'
   workflow_dispatch:
