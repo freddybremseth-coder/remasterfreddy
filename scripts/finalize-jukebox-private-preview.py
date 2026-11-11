@@ -28,11 +28,13 @@ def request_json(opener, request, timeout=45):
 
 def finalize(receipt_file: Path, video_file: Path, job_id: str,
              master_sha256: str, project_origin: str, service_key: str,
-             approved: bool, enabled: bool):
+             approved: bool, enabled: bool, attempt: int):
     if approved is not True or enabled is not True:
         raise ValueError("Finalization requires explicit approval and feature flag")
     if not service_key:
         raise ValueError("Trusted service-role credential is required")
+    if isinstance(attempt, bool) or not isinstance(attempt, int) or not 1 <= attempt <= 5:
+        raise ValueError("Exact active render attempt (1–5) required")
     verified = private_upload.preview_gate.verify(
         receipt_file, video_file, job_id, master_sha256)
     if video_file.name != job_id + ".mp4":
@@ -43,14 +45,15 @@ def finalize(receipt_file: Path, video_file: Path, job_id: str,
     headers = {"Authorization": f"Bearer {service_key}", "apikey": service_key}
     job_url = (origin + "/rest/v1/remaster_jukebox_jobs?"
                + urllib.parse.urlencode({"id": "eq." + job_id,
-                                         "select": "id,state,master_sha256,approved_at,published_at"}))
+                                         "select": "id,state,attempts,master_sha256,approved_at,published_at"}))
     jobs = request_json(opener, urllib.request.Request(job_url, headers=headers))
     if (not isinstance(jobs, list) or len(jobs) != 1
-            or jobs[0].get("state") != "queued"
+            or jobs[0].get("state") != "rendering"
+            or jobs[0].get("attempts") != attempt
             or jobs[0].get("master_sha256") != master_sha256
             or jobs[0].get("approved_at") is not None
             or jobs[0].get("published_at") is not None):
-        raise ValueError("Queued job state or original master does not match")
+        raise ValueError("Active render lease, attempt or original master does not match")
     # Read back the actual private Storage object; metadata alone cannot
     # verify SHA-256 and a successful TUS completion is not sufficient.
     path = urllib.parse.quote(job_id + ".mp4")
@@ -69,7 +72,8 @@ def finalize(receipt_file: Path, video_file: Path, job_id: str,
         raise ValueError("Stored MP4 hash or size differs from verified render")
     condition = urllib.parse.urlencode({
         "id": "eq." + job_id,
-        "state": "eq.queued",
+        "state": "eq.rendering",
+        "attempts": "eq." + str(attempt),
         "master_sha256": "eq." + master_sha256,
         "approved_at": "is.null",
         "published_at": "is.null",
@@ -97,9 +101,11 @@ if __name__ == "__main__":
     parser.add_argument("--expected-job", required=True)
     parser.add_argument("--expected-master-sha256", required=True)
     parser.add_argument("--approve-private-finalization", action="store_true")
+    parser.add_argument("--attempt", type=int, required=True, help="Claimed render attempt 1–5")
     args = parser.parse_args()
     print(json.dumps(finalize(
         args.receipt, args.video, args.expected_job, args.expected_master_sha256,
         os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
         args.approve_private_finalization,
-        os.environ.get("REMASTER_JUKEBOX_PRIVATE_UPLOADS_ENABLED") == "true"), indent=2))
+        os.environ.get("REMASTER_JUKEBOX_PRIVATE_UPLOADS_ENABLED") == "true",
+        args.attempt), indent=2))
