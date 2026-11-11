@@ -82,7 +82,14 @@ def run(reservations: Path, audio: Path, jukebox: Path,
                 or not handoff["templateVersion"].startswith("photo-v1-")):
             raise ValueError("Unrecognized Jukebox template version")
     clip_root = work / "media"
-    receipt = stager.stage(reservations, clip_root, storage_url, storage_key)
+    # Photo-only songs are valid. When video clips exist they still must be
+    # verified by the private reservation stager.
+    if exported.get("clips") == [] and handoff and handoff["imagePaths"]:
+        clip_root.mkdir(parents=True, exist_ok=False)
+        receipt = {"version": 1, "clips": [], "publish": False,
+                   "approved_for_render": False}
+    else:
+        receipt = stager.stage(reservations, clip_root, storage_url, storage_key)
     # Local song master and jukebox visual are copied (not moved or overwritten).
     for source, name in ((audio, "song" + audio.suffix.lower()),
                          (jukebox, "jukebox" + jukebox.suffix.lower())):
