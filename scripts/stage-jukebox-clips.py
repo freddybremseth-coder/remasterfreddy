@@ -64,7 +64,9 @@ def stage(manifest_path: Path, destination: Path, supabase_url: str, service_rol
     parsed = urllib.parse.urlparse(supabase_url)
     if (parsed.scheme != "https" or not parsed.hostname or parsed.username
             or parsed.password or parsed.query or parsed.fragment
-            or parsed.path not in ("", "/")):
+            or parsed.port is not None or parsed.path not in ("", "/")
+            or not parsed.hostname.endswith(".supabase.co")
+            or parsed.hostname.count(".") != 2):
         raise ValueError("Expected a plain HTTPS Supabase project origin")
     if not service_role:
         raise ValueError("SUPABASE_SERVICE_ROLE_KEY is required")
