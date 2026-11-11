@@ -12,6 +12,9 @@ on:
       - 'scripts/prepare-jukebox-job.py'
       - 'scripts/test-jukebox-job.py'
       - 'scripts/stage-jukebox-clips.py'
+      - 'scripts/stage-jukebox-photos.py'
+      - 'scripts/render-jukebox-photos.py'
+      - 'scripts/test-jukebox-photos.py'
       - 'scripts/test-stage-jukebox-clips.py'
       - 'scripts/test-jukebox-pipeline.py'
       - 'scripts/run-jukebox-offline-worker.py'
@@ -35,6 +38,7 @@ jobs:
           python3 scripts/test-jukebox-job.py
           python3 scripts/test-stage-jukebox-clips.py
           python3 scripts/test-jukebox-pipeline.py
+          python3 scripts/test-jukebox-photos.py
 
       - name: Generate visual inspection frames
         if: success()
