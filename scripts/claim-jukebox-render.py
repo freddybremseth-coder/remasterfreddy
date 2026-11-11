@@ -93,6 +93,43 @@ def claim(job_id: str, project_origin: str, service_key: str,
     }
 
 
+def heartbeat(job_id: str, attempt: int, project_origin: str,
+              service_key: str) -> None:
+    """Renew only this exact running attempt; fail closed on lost lease."""
+    if not UUID.fullmatch(job_id):
+        raise ValueError("Invalid Jukebox heartbeat job ID")
+    if type(attempt) is not int or not 1 <= attempt <= 5:
+        raise ValueError("Invalid Jukebox heartbeat attempt")
+    if not service_key:
+        raise ValueError("Service-role credential is required")
+    upload_gate.endpoint(project_origin)
+    origin = project_origin.rstrip("/")
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    where = urllib.parse.urlencode({
+        "id": "eq." + job_id,
+        "state": "eq.rendering",
+        "attempts": "eq." + str(attempt),
+        "select": "id,state,attempts",
+    })
+    body = json.dumps({"heartbeat_at": now, "updated_at": now}).encode("utf-8")
+    request = urllib.request.Request(
+        origin + "/rest/v1/remaster_jukebox_jobs?" + where,
+        data=body, method="PATCH", headers={
+            "apikey": service_key,
+            "Authorization": "Bearer " + service_key,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        })
+    opener = urllib.request.build_opener(upload_gate.NoRedirect())
+    rows = request_json(opener, request)
+    if (not isinstance(rows, list) or len(rows) != 1
+            or rows[0].get("id") != job_id
+            or rows[0].get("state") != "rendering"
+            or rows[0].get("attempts") != attempt):
+        raise ValueError("Jukebox render lease lost")
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--job-id", required=True)
