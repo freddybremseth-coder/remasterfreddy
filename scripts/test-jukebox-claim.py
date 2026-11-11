@@ -57,6 +57,27 @@ class ClaimTests(unittest.TestCase):
     def test_concurrent_claim_cannot_reserve_twice(self):
         self.assertEqual(len(self.execute(contest=True)), 2)
 
+    def test_heartbeat_updates_only_matching_active_render_attempt(self):
+        calls = []
+        def fake(_opener, request):
+            clauses = parse_qs(urlparse(request.full_url).query)
+            calls.append((request.get_method(), clauses, json.loads(request.data)))
+            return [{"id": JOB, "state": "rendering", "attempts": 2}]
+        with (patch.object(module, "request_json", side_effect=fake),
+              patch.object(module.urllib.request, "build_opener", return_value=object())):
+            module.heartbeat(JOB, 2, "https://example.supabase.co", "test-service-role")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], "PATCH")
+        self.assertEqual(calls[0][1]["state"], ["eq.rendering"])
+        self.assertEqual(calls[0][1]["attempts"], ["eq.2"])
+        self.assertIn("heartbeat_at", calls[0][2])
+
+    def test_heartbeat_rejects_lost_lease(self):
+        with (patch.object(module, "request_json", return_value=[]),
+              patch.object(module.urllib.request, "build_opener", return_value=object())):
+            with self.assertRaisesRegex(ValueError, "lease lost"):
+                module.heartbeat(JOB, 2, "https://example.supabase.co", "test-service-role")
+
     def test_disabled_render_claim_fails_before_network(self):
         with self.assertRaisesRegex(ValueError, "operator approval"):
             module.claim(JOB, "https://example.supabase.co", "test", False, True)
