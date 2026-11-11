@@ -57,6 +57,7 @@ class PrivateTestTests(unittest.TestCase):
             self.assertEqual(args[-1], 2)
             return {"status": "ready_for_private_review"}
         with (patch.object(module.claim_worker, "claim", side_effect=claim),
+              patch.object(module.claim_worker, "heartbeat", side_effect=lambda *a: calls.append("heartbeat")),
               patch.object(module.render_worker, "run", side_effect=render),
               patch.object(module.upload_worker, "upload", side_effect=upload),
               patch.object(module.finalize_worker, "finalize", side_effect=finalize)):
@@ -64,12 +65,13 @@ class PrivateTestTests(unittest.TestCase):
                 self.export, self.audio, self.jukebox, self.work, self.output,
                 JOB, True, True, "https://example.supabase.co",
                 "test-service-role", True, True)
-        self.assertEqual(calls, ["claim", "render", "storage_upload", "verify_storage"])
+        self.assertEqual(calls, ["claim", "heartbeat", "render", "storage_upload", "verify_storage"])
         self.assertEqual(result["state"], "ready_for_private_review")
         self.assertFalse(result["youtube_published"])
 
     def test_render_only_does_not_upload(self):
-        with (patch.object(module.claim_worker, "claim", return_value={
+        with (patch.object(module.claim_worker, "heartbeat", return_value=None),
+              patch.object(module.claim_worker, "claim", return_value={
                 "attempt": 1, "master_sha256": self.master,
                 "format": "landscape", "seconds": None}),
               patch.object(module.render_worker, "run", return_value={
@@ -93,6 +95,20 @@ class PrivateTestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no music visuals"):
             module.preflight(self.export, self.audio, self.jukebox,
                              self.work, self.output, JOB)
+
+    def test_lost_lease_refuses_to_start_render(self):
+        with (patch.object(module.claim_worker, "claim", return_value={
+                "attempt": 1, "master_sha256": self.master,
+                "format": "landscape", "seconds": None}),
+              patch.object(module.claim_worker, "heartbeat",
+                           side_effect=ValueError("Jukebox render lease lost")),
+              patch.object(module.render_worker, "run",
+                           side_effect=AssertionError("No render on lost lease"))):
+            with self.assertRaisesRegex(ValueError, "lease lost"):
+                module.run_private_test(
+                    self.export, self.audio, self.jukebox, self.work, self.output,
+                    JOB, True, False, "https://example.supabase.co",
+                    "test-service-role", True, False)
 
     def test_private_upload_needs_separate_flag(self):
         with patch.object(module.claim_worker, "claim", side_effect=AssertionError("No claim expected")):
