@@ -48,7 +48,7 @@ def validate_master_path(file_url: str, origin: str) -> tuple[str, str]:
             any(p in (".", "..") for p in name.split("/"))):
         raise ValueError("Unsafe canonical master object path")
     bucket, sep, object_name = name.partition("/")
-    if not sep or not object_name or bucket not in {"songs", "audio", "music", "song-files", "remaster-audio"}:
+    if not sep or not object_name or bucket != "assets":
         raise ValueError("Master bucket must be explicitly allowlisted")
     extension = Path(object_name).suffix.lower()
     if extension not in ALLOWED_EXTENSIONS:
