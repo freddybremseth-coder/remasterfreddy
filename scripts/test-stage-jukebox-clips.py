@@ -18,6 +18,11 @@ uploader_spec = importlib.util.spec_from_file_location(
 private_uploader = importlib.util.module_from_spec(uploader_spec)
 uploader_spec.loader.exec_module(private_uploader)
 
+finalizer_spec = importlib.util.spec_from_file_location(
+    "private_finalizer", Path(__file__).with_name("finalize-jukebox-private-preview.py"))
+private_finalizer = importlib.util.module_from_spec(finalizer_spec)
+finalizer_spec.loader.exec_module(private_finalizer)
+
 JOB = "12345678-1234-1234-1234-123456789abc"
 OBJECT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
@@ -40,6 +45,14 @@ class Response(io.BytesIO):
 
 
 class StagingTest(unittest.TestCase):
+    def test_private_finalization_is_off_by_default(self):
+        with patch.object(private_finalizer.urllib.request, "build_opener") as opener:
+            with self.assertRaisesRegex(ValueError, "explicit approval"):
+                private_finalizer.finalize(Path("missing.json"), Path("missing.mp4"),
+                    JOB, "0" * 64, "https://project.supabase.co",
+                    "test-key", False, False)
+            opener.assert_not_called()
+
     def test_private_upload_is_off_by_default(self):
         with patch.object(private_uploader.urllib.request, "build_opener") as opener:
             with self.assertRaisesRegex(ValueError, "explicit approval"):
