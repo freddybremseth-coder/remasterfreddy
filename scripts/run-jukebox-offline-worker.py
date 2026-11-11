@@ -41,6 +41,39 @@ def run(reservations: Path, audio: Path, jukebox: Path,
         raise ValueError("Output must be separate from worker staging")
     if any(source.resolve().is_relative_to(work) for source in (reservations, audio, jukebox)):
         raise ValueError("All source inputs must be outside new workspace")
+    # Bind the local master and output format to the server-owned queued job.
+    # Existing legacy exports without 'handoff' can still be tested offline,
+    # but new production exports must include this pinned metadata.
+    exported = json.loads(reservations.read_text(encoding="utf-8"))
+    handoff = exported.get("handoff")
+    if handoff is not None:
+        if not isinstance(handoff, dict) or set(handoff) != {
+                "masterSha256", "format", "seconds", "templateVersion"}:
+            raise ValueError("Invalid server-owned Jukebox handoff")
+        expected_digest = handoff["masterSha256"]
+        if (not isinstance(expected_digest, str)
+                or len(expected_digest) != 64
+                or any(c not in "0123456789abcdef" for c in expected_digest)):
+            raise ValueError("Invalid queued song master checksum")
+        with audio.open("rb") as master:
+            checksum = hashlib.sha256()
+            for part in iter(lambda: master.read(1024 * 1024), b""):
+                checksum.update(part)
+        if checksum.hexdigest() != expected_digest:
+            raise ValueError("Queued song master SHA-256 does not match local audio")
+        expected_format = "portrait" if portrait else "landscape"
+        if handoff["format"] != expected_format:
+            raise ValueError("Queued format does not match local render format")
+        requested = handoff["seconds"]
+        if requested is None:
+            if seconds is not None:
+                raise ValueError("Full-length queue requires full-length render")
+        elif (isinstance(requested, bool) or not isinstance(requested, int)
+              or requested not in (15, 30, 60) or seconds != requested):
+            raise ValueError("Queued duration does not match local render duration")
+        if (not isinstance(handoff["templateVersion"], str)
+                or not handoff["templateVersion"].startswith("photo-v1-")):
+            raise ValueError("Unrecognized Jukebox template version")
     clip_root = work / "media"
     receipt = stager.stage(reservations, clip_root, storage_url, storage_key)
     # Local song master and jukebox visual are copied (not moved or overwritten).
