@@ -76,3 +76,19 @@ python3 scripts/run-jukebox-spool-worker.py --spool /privat/jukebox-spool --limi
 Uten `--upload-private-preview` skjer **ingen** MP4-opplasting til Storage, og aldri YouTube-opplasting. Privat Storage kan bare brukes separat når `REMASTER_JUKEBOX_PRIVATE_UPLOADS_ENABLED=true` og flagget `--upload-private-preview` er gitt. Ved tvetydig feil stopper jobben uten automatisk forsøk på nytt; en operatør må kontrollere jobbstaten, renderforsøket og lokale filer.
 
 Køarbeideren kjører med maksimalt fem jobbmapper per kall; bruk aldri en ubeskyttet katalog. Fremtidig fullt automatisert drift krever en godkjent server-side produsent som knytter katalogmaster og jukebox-asset til jobb-ID, laster dem ned med autentiserte rettigheter, verifiserer SHA-256 og gjør en transaksjonssikker overgang til den betrodde køen. **Den komponenten er ikke implementert her.**
+
+## Automatisk staging fra RealtyFlows låtkatalog (nytt)
+
+En beskyttet katalogoppslagsmodul ligger i `scripts/prepare-jukebox-catalog-spool.py`. Den bruker `handoff.songId` fra privat jobbeksport, leser nøyaktig denne låten fra `public.songs` med `brand=remasterfreddy` via service-role på betrodd arbeidervert, og laster ned kun master fra `assets` i den eksakte Supabase-prosjektinstansen. SHA-256 må samsvare med `handoff.masterSha256`. Feil kilde, feil format eller endrede lydbytes stopper staging uten `job.json`.
+
+Den administratorbeskyttede eksporten må først lagres som `clip-export.json` i en jobbmappe med UUID-navn. Legg dessuten inn det **godkjente** Jukebox-motivet som `cabinet.mp4`; dette er fortsatt et separat, manuelt asset-steg. Følgende klargjør deretter musikken og oppretter spool-kontrakten:
+
+```bash
+export REMASTER_JUKEBOX_PRIVATE_SPOOL_ENABLED=true
+# SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY må komme fra hemmelighetslager
+python3 scripts/prepare-jukebox-catalog-spool.py \
+  --job-directory /privat/jukebox-spool/<job-uuid> \
+  --prepare-private
+```
+
+Etter dette kan den eksisterende spool-arbeideren kjøre én jobb med `--run-once`. Ingen del av dette publiserer til YouTube. Det er fortsatt **ingen** kontinuerlig arbeidsprosess eller automatisk nedlasting av godkjent jukebox-motiv, og Jukebox er ikke produksjonsaktivert. En fremtidig motivkatalog må knytte en revidert, immutable asset-ID og SHA-256 til valgt Jukebox-stil; ikke bruk uspesifikke nettadresser eller første treff i Storage.
