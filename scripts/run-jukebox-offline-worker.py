@@ -7,6 +7,7 @@ remains a local private MP4 until separately reviewed and approved.
 """
 import argparse
 import json
+import hashlib
 import os
 import shutil
 from pathlib import Path
@@ -57,8 +58,33 @@ def run(reservations: Path, audio: Path, jukebox: Path,
     manifest_file = work / "render-manifest.json"
     manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     result = renderer.render(manifest_file, clip_root, target)
+    # A machine-readable, local-only provenance record. It must never be
+    # interpreted as permission to upload or publish the finished video.
+    exported = json.loads(reservations.read_text(encoding="utf-8"))
+    master_hash = renderer.digest(clip_root / ("song" + audio.suffix.lower()))
+    manifest_hash = hashlib.sha256(manifest_file.read_bytes()).hexdigest()
+    render_receipt = {
+        "schema_version": 1,
+        "job_id": exported["jobId"],
+        "status": "rendered_private",
+        "output": {"file": target.name, "sha256": result["sha256"],
+                   "bytes": target.stat().st_size,
+                   "duration_seconds": result["duration_seconds"]},
+        "source": {"audio_sha256": master_hash,
+                   "render_manifest_sha256": manifest_hash,
+                   "clips": receipt["clips"]},
+        "scene_count": len(clip_names),
+        "approved_for_render": True,
+        "approved_for_upload": False,
+        "approved_for_publication": False,
+        "published": False,
+    }
+    receipt_file = work / "render-receipt.json"
+    with receipt_file.open("x", encoding="utf-8") as stream:
+        json.dump(render_receipt, stream, indent=2)
     return {"status": result["status"], "output": result["output"],
             "sha256": result["sha256"], "scene_count": len(clip_names),
+            "receipt": str(receipt_file),
             "published": False, "approval_scope": "render_only"}
 
 
