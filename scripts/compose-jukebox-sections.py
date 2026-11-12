@@ -15,7 +15,7 @@ spec = spec_from_file_location("jukebox_composer", Path(__file__).with_name("com
 composer = module_from_spec(spec)
 spec.loader.exec_module(composer)
 
-SECTIONS = {"opening", "verse1", "chorus", "verse2", "bridge", "solo", "outro"}
+SECTIONS = {"opening", "verse1", "chorus", "verse2", "verse3", "bridge", "solo", "outro"}
 
 
 def build_section_plan(duration: float, assignments: list[dict]) -> list[dict]:

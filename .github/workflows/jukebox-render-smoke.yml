@@ -30,6 +30,8 @@ on:
       - 'scripts/test-jukebox-catalog-spool.py'
       - 'scripts/compose-jukebox-sections.py'
       - 'scripts/test-jukebox-sections.py'
+      - 'scripts/render-jukebox-portable-project.py'
+      - 'scripts/test-jukebox-portable-project.py'
       - 'scripts/stage-jukebox-cabinet.py'
       - 'scripts/test-jukebox-cabinet.py'
       - 'scripts/prepare-jukebox-catalog-spool.py'
@@ -60,6 +62,7 @@ jobs:
           python3 scripts/test-jukebox-spool-worker.py
           python3 scripts/test-jukebox-catalog-spool.py
           python3 scripts/test-jukebox-sections.py
+          python3 scripts/test-jukebox-portable-project.py
           python3 scripts/test-jukebox-cabinet.py
           python3 scripts/test-jukebox-photos.py
 
