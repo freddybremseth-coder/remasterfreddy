@@ -94,6 +94,26 @@ class JobValidationTests(unittest.TestCase):
             runner.verify_complete_video(self.root / "clip-a.mp4")
 
 
+    @patch.object(runner.subprocess, "run")
+    def test_final_decode_checks_both_tracks(self, run_command):
+        runner.verify_final_media_decode(self.root / "clip-a.mp4", 30)
+        command = run_command.call_args.args[0]
+        self.assertIn("-xerror", command)
+        self.assertIn("0:v:0", command)
+        self.assertIn("0:a:0", command)
+        self.assertEqual(command[-3:], ["-f", "null", "-"])
+        self.assertTrue(run_command.call_args.kwargs["check"])
+
+    @patch.object(runner.subprocess, "run",
+                  side_effect=subprocess.CalledProcessError(1, "ffmpeg"))
+    def test_final_decode_rejects_corrupt_audio_or_video(self, _run):
+        with self.assertRaisesRegex(ValueError, "complete video/audio decode"):
+            runner.verify_final_media_decode(self.root / "clip-a.mp4", 30)
+
+    def test_final_decode_rejects_oversize_duration(self):
+        with self.assertRaisesRegex(ValueError, "Invalid final media duration"):
+            runner.verify_final_media_decode(self.root / "clip-a.mp4", 1801)
+
     @patch.object(runner.subprocess, "check_output")
     def test_finished_mp4_rejects_missing_audio(self, probe):
         probe.return_value = json.dumps({
