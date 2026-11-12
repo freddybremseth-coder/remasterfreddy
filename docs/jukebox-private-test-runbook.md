@@ -2,6 +2,18 @@
 
 **Status: utviklingsgren, ikke produksjonsaktivert.** Dette er en manuell, betrodd operatørflyt for én konkret jobb. Det er **ikke** offentlig YouTube-publisering, og det er ikke en kontinuerlig bakgrunnsarbeider.
 
+## Verifisert teknisk status – 12. november 2026
+
+- PR #57, commit `ac3a0be180ff072481cb2cb4fb7a7dff09136885`, har **grønn** `Re-Master build and tests` og `Jukebox MP4 render smoke test` på samme commit.
+- Den automatiske render-testen har opprettet både landscape-/portrait-MP4 og kontrollbilder som private GitHub Actions-artifakter. Dette er syntetiske QA-medier, ikke ferdige musikkvideoer.
+- Sluttkontrollen dekoder nå **både video- og lydstrøm** i en ferdig rendret lokal MP4 før filen flyttes til endelig privat filbane; hash, format og varighet sjekkes separat. Testene er bestått på denne commit-versjonen.
+- Den åpne RealtyFlow PRO PR #1643 har også grønne kontroller på commit `cf31fc0387636e694940da96c9f3ba0adb8deeca`. Disse PR-ene er fortsatt ikke slått sammen eller aktivert i produksjon.
+- Det er **ikke** verifisert noen visuelt godkjent Rock-Ola v3 MP4 på betrodd renderarbeider eller i riktig Supabase Storage-bane. Biblioteket har et eldre v2-manifest og stillbilder, som ikke er en erstatning for faktiske godkjente MP4-bytes.
+- **Neste praktiske akseptansekriterium:** velg og gjennomse selve Rock-Ola v3-filen, kontroller ffprobe/SHA-256 og kilde/rettigheter; opprett kun deretter en autorisert, privat `Drømmer`-jobb for 16:9 og egen jobb for 9:16; inspiser hele videoen, overganger og lyd før separat godkjenning.
+- Ingen offentlig YouTube-automatisering, arbeidsprosess eller nye produksjonsflagg aktiveres av grønn CI alene. Ikke bruk testartifakter eller et v2-manifest som godkjent kabinettvideo.
+
+---
+
 ## Forutsetninger
 
 - RealtyFlow PR #1643 og renderings-PR #57 er testet, vurdert og riktig konfigurert. Kjør aldri SQL-migrasjonen i produksjon bare for å åpne testskjermbildet.
