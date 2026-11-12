@@ -49,8 +49,10 @@ def run(reservations: Path, audio: Path, jukebox: Path,
     exported = json.loads(reservations.read_text(encoding="utf-8"))
     handoff = exported.get("handoff")
     if handoff is not None:
-        if not isinstance(handoff, dict) or set(handoff) != {
-                "masterSha256", "format", "seconds", "templateVersion", "imagePaths"}:
+        required = {"masterSha256", "format", "seconds", "templateVersion", "imagePaths"}
+        allowed = required | {"songId", "sectionAssignments"}
+        if (not isinstance(handoff, dict) or not required.issubset(handoff)
+                or not set(handoff).issubset(allowed)):
             raise ValueError("Invalid server-owned Jukebox handoff")
         # The server pins an ordered list, never arbitrary remote URLs.
         images = handoff["imagePaths"]
@@ -99,6 +101,7 @@ def run(reservations: Path, audio: Path, jukebox: Path,
             shutil.copyfileobj(reader, writer, 1024 * 1024)
     clip_names = [item["file"] for item in receipt["clips"]]
     photos = []
+    storyboard = None
     if handoff and handoff["imagePaths"]:
         photos = photo_stager.stage_images(
             handoff["imagePaths"], clip_root, storage_url, storage_key)
@@ -106,14 +109,44 @@ def run(reservations: Path, audio: Path, jukebox: Path,
             clip_root / ("song" + audio.suffix.lower()), "audio")
         effective_length = (min(original_length, seconds)
                             if seconds is not None else original_length)
-        photo_videos = photo_renderer.render_photos(
-            clip_root, photos, effective_length, portrait,
-            min(len(clip_names), 12 - len(photos)))
-        clip_names = photo_renderer.interleave_visuals(clip_names, photo_videos)
+        assignments = handoff.get("sectionAssignments") or []
+        if assignments:
+            # Only the explicitly selected photos are used in the timed track.
+            # Other clips may be staged for verification but are not inserted
+            # into an assigned image interval or silently repositioned.
+            from collections import Counter
+            paths = [p["storagePath"] for p in photos]
+            if Counter(paths) != Counter(item.get("imagePath") for item in assignments
+                                          if isinstance(item, dict)):
+                raise ValueError("Section assignments must cover every queued photo exactly once")
+            lookup = {p["storagePath"]: p["file"] for p in photos}
+            storyboard = []
+            for index, entry in enumerate(assignments):
+                if not isinstance(entry, dict):
+                    raise ValueError("Invalid section assignment")
+                start, end = entry.get("startSeconds"), entry.get("endSeconds")
+                if (type(start) not in (int,float) or type(end) not in (int,float)
+                        or not 0 <= start < end <= effective_length
+                        or end - start > 300):
+                    raise ValueError("Section time window outside the selected song")
+                filename = f"photo-scene-{index:02d}.mp4"
+                photo_renderer.render_photo(
+                    clip_root / lookup[entry["imagePath"]],
+                    clip_root / filename, end-start, portrait)
+                storyboard.append({"section":entry.get("section"),
+                                   "clip":filename,"start":start,"end":end})
+            clip_names = [item["clip"] for item in storyboard]
+        else:
+            photo_videos = photo_renderer.render_photos(
+                clip_root, photos, effective_length, portrait,
+                min(len(clip_names), 12 - len(photos)))
+            clip_names = photo_renderer.interleave_visuals(clip_names, photo_videos)
     manifest = preparer.build_manifest(
         clip_root, "song" + audio.suffix.lower(),
         "jukebox" + jukebox.suffix.lower(), clip_names, portrait, seconds,
         approved=True)
+    if storyboard is not None:
+        manifest["section_timeline"] = storyboard
     manifest_file = work / "render-manifest.json"
     manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     result = renderer.render(manifest_file, clip_root, target)
