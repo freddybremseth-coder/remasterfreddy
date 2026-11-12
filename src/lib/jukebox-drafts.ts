@@ -16,24 +16,25 @@ function openDraftDb():Promise<IDBDatabase>{
     request.onerror=()=>reject(request.error||new Error("Kunne ikke åpne lokal lagring."));
   });
 }
-async function accessDraft<T>(songId:string,mode:IDBTransactionMode,action:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{
+async function accessDraft<T>(mode:IDBTransactionMode,action:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{
   const db=await openDraftDb();
   return new Promise((resolve,reject)=>{
     const transaction=db.transaction(STORE,mode);
     const request=action(transaction.objectStore(STORE));
-    request.onsuccess=()=>resolve(request.result);
+    let value:T;
+    request.onsuccess=()=>{value=request.result;};
     request.onerror=()=>reject(request.error||new Error("Lokal lagring mislyktes."));
     transaction.onerror=()=>reject(transaction.error||new Error("Lokal lagring mislyktes."));
-    transaction.oncomplete=()=>db.close();
-    transaction.onabort=()=>db.close();
+    transaction.oncomplete=()=>{db.close();resolve(value);};
+    transaction.onabort=()=>{db.close();reject(transaction.error||new Error("Lokal lagring ble avbrutt."));};
   });
 }
 export async function saveJukeboxDraft(draft:JukeboxDraft):Promise<void>{
-  await accessDraft(draft.songId,"readwrite",store=>store.put(draft));
+  await accessDraft("readwrite",store=>store.put(draft));
 }
 export async function loadJukeboxDraft(songId:string):Promise<JukeboxDraft|null>{
-  return (await accessDraft(songId,"readonly",store=>store.get(songId)))||null;
+  return (await accessDraft("readonly",store=>store.get(songId)))||null;
 }
 export async function deleteJukeboxDraft(songId:string):Promise<void>{
-  await accessDraft(songId,"readwrite",store=>store.delete(songId));
+  await accessDraft("readwrite",store=>store.delete(songId));
 }
