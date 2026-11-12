@@ -175,6 +175,31 @@ class PhotoRenderTests(unittest.TestCase):
             self.assertTrue(photo_manifest["clips"][0]["file"].startswith("photo-scene-"))
             self.assertGreater(composer.probe_media(root / "photo-only.mp4", "audio"), 2)
 
+            # Explicit per-section timeline travels from the trusted export
+            # through private photo staging and the actual final MP4 renderer.
+            export["handoff"]["sectionAssignments"] = [{
+                "imagePath": "neural-beat/photo.png",
+                "section": "opening", "startSeconds": 0.0, "endSeconds": 1.5,
+            }]
+            manifest.write_text(json.dumps(export), encoding="utf-8")
+            with (patch.object(worker.stager, "stage",
+                               side_effect=AssertionError("No clip stage expected")),
+                  patch.object(worker.photo_stager, "stage_images",
+                               side_effect=stage_photos)):
+                assigned = worker.run(
+                    manifest, audio, jukebox,
+                    root / "assigned-work", root / "assigned.mp4",
+                    False, 15, True, "https://example.supabase.co", "test-only")
+            self.assertEqual(assigned["scene_count"], 1)
+            assigned_manifest = json.loads(
+                (root / "assigned-work" / "render-manifest.json").read_text())
+            self.assertEqual(assigned_manifest["section_timeline"][0]["section"],
+                             "opening")
+            self.assertEqual(assigned_manifest["section_timeline"][0]["end"], 1.5)
+            self.assertGreater(composer.probe_media(root / "assigned.mp4", "audio"), 2)
+            self.assertFalse(assigned["published"])
+
+
 
 if __name__ == "__main__":
     unittest.main()
