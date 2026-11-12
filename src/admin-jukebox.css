@@ -1,0 +1,108 @@
+.admin-jukebox-studio{max-width:1100px}
+.jukebox-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.jukebox-controls label{display:grid;gap:7px;font-weight:600}
+.jukebox-controls select{width:100%;min-width:0;padding:12px;border-radius:10px;border:1px solid #64748b;background:#111827;color:#fff}
+.jukebox-stage{margin:18px auto;background:#08151c;position:relative;overflow:hidden;display:grid;place-items:center;max-width:790px;aspect-ratio:16/9;border-radius:18px}
+.jukebox-stage.jukebox-portrait{max-width:340px;aspect-ratio:9/16}
+.jukebox-frame{position:relative;width:93%;height:91%;border:9px solid #9de3e4;border-radius:16% 16% 7% 7%;box-shadow:inset 0 0 0 12px #661e2b,0 0 30px #44d6da55;background:radial-gradient(ellipse at center,#263340,#09141c);display:flex;align-items:center;flex-direction:column;overflow:hidden}
+.jukebox-header{position:relative;z-index:2;color:#f7de9c;font-size:clamp(12px,2vw,24px);font-weight:900;letter-spacing:.1em;margin-top:3.5%;text-shadow:0 0 16px #f2aa45}
+.jukebox-deck{position:relative;width:min(68%,65vh);aspect-ratio:1;margin:auto;border:9px solid #ccae66;border-radius:50%;background:#121822;box-shadow:0 0 0 9px #253843}
+.jukebox-record{position:absolute;inset:2%;border-radius:50%;background:repeating-radial-gradient(circle at center,#13151b 0 4px,#24252d 5px 6px,#0d1017 7px 10px);display:grid;place-items:center;animation:jukebox-spin 1.333333s linear infinite;animation-play-state:paused}
+.jukebox-record.is-playing{animation-play-state:running}
+.jukebox-label{width:45%;height:45%;border:6px solid #dfbd72;border-radius:50%;background:#a62e34;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5%;text-align:center;color:#fff5d0;overflow:hidden;padding:3%}
+.jukebox-label strong{font-size:clamp(7px,1.45vw,17px);line-height:1.1}
+.jukebox-label span{color:white;font-size:clamp(7px,1.25vw,15px);max-width:100%;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.jukebox-label small{font-size:clamp(5px,.8vw,11px)}
+.jukebox-tonearm{position:absolute;z-index:2;left:73%;top:-16%;width:40%;height:12px;background:linear-gradient(#f1ecda,#5f7888);transform-origin:90% 50%;transform:rotate(-30deg);border:3px solid #25323e;border-radius:20px;pointer-events:none}
+.jukebox-tonearm span{position:absolute;left:-8%;top:-11px;height:34px;width:29px;border-radius:6px;background:#b8ced3;border:4px solid #22323c}
+.jukebox-caption{z-index:2;color:white;text-align:center;font-size:clamp(12px,2vw,25px);font-weight:800;max-width:82%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4%}
+.jukebox-actions{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.jukebox-studio .admin-warning,.admin-jukebox-studio .admin-warning{display:flex;align-items:center;gap:10px}
+.jukebox-portrait .jukebox-frame{border-width:7px}
+.jukebox-portrait .jukebox-header{font-size:13px;margin-top:12%}
+.jukebox-portrait .jukebox-deck{width:87%}
+.jukebox-portrait .jukebox-caption{font-size:15px;margin-bottom:17%}
+.jukebox-portrait .jukebox-label strong{font-size:10px}
+.jukebox-portrait .jukebox-label span{font-size:9px}
+@keyframes jukebox-spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.jukebox-controls{grid-template-columns:1fr}.jukebox-frame{border-width:5px}.jukebox-deck{border-width:5px}.jukebox-label{border-width:3px}.jukebox-tonearm{height:7px}.jukebox-tonearm span{height:22px;width:18px;top:-9px}}
+
+
+/* Polished cabinet lighting for the simple vinyl-first video concept. */
+.jukebox-stage{isolation:isolate;background:radial-gradient(ellipse at 50% 35%,#234d62 0%,#10232e 48%,#060b13 100%);box-shadow:inset 0 0 70px #02040c,0 18px 45px #0005}
+.jukebox-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 85%,#46b9d521,transparent 62%);z-index:0}
+.jukebox-frame{z-index:1;border-color:#b7e6e9;border-style:solid;background:radial-gradient(ellipse at 50% 46%,#30465a 0%,#101f2c 62%,#070f1a 100%);box-shadow:inset 0 0 0 8px #7d2635,inset 0 0 0 15px #c7a56d,inset 0 0 55px #f6bb6c3b,0 0 28px #46c5dc66,0 12px 25px #0009}
+.jukebox-frame::before{content:"";position:absolute;inset:3% 3.5%;border-radius:15% 15% 7% 7%;border:2px solid #f4d79b99;box-shadow:0 0 18px #f1bf6b55,inset 0 0 16px #50d4e33d;pointer-events:none}
+.jukebox-frame::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 18%,#ffffff0b 31%,transparent 43%,transparent 65%,#ffffff08 72%,transparent 79%);mix-blend-mode:screen}
+.jukebox-header{color:#b9e5f3;text-shadow:0 1px 0 #07121e,0 2px 0 #386d91,0 3px 0 #07121e,0 0 14px #43bde5,0 0 25px #54c4ef7a}
+.jukebox-deck{border-color:#d6b67a;background:radial-gradient(circle,#1b2933 0%,#080d15 75%);box-shadow:0 0 0 6px #52697a,0 0 0 9px #162632,inset 0 0 24px #000,0 8px 22px #000a}
+.jukebox-record{background:repeating-radial-gradient(circle at center,#0e1218 0 3px,#30323c 4px 5px,#0c1017 6px 9px);box-shadow:inset 0 0 12px #000c,0 2px 8px #000a}
+.jukebox-record::after{content:"";position:absolute;inset:1%;border-radius:50%;background:linear-gradient(125deg,transparent 12%,#b4d9ed15 26%,transparent 40%,transparent 67%,#fff2c311 76%,transparent 88%);pointer-events:none}
+.jukebox-caption{text-shadow:0 2px 7px #000,0 0 16px #e3b97144;letter-spacing:.025em}
+@media(prefers-reduced-motion:reduce){.jukebox-record{animation:none!important}}
+
+/* Slow, restrained light breathing while music is actually playing. */
+.jukebox-active .jukebox-frame{animation:jukebox-glow 5s ease-in-out infinite}
+.jukebox-active .jukebox-header{animation:jukebox-sign-glow 6s ease-in-out infinite}
+@keyframes jukebox-glow{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.12)}
+}
+@keyframes jukebox-sign-glow{
+  0%,100%{opacity:1}
+  50%{opacity:.88}
+}
+@media(prefers-reduced-motion:reduce){
+  .jukebox-active .jukebox-frame,.jukebox-active .jukebox-header{animation:none}
+}
+
+/* Storyboard timeline: proportional to the original song duration. */
+.jukebox-timeline{margin:18px 0;padding:16px;border:1px solid #3c6373;border-radius:14px;background:#10202b;color:#e8f5fa}
+.jukebox-timeline h3{margin:0 0 10px;font-size:16px}
+.jukebox-timeline p{margin:10px 0 0;font-size:13px;line-height:1.5;color:#c6dbe4}
+.jukebox-timeline-track{display:flex;gap:3px;width:100%;min-height:46px;overflow:hidden;border-radius:8px}
+.jukebox-timeline-endcap,.jukebox-timeline-scene{flex-basis:0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;font-size:12px;font-weight:700}
+.jukebox-timeline-endcap{background:#e7bc70;color:#182532}
+.jukebox-timeline-scene{background:#206e85;color:white;border-left:1px solid #ffffff33}
+@media(max-width:600px){.jukebox-timeline{padding:12px}.jukebox-timeline-endcap,.jukebox-timeline-scene{font-size:9px}.jukebox-timeline-track{min-height:38px}}
+
+/* Browser-only scene inspection: never uploads to a server. */
+.jukebox-local-clips{padding:16px;margin:18px 0;border:1px solid #496875;border-radius:14px;background:#10202b;color:#e8f5fa}
+.jukebox-local-clips h3{margin:0 0 8px}
+.jukebox-local-clips p{font-size:13px;color:#c6dbe4;line-height:1.5}
+.jukebox-file-picker{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap;font-weight:700;margin:10px 0}
+.jukebox-file-picker input{max-width:100%;font:inherit;font-size:13px}
+.jukebox-local-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.jukebox-local-grid figure{margin:0;min-width:0;background:#07141d;border:1px solid #365969;border-radius:10px;overflow:hidden}
+.jukebox-local-grid video{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:black}
+.jukebox-local-grid figcaption{padding:8px 10px;font-size:12px;overflow-wrap:anywhere}
+
+.jukebox-clip-order{display:flex;gap:8px;justify-content:space-between;padding:0 8px 8px}
+.jukebox-clip-order button{display:inline-flex;align-items:center;gap:5px;background:#1f546b;color:white;border:1px solid #56869c;border-radius:7px;padding:7px 9px;cursor:pointer;font-size:12px}
+.jukebox-clip-order button:disabled{opacity:.4;cursor:not-allowed}
+.jukebox-clip-order button:focus-visible{outline:2px solid #f2ca80;outline-offset:2px}
+
+/* Full-length local storyboard preview with original song audio only. */
+.jukebox-scene-player{position:absolute;inset:0;z-index:3;background:#060d15;overflow:hidden}
+.jukebox-scene-player video{width:100%;height:100%;object-fit:contain;background:#060d15}
+.jukebox-scene-label{position:absolute;left:12px;bottom:12px;background:#07151edb;color:#fff;border:1px solid #ffffff66;border-radius:8px;padding:8px 11px;font-size:13px;font-weight:700;max-width:calc(100% - 24px)}
+
+.jukebox-storyboard-download{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0;border:1px solid #83b3c6;background:#20485e;color:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:700}
+.jukebox-storyboard-download:focus-visible{outline:2px solid #f0c77a;outline-offset:2px}
+
+/* Finished private files remain inside the authenticated production-status card. */
+.jukebox-job{display:block;margin:12px 0;padding:14px}
+.jukebox-job>div:first-child{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.jukebox-job p{margin:8px 0;line-height:1.45}
+.jukebox-private-review{width:100%;margin-top:12px;max-width:720px}
+.jukebox-private-review video{display:block;width:100%;max-height:520px;aspect-ratio:16/9;object-fit:contain;background:#080b11;border-radius:10px}
+.jukebox-private-review p{font-size:12px;opacity:.85}
+@media(max-width:600px){.jukebox-job{padding:11px}.jukebox-private-review video{max-height:68vh}}
+
+/* Local photos use the same contained frame as muted video previews. */
+.jukebox-local-grid img{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#060d15}
+.jukebox-scene-player img{display:block;width:100%;height:100%;object-fit:contain;background:#060d15}
+
+/* A selected ending stays visibly pinned while new photos are inserted before it. */
+.jukebox-clip-order{flex-wrap:wrap;justify-content:flex-start}
+.jukebox-finale-tag{display:inline-flex;align-items:center;padding:7px 9px;color:#ffe6a9;border:1px solid #b48b40;background:#42351c;border-radius:7px;font-size:12px;font-weight:700}

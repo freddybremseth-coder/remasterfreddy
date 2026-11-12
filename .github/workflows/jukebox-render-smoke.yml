@@ -1,0 +1,134 @@
+name: Jukebox MP4 render smoke test
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/render-jukebox.py'
+      - 'scripts/render-jukebox-batch.py'
+      - 'scripts/test-jukebox.py'
+      - 'scripts/compose-jukebox-video.py'
+      - 'scripts/test-jukebox-composition.py'
+      - 'scripts/render-jukebox-job.py'
+      - 'scripts/prepare-jukebox-job.py'
+      - 'scripts/test-jukebox-job.py'
+      - 'scripts/stage-jukebox-clips.py'
+      - 'scripts/stage-jukebox-photos.py'
+      - 'scripts/render-jukebox-photos.py'
+      - 'scripts/test-jukebox-photos.py'
+      - 'scripts/test-stage-jukebox-clips.py'
+      - 'scripts/test-jukebox-pipeline.py'
+      - 'scripts/finalize-jukebox-private-preview.py'
+      - 'scripts/test-jukebox-finalization.py'
+      - 'scripts/claim-jukebox-render.py'
+      - 'scripts/test-jukebox-claim.py'
+      - 'scripts/run-jukebox-private-test.py'
+      - 'scripts/test-jukebox-private-test.py'
+      - 'scripts/run-jukebox-spool-worker.py'
+      - 'scripts/test-jukebox-spool-worker.py'
+      - 'scripts/stage-jukebox-master.py'
+      - 'scripts/prepare-jukebox-catalog-spool.py'
+      - 'scripts/test-jukebox-catalog-spool.py'
+      - 'scripts/compose-jukebox-sections.py'
+      - 'scripts/test-jukebox-sections.py'
+      - 'scripts/stage-jukebox-cabinet.py'
+      - 'scripts/test-jukebox-cabinet.py'
+      - 'scripts/prepare-jukebox-catalog-spool.py'
+      - 'scripts/run-jukebox-offline-worker.py'
+      - 'assets/jukebox/**'
+      - '.github/workflows/jukebox-render-smoke.yml'
+  workflow_dispatch:
+jobs:
+  render-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg inkscape
+      - name: Render and inspect landscape and portrait MP4
+        run: |
+          python3 scripts/test-jukebox.py
+          python3 scripts/test-jukebox-composition.py
+          python3 scripts/test-jukebox-job.py
+          python3 scripts/test-stage-jukebox-clips.py
+          python3 scripts/test-jukebox-pipeline.py
+          python3 scripts/test-jukebox-finalization.py
+          python3 scripts/test-jukebox-claim.py
+          python3 scripts/test-jukebox-private-test.py
+          python3 scripts/test-jukebox-spool-worker.py
+          python3 scripts/test-jukebox-catalog-spool.py
+          python3 scripts/test-jukebox-sections.py
+          python3 scripts/test-jukebox-cabinet.py
+          python3 scripts/test-jukebox-photos.py
+
+      - name: Generate visual inspection frames
+        if: success()
+        run: |
+          mkdir -p jukebox-review
+          ffmpeg -hide_banner -loglevel error -f lavfi -i sine=frequency=440:duration=3 -c:a pcm_s16le jukebox-review/sample.wav
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Visual Review" --output jukebox-review/landscape.mp4 --seconds 2
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Visual Review" --output jukebox-review/portrait.mp4 --portrait --seconds 2
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/landscape.mp4 -frames:v 1 jukebox-review/landscape.png
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/portrait.mp4 -frames:v 1 jukebox-review/portrait.png
+          # Use the real approved photo once committed; otherwise keep the
+          # placeholder test without implying that the photo is installed.
+          if [ -f assets/jukebox/cabinet-landscape.png ]; then
+            PHOTO=assets/jukebox/cabinet-landscape.png
+            echo "Reviewing approved landscape photo asset"
+          elif [ -f assets/jukebox/candidates/landscape-v1.jpg ]; then
+            PHOTO=assets/jukebox/candidates/landscape-v1.jpg
+            echo "Reviewing unapproved landscape photo candidate"
+          else
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1920x1080 -frames:v 1 jukebox-review/photo-placeholder.png
+            PHOTO=jukebox-review/photo-placeholder.png
+            echo "::warning::Approved photo asset missing; using placeholder"
+          fi
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO" --output jukebox-review/photo-title.mp4 --seconds 2
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title.mp4 -frames:v 1 jukebox-review/photo-title.png
+          if [ -f assets/jukebox/candidates/portrait-v1.jpg ]; then
+            PHOTO_PORTRAIT=assets/jukebox/candidates/portrait-v1.jpg
+            echo "Reviewing unapproved portrait photo candidate"
+          else
+            ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xf3dfba:s=1080x1920 -frames:v 1 jukebox-review/photo-placeholder-portrait.png
+            PHOTO_PORTRAIT=jukebox-review/photo-placeholder-portrait.png
+          fi
+          python3 scripts/render-jukebox.py --audio jukebox-review/sample.wav --title "Blå natt & kjærlighet" --cabinet-image "$PHOTO_PORTRAIT" --output jukebox-review/photo-title-portrait.mp4 --portrait --seconds 2
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/photo-title-portrait.mp4 -frames:v 1 jukebox-review/photo-title-portrait.png
+          # Assemble a visual-only hybrid sample. All colors are synthetic;
+          # this is QA footage, not a real Re-master Freddy music video.
+          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0x245a83:s=320x180:d=1:r=25 -c:v libx264 -pix_fmt yuv420p jukebox-review/scene-blue.mp4
+          ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=0xd19a45:s=320x180:d=1:r=25 -c:v libx264 -pix_fmt yuv420p jukebox-review/scene-gold.mp4
+          python3 scripts/compose-jukebox-video.py --audio jukebox-review/sample.wav --jukebox jukebox-review/landscape.mp4 --video jukebox-review/scene-blue.mp4 --video jukebox-review/scene-gold.mp4 --output jukebox-review/hybrid-sample.mp4 --seconds 2
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "h264"
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "aac"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "1920"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of default=nw=1:nk=1 jukebox-review/hybrid-sample.mp4)" = "1080"
+          ffmpeg -hide_banner -loglevel error -ss 1 -i jukebox-review/hybrid-sample.mp4 -frames:v 1 jukebox-review/hybrid-sample.png
+      - name: Upload playable QA videos
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukebox-playable-test-videos
+          path: |
+            jukebox-review/landscape.mp4
+            jukebox-review/portrait.mp4
+            jukebox-review/photo-title.mp4
+            jukebox-review/photo-title-portrait.mp4
+            jukebox-review/hybrid-sample.mp4
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload inspection stills
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jukebox-inspection-stills
+          path: |
+            jukebox-review/landscape.png
+            jukebox-review/portrait.png
+            jukebox-review/photo-title.png
+            jukebox-review/photo-title-portrait.png
+            jukebox-review/hybrid-sample.png
+          retention-days: 7
+          if-no-files-found: error
