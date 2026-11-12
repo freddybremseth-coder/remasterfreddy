@@ -102,3 +102,7 @@
 /* Local photos use the same contained frame as muted video previews. */
 .jukebox-local-grid img{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#060d15}
 .jukebox-scene-player img{display:block;width:100%;height:100%;object-fit:contain;background:#060d15}
+
+/* A selected ending stays visibly pinned while new photos are inserted before it. */
+.jukebox-clip-order{flex-wrap:wrap;justify-content:flex-start}
+.jukebox-finale-tag{display:inline-flex;align-items:center;padding:7px 9px;color:#ffe6a9;border:1px solid #b48b40;background:#42351c;border-radius:7px;font-size:12px;font-weight:700}
