@@ -13,7 +13,7 @@ export default function AdminJukeboxStudio(){
   const [endWithLastScene,setEndWithLastScene]=useState(false);
   const [audioDuration,setAudioDuration]=useState(0);
   const [playhead,setPlayhead]=useState(0);
-  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video"}[]>([]);
+  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";finale?:boolean}[]>([]);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -83,6 +83,7 @@ export default function AdminJukeboxStudio(){
         type:"music_video_scene",sequence:index+1,
         filename:localClips[index]?.name||null,
         mediaKind:localClips[index]?.kind||null,
+        finale:Boolean(localClips[index]?.finale),
         start:introTime+index*clipTime,duration:clipTime,
       })),
       ...(outroTime>0?[{type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime}]:[]),
@@ -104,6 +105,7 @@ export default function AdminJukeboxStudio(){
     setLocalClips(previous=>{
       const nextIndex=index+direction;
       if(index<0||nextIndex<0||index>=previous.length||nextIndex>=previous.length)return previous;
+      if(previous[index].finale||previous[nextIndex].finale)return previous;
       const reordered=[...previous];
       [reordered[index],reordered[nextIndex]]=[reordered[nextIndex],reordered[index]];
       return reordered;
@@ -122,8 +124,21 @@ export default function AdminJukeboxStudio(){
       kind:(file.type.startsWith("image/")?"image":"video") as "image"|"video"
     }));
     localClipUrls.current.push(...additions.map(clip=>clip.url));
-    setLocalClips(previous=>[...previous,...additions]);
+    setLocalClips(previous=>{
+      const finaleIndex=previous.findIndex(item=>item.finale);
+      if(finaleIndex<0)return [...previous,...additions];
+      return [...previous.slice(0,finaleIndex),...additions,...previous.slice(finaleIndex)];
+    });
     if(files.length>available)setJobNotice("Maksimalt 12 scener per video i denne versjonen. Tidligere valgte bilder beholdes.");
+  }
+  function setFinale(index:number){
+    setLocalClips(previous=>{
+      const chosen=previous[index];
+      if(!chosen)return previous;
+      const others=previous.filter((_,position)=>position!==index).map(clip=>({...clip,finale:false}));
+      return [...others,{...chosen,finale:true}];
+    });
+    setEndWithLastScene(true);
   }
   function removeLocalClip(index:number){
     const removed=localClips[index];
@@ -182,17 +197,18 @@ export default function AdminJukeboxStudio(){
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
-      <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Dette er en lokal forhåndsvisning; filene lagres ikke i kontoen eller produksjonskøen.</p>
+      <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Velg «Siste bilde» for å holde avslutningen på plass når du legger til flere bilder. Dette er en lokal forhåndsvisning; filene lagres ikke i kontoen eller produksjonskøen.</p>
       <label className="jukebox-file-picker">Legg til bilder eller videoklipp
         <input type="file" accept="video/*,image/jpeg,image/png,image/webp" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
       </label>
       {localClips.length>0&&<div className="jukebox-local-grid">
         {localClips.map((clip,index)=><figure key={clip.url}>
           {clip.kind==="image"?<img src={clip.url} alt={`Scene ${index+1}: ${clip.name}`}/>:<video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>}
-          <figcaption>Scene {index+1} · {clip.name}</figcaption>
+          <figcaption>Scene {index+1} · {clip.name}{clip.finale?" · Låst som avslutning":""}</figcaption>
           <div className="jukebox-clip-order">
-            <button type="button" disabled={index===0} onClick={()=>moveLocalClip(index,-1)} aria-label={`Flytt scene ${index+1} opp`}><ArrowUp size={15}/> Før</button>
-            <button type="button" disabled={index===localClips.length-1} onClick={()=>moveLocalClip(index,1)} aria-label={`Flytt scene ${index+1} ned`}><ArrowDown size={15}/> Etter</button>
+            <button type="button" disabled={index===0||Boolean(clip.finale)||Boolean(localClips[index-1]?.finale)} onClick={()=>moveLocalClip(index,-1)} aria-label={`Flytt scene ${index+1} opp`}><ArrowUp size={15}/> Før</button>
+            <button type="button" disabled={index===localClips.length-1||Boolean(clip.finale)||Boolean(localClips[index+1]?.finale)} onClick={()=>moveLocalClip(index,1)} aria-label={`Flytt scene ${index+1} ned`}><ArrowDown size={15}/> Etter</button>
+            {clip.finale?<span className="jukebox-finale-tag">Siste bilde</span>:<button type="button" onClick={()=>setFinale(index)} aria-label={`Bruk scene ${index+1} som siste bilde`}>Siste bilde</button>}
             <button type="button" onClick={()=>removeLocalClip(index)} aria-label={`Fjern scene ${index+1}`}>Fjern</button>
           </div>
         </figure>)}
