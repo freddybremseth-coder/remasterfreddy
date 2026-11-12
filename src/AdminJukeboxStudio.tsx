@@ -289,12 +289,20 @@ export default function AdminJukeboxStudio(){
       {draftLoading&&<p role="status">Henter lagrede bilder for denne sangen…</p>}
       <div className="jukebox-actions">
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
-        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadBackup()}>Last ned prosjekt med bilder</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadBackup()}>Klargjør privat MP4 – last ned prosjekt</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>portableInput.current?.click()}>Åpne prosjektfil</button>
         <input ref={portableInput} type="file" accept=".json,application/json" style={{display:"none"}} aria-label="Velg Jukebox-prosjektfil" onChange={event=>{void importBackup(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
       </div>
-      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk «Last ned prosjekt med bilder» og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
+      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
+      <div className="admin-warning jukebox-render-handoff" role="status">
+        <Clapperboard size={18}/>
+        <div>
+          <strong>Privat MP4 – klargjøring</strong>
+          <p>Bildene, sangdelene, visningstidene og siste bilde kan eksporteres som én privat prosjektfil. Den kan brukes av den separate rendereren sammen med originalmusikken og et visuelt godkjent Rock-Ola-klipp.</p>
+          <p>Selve hybridrenderingen kan ennå ikke startes fra nettleseren. Den godkjente Rock-Ola-masteren og en ekte ende-til-ende-test mangler. Ingen opplasting til YouTube skjer her.</p>
+        </div>
+      </div>
       {draftNotice&&<p role="status">{draftNotice}</p>}
       {localClips.length>0&&<div className="jukebox-local-grid">
         {localClips.map((clip,index)=><figure key={clip.url}>
@@ -348,7 +356,7 @@ export default function AdminJukeboxStudio(){
       </button>
       {renderEnabled&&<button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater produksjonsstatus</button>}
     </div>
-    {style==="hybrid"&&<p className="jukebox-hybrid-note">Hybridkomposisjon er testet som MP4, men kan ikke settes i produksjonskø før en godkjent musikkvideo og en renderarbeider er tilgjengelig. Ingen publisering skjer automatisk.</p>}
+    {style==="hybrid"&&<p className="jukebox-hybrid-note">Eksportér fotoprosjektet under «Velg egne bilder og videoscener» for privat rendering. Produksjonskøen for hybridvideo åpnes først når godkjent Rock-Ola-fil, renderarbeider og en ekte test er verifisert. Ingen publisering skjer automatisk.</p>}
     {jobNotice&&<p role="status">{jobNotice}</p>}
     {renderEnabled&&jobs.length>0&&<div aria-label="Jukebox-jobber">
       <h3>Produksjonsstatus</h3>
