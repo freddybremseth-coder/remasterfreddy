@@ -131,8 +131,20 @@ def build_assignments(photos: list[dict], duration: float, portrait: bool,
     return assignments
 
 
+def verify_sha256(path: Path, expected: str) -> None:
+    if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected.lower()):
+        raise ValueError("Expected a 64-digit SHA-256 checksum")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while block := stream.read(1024*1024):
+            digest.update(block)
+    if digest.hexdigest() != expected.lower():
+        raise ValueError("Original media checksum does not match approved input")
+
+
 def render_project(project: Path, audio: Path, cabinet: Path, output: Path,
-                   expected_song_id: str | None = None, dry_run: bool = False) -> dict:
+                   expected_song_id: str | None = None, dry_run: bool = False,
+                   audio_sha256: str | None = None, cabinet_sha256: str | None = None) -> dict:
     data = validate_backup(project, expected_song_id)
     composer = module("compose-jukebox-video.py")
     renderer = module("render-jukebox-photos.py")
@@ -141,6 +153,10 @@ def render_project(project: Path, audio: Path, cabinet: Path, output: Path,
     if data["seconds"] != "full":
         duration = min(duration, float(data["seconds"]))
     composer.probe_media(cabinet, "video")
+    if not audio_sha256 or not cabinet_sha256:
+        raise ValueError("Approved song master and cabinet SHA-256 required")
+    verify_sha256(audio, audio_sha256)
+    verify_sha256(cabinet, cabinet_sha256)
     portrait = data["videoFormat"] == "portrait"
     if output.exists():
         raise ValueError("Will not overwrite an existing MP4")
@@ -173,9 +189,12 @@ if __name__ == "__main__":
     p.add_argument("--audio", type=Path, required=True)
     p.add_argument("--jukebox", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--song-id", help="Expected song ID; prevents wrong-track render")
+    p.add_argument("--song-id", required=True, help="Expected song ID; prevents wrong-track render")
+    p.add_argument("--audio-sha256", required=True, help="Verified original master hash")
+    p.add_argument("--jukebox-sha256", required=True, help="Reviewed cabinet MP4 hash")
     p.add_argument("--plan-only", action="store_true")
     args = p.parse_args()
     result = render_project(args.project, args.audio, args.jukebox, args.output,
-                            args.song_id, args.plan_only)
+                            args.song_id, args.plan_only,
+                            audio_sha256=args.audio_sha256, cabinet_sha256=args.jukebox_sha256)
     print(json.dumps(result, indent=2, ensure_ascii=False))
