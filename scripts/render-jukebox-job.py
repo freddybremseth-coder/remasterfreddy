@@ -18,6 +18,9 @@ from importlib.util import module_from_spec, spec_from_file_location
 spec = spec_from_file_location("composer", Path(__file__).with_name("compose-jukebox-video.py"))
 composer = module_from_spec(spec)
 spec.loader.exec_module(composer)
+sections_spec = spec_from_file_location("section_composer", Path(__file__).with_name("compose-jukebox-sections.py"))
+section_composer = module_from_spec(sections_spec)
+sections_spec.loader.exec_module(section_composer)
 
 
 def digest(path: Path) -> str:
@@ -72,6 +75,14 @@ def prepare(manifest: dict, root: Path):
     composer.probe_media(jukebox, "video")
     for visual in visuals:
         composer.probe_media(visual, "video")
+    storyboard = manifest.get("section_timeline")
+    if storyboard is not None:
+        length = composer.probe_media(audio,"audio")
+        length = min(length,seconds) if seconds is not None else length
+        section_composer.build_section_plan(length, storyboard)
+        expected = [row["clip"] for row in storyboard]
+        if len(expected) != len(visuals) or set(expected) != {v.name for v in visuals}:
+            raise ValueError("Storyboard must cover each approved image exactly once")
     return audio, jukebox, visuals, format_value == "portrait", seconds
 
 
@@ -127,7 +138,9 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
     audio, jukebox, clips, portrait, seconds = prepare(manifest, root)
     length = composer.probe_media(audio, "audio")
     length = min(length, seconds) if seconds is not None else length
-    plan = composer.scene_plan(length, portrait, clips)
+    storyboard = manifest.get("section_timeline")
+    plan = (section_composer.build_section_plan(length, storyboard)
+            if storyboard is not None else composer.scene_plan(length, portrait, clips))
     if plan_only:
         return {"status": "validated", "scene_plan": plan,
                 "full_decode_checked": False}
@@ -149,7 +162,11 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
     ) as temporary:
         staged = Path(temporary.name)
     try:
-        composer.compose(audio, jukebox, clips, staged, portrait, seconds)
+        if storyboard is not None:
+            section_composer.compose_sections(audio, jukebox, clips,
+                                              storyboard, staged, portrait, seconds)
+        else:
+            composer.compose(audio, jukebox, clips, staged, portrait, seconds)
         output_hash = digest(staged)
         output_duration = composer.media_duration(staged)
         verify_rendered_mp4(staged, portrait, length)
