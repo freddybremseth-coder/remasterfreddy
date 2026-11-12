@@ -132,6 +132,26 @@ def verify_rendered_mp4(path: Path, portrait: bool, expected_length: float) -> N
         raise ValueError("Rendered MP4 duration does not match source audio")
 
 
+
+def verify_final_media_decode(path: Path, duration: float) -> None:
+    """Decode BOTH final tracks before exposing a private finished MP4.
+
+    ffprobe validates headers, but cannot detect corrupted frames or audio
+    packets in the middle of an otherwise readable file. Never publish here.
+    """
+    if not math.isfinite(duration) or duration <= 0 or duration > 1800:
+        raise ValueError("Invalid final media duration for full decode")
+    try:
+        subprocess.run([
+            "ffmpeg", "-hide_banner", "-nostdin", "-v", "error", "-xerror",
+            "-i", str(path), "-map", "0:v:0", "-map", "0:a:0",
+            "-f", "null", "-"
+        ], check=True, capture_output=True,
+           timeout=max(90, min(1200, int(duration * 3))))
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
+        raise ValueError("Finished Jukebox MP4 failed complete video/audio decode") from error
+
+
 def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool = False):
     root = media_dir.resolve(strict=True)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -170,6 +190,7 @@ def render(manifest_path: Path, media_dir: Path, output: Path, plan_only: bool =
         output_hash = digest(staged)
         output_duration = composer.media_duration(staged)
         verify_rendered_mp4(staged, portrait, length)
+        verify_final_media_decode(staged, length)
         # Hard link fails if target exists, avoiding accidental replacement.
         os.link(staged, target)
     finally:
