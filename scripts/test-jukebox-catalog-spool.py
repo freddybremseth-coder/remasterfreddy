@@ -115,6 +115,47 @@ class CatalogSpoolTests(unittest.TestCase):
         (destination/"master.mp3").write_bytes(AUDIO)
         return {"file":"master.mp3","sha256":SHA,"bytes":len(AUDIO)}
 
+    def test_automatically_stages_only_pinned_approved_cabinet(self):
+        (self.folder/"cabinet.mp4").unlink()
+        def fake_cabinet(object_path, sha, origin, directory):
+            self.assertEqual(object_path,"jukebox/approved/rockola-cabinet.mp4")
+            self.assertEqual(sha,"b"*64)
+            self.assertEqual(origin,ORIGIN)
+            (directory/"cabinet.mp4").write_bytes(b"test visual")
+            return {"file":"cabinet.mp4","sha256":sha}
+        with (patch.dict(spool.os.environ,{
+                "REMASTER_JUKEBOX_APPROVED_CABINET_PATH":
+                    "jukebox/approved/rockola-cabinet.mp4",
+                "REMASTER_JUKEBOX_APPROVED_CABINET_SHA256":"b"*64}),
+              patch.object(spool,"lookup_song",
+                           return_value={"id":SONG,"file_url":URL}),
+              patch.object(spool.masters,"stage_master",
+                           side_effect=self.fake_stage),
+              patch.object(spool.cabinets,"stage_cabinet",
+                           side_effect=fake_cabinet)):
+            result=spool.prepare(self.folder,ORIGIN,"test-key")
+        self.assertEqual(result["state"],"staged_private")
+        self.assertTrue((self.folder/"cabinet.mp4").is_file())
+        self.assertEqual(json.loads((self.folder/"job.json").read_text())
+                         ["jukebox"],"cabinet.mp4")
+
+    def test_failed_cabinet_staging_does_not_leave_runnable_job(self):
+        (self.folder/"cabinet.mp4").unlink()
+        with (patch.dict(spool.os.environ,{
+                "REMASTER_JUKEBOX_APPROVED_CABINET_PATH":
+                    "jukebox/approved/rockola-cabinet.mp4",
+                "REMASTER_JUKEBOX_APPROVED_CABINET_SHA256":"b"*64}),
+              patch.object(spool,"lookup_song",
+                           return_value={"id":SONG,"file_url":URL}),
+              patch.object(spool.masters,"stage_master",
+                           side_effect=self.fake_stage),
+              patch.object(spool.cabinets,"stage_cabinet",
+                           side_effect=ValueError("approved cabinet digest mismatch"))):
+            with self.assertRaisesRegex(ValueError,"digest mismatch"):
+                spool.prepare(self.folder,ORIGIN,"test-key")
+        self.assertFalse((self.folder/"job.json").exists())
+        self.assertFalse((self.folder/"master.mp3").exists())
+
     def test_duplicate_job_never_stages_twice(self):
         (self.folder/"job.json").write_text("{}")
         with patch.object(spool,"lookup_song",side_effect=AssertionError("no lookup")):
