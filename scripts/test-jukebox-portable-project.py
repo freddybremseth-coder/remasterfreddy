@@ -77,6 +77,19 @@ class PortableImportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Corrupt image"):
                 module.extract_images(verified,root/"stage")
 
+    def test_requires_exact_original_media_checksums(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            path=root/"master.wav"
+            path.write_bytes(b"trusted test file")
+            import hashlib
+            actual=hashlib.sha256(path.read_bytes()).hexdigest()
+            module.verify_sha256(path,actual)
+            with self.assertRaisesRegex(ValueError,"checksum"):
+                module.verify_sha256(path,"0"*64)
+            with self.assertRaisesRegex(ValueError,"64-digit"):
+                module.verify_sha256(path,"not-a-sha")
+
     def test_fallback_jukebox_outro_not_pinned(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
