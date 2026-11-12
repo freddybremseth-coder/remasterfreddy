@@ -92,3 +92,16 @@ python3 scripts/prepare-jukebox-catalog-spool.py \
 ```
 
 Etter dette kan den eksisterende spool-arbeideren kjøre én jobb med `--run-once`. Ingen del av dette publiserer til YouTube. Det er fortsatt **ingen** kontinuerlig arbeidsprosess eller automatisk nedlasting av godkjent jukebox-motiv, og Jukebox er ikke produksjonsaktivert. En fremtidig motivkatalog må knytte en revidert, immutable asset-ID og SHA-256 til valgt Jukebox-stil; ikke bruk uspesifikke nettadresser eller første treff i Storage.
+
+## Godkjent kabinettmotiv – automatisk, kontrollert innhenting
+
+Det er nå mulig å hente `cabinet.mp4` automatisk på den betrodde renderarbeideren fra **eksakt én** forhåndsgodkjent fil i RealtyFlow `assets`-bucket. Ingen vilkårlig URL eller første tilgjengelige Storage-fil brukes.
+
+1. Lag og godkjenn et stabilt Jukebox-kabinettmotiv visuelt, inkludert riktig 1960-talls design. Gjør en eksplisitt vurdering av oppløsning, innhold, varighet, lydfri videofil og rettigheter.
+2. Legg den godkjente filen under `assets/jukebox/<godkjent-versjon>/<filnavn>.mp4` og beregn SHA-256 fra den **faktisk opplastede** filen.
+3. Sett disse verdiene på en betrodd arbeidervert (aldri i klientkode): `REMASTER_JUKEBOX_APPROVED_CABINET_PATH=jukebox/<godkjent-versjon>/<filnavn>.mp4` og `REMASTER_JUKEBOX_APPROVED_CABINET_SHA256=<64 heksadesimale tegn>`.
+4. Ved `prepare-jukebox-catalog-spool.py --prepare-private` hentes den konfigurerte kabinettvideoen automatisk bare hvis ingen lokal `cabinet.mp4` finnes. Innhentingen nekter redirect, ekstern host, avvikende MIME/filheader, for store filer og endret SHA-256.
+5. Feil i kabinettopplastingen fører til at ingen `job.json` skrives, og en nyklargjort lydfil blir fjernet. Eksisterende filer overskrives aldri.
+6. Kommandoen starter **ikke** en renderjobb og publiserer ingenting; den bare klargjør verifiserte medier.
+
+Lesebasert Supabase-kontroll 12. november 2026 fant **ingen** kabinett-/Rock-Ola-filer under de forventede navnene i `assets`. Den manglende visuelle originalfilen er dermed fortsatt en faktisk blokkering for full, virkelig ende-til-ende-test. Ikke konfigurer en tilfeldig fil som erstatning.
