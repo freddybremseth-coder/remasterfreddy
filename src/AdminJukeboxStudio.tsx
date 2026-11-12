@@ -10,6 +10,7 @@ export default function AdminJukeboxStudio(){
   const [format,setFormat]=useState<"landscape"|"portrait">("landscape");
   const [style,setStyle]=useState<"jukebox"|"hybrid">("jukebox");
   const [sceneCount,setSceneCount]=useState(3);
+  const [endWithLastScene,setEndWithLastScene]=useState(false);
   const [audioDuration,setAudioDuration]=useState(0);
   const [playhead,setPlayhead]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video"}[]>([]);
@@ -30,7 +31,7 @@ export default function AdminJukeboxStudio(){
   const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
   const plannedDuration=audioDuration>0?Math.min(audioDuration,seconds==="full"?audioDuration:Number(seconds)):0;
   const introTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(30,plannedDuration*.20);
-  const outroTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10);
+  const outroTime=endWithLastScene&&style==="hybrid"?0:(format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10));
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
   const effectiveSceneCount=localClips.length||sceneCount;
   const clipTime=middleTime/effectiveSceneCount;
@@ -84,11 +85,12 @@ export default function AdminJukeboxStudio(){
         mediaKind:localClips[index]?.kind||null,
         start:introTime+index*clipTime,duration:clipTime,
       })),
-      {type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime},
+      ...(outroTime>0?[{type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime}]:[]),
     ];
     const manifest={
       version:2,renderStatus:"planning_only",songId:song.id,songTitle:song.title,
       format,seconds:plannedDuration,style,localMediaIncluded:false,
+      endWithLastScene,
       entries:entries.map(entry=>({...entry,start:Number(entry.start.toFixed(3)),duration:Number(entry.duration.toFixed(3))})),
     };
     const file=new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"});
@@ -158,22 +160,25 @@ export default function AdminJukeboxStudio(){
       <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"60")}>
         <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
+      {style==="hybrid"&&<label><span>Avslutning</span><select aria-label="Velg avslutning" value={endWithLastScene?"last_scene":"jukebox"} onChange={event=>setEndWithLastScene(event.target.value==="last_scene")}>
+        <option value="jukebox">Avslutt med Jukebox</option><option value="last_scene">Avslutt med siste bilde eller klipp</option>
+      </select></label>}
       {style==="hybrid"&&<label><span>Antall musikkvideoscener</span><select aria-label="Antall musikkvideoscener" value={sceneCount} disabled={localClips.length>0} onChange={event=>setSceneCount(Number(event.target.value))}>
         {Array.from({length:12},(_,index)=>index+1).map(value=><option key={value} value={value}>{value} {value===1?"scene":"scener"}</option>)}
       </select></label>}
     </div>
     {style==="hybrid"&&<div className="admin-warning" role="status">
-      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Med valgte lokale bilder og videoer vises scenene i tidslinjen under avspilling.
+      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egne bilder og videoer deretter. {endWithLastScene?"Siste bilde/klipp avslutter hele filmen.":`Jukebox kommer tilbake mot slutten (${hybridOutro}).`} Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Med valgte lokale bilder og videoer vises scenene i tidslinjen under avspilling.
     </div>}
     {style==="hybrid"&&<div className="jukebox-timeline" aria-label="Klippplan for hybridvideo">
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
       {plannedDuration>0?<div className="jukebox-timeline-track">
         <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
         {Array.from({length:effectiveSceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
-        <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
+        {outroTime>0&&<div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>}
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
