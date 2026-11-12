@@ -83,6 +83,9 @@ export default function AdminJukeboxStudio(){
     if(!songId)return;
     let cancelled=false;
     const requestId=++draftLoadId.current;
+    for(const url of localClipUrls.current)URL.revokeObjectURL(url);
+    localClipUrls.current=[];
+    setLocalClips([]);
     setDraftNotice("");
     void loadJukeboxDraft(songId).then(draft=>{
       if(cancelled||requestId!==draftLoadId.current||!draft)return;
