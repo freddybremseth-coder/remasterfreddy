@@ -35,10 +35,26 @@ export default function AdminHybridStudio() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 404 || res.status === 503 || res.status === 502) {
-          throw new Error("Videoplanlegging er ennå ikke aktivert i RealtyFlow. Ingen sang eller medier er endret.");
+        const reason = typeof data.error === "string" ? data.error : "";
+        // A song lookup 404 is not the same as a missing API route.
+        // Keep owner-specific details out of the client; show a useful,
+        // accurate next step without claiming the entire feature is disabled.
+        if (res.status === 404 && reason === "Re-Master Freddy song not found") {
+          throw new Error("«Drømmer» finnes i Re-master Freddy, men ikke i RealtyFlows låtkatalog for denne merkevaren. Kontroller at sangene er synkronisert.");
         }
-        throw new Error(data.error || "Forhåndsvisning utilgjengelig");
+        if (res.status === 404) {
+          throw new Error("RealtyFlow fant ikke videoplanleggings-API-et (404). Kontroller at riktig backend-versjon er publisert.");
+        }
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("RealtyFlow avviste administratortilgangen. Kontroller eiertilgang og serverkoblingen mellom Re-master Freddy og RealtyFlow.");
+        }
+        if (res.status === 503) {
+          throw new Error("Videoplanleggingen mangler nødvendig serverkonfigurasjon. Kontroller tjenestekobling og Supabase-oppsett.");
+        }
+        if (res.status === 502) {
+          throw new Error("RealtyFlow kunne ikke nås, eller returnerte en ugyldig respons. Kontroller tilkoblingen før du prøver igjen.");
+        }
+        throw new Error(reason || `Videoplanlegging feilet (HTTP ${res.status}). Ingen medier er endret.`);
       }
       setPlan(data);
     } catch (e) {
