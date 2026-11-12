@@ -24,6 +24,7 @@ def load(name, alias):
     return obj
 
 masters=load("stage-jukebox-master.py","canonical_master")
+cabinets=load("stage-jukebox-cabinet.py","approved_cabinet")
 UUID=re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",re.I)
 
 
@@ -72,19 +73,33 @@ def prepare(folder: Path, origin: str, key: str) -> dict:
     if not data["clips"] and not handoff["imagePaths"]:
         raise ValueError("No private music visuals")
     cabinet=folder/"cabinet.mp4"
-    if not cabinet.is_file() or cabinet.is_symlink():
-        raise ValueError("Locally approved cabinet.mp4 missing")
+    if cabinet.is_symlink():
+        raise ValueError("Cabinet symlink forbidden")
+    # Explicitly approved, content-pinned cabinet can be staged automatically.
+    # Otherwise only an already-provisioned local file is eligible.
+    cabinet_path=os.environ.get("REMASTER_JUKEBOX_APPROVED_CABINET_PATH","")
+    cabinet_sha=os.environ.get("REMASTER_JUKEBOX_APPROVED_CABINET_SHA256","")
+    if not cabinet.is_file() and (not cabinet_path or not cabinet_sha):
+        raise ValueError("Approved cabinet.mp4 missing; no cabinet asset configured")
+    if cabinet.is_file() and (cabinet_path or cabinet_sha):
+        raise ValueError("Local cabinet and remote pinned cabinet configuration conflict")
     config=folder/"job.json"
     if config.exists() or config.is_symlink():
         raise ValueError("Job already staged; no implicit overwrite or retry")
     song=lookup_song(origin,key,handoff["songId"])
     staged=masters.stage_master(song["file_url"],origin,expected,folder)
+    cabinet_staged=False
     try:
+        if not cabinet.is_file():
+            cabinets.stage_cabinet(cabinet_path,cabinet_sha,origin,folder)
+            cabinet_staged=True
         payload={"jobId":folder.name,"audio":staged["file"],"jukebox":"cabinet.mp4"}
         with config.open("x",encoding="utf-8") as stream:
             json.dump(payload,stream,sort_keys=True)
     except Exception:
         (folder/staged["file"]).unlink(missing_ok=True)
+        if cabinet_staged:
+            cabinet.unlink(missing_ok=True)
         raise
     return {"job_id":folder.name,"song_id":song["id"],
             "audio_sha256":staged["sha256"],"audio_file":staged["file"],
