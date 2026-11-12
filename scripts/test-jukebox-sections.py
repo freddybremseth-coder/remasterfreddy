@@ -43,6 +43,42 @@ class TimedSectionTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     sections.build_section_plan(6.0,invalid)
 
+    def test_section_plan_rejects_unsafe_timestamps_and_preserves_boundaries(self):
+        valid = {"section":"chorus","clip":"photo-scene-00.mp4",
+                 "start":0.0,"end":1.0}
+        # A full-coverage image needs no cabinet gap; a partial one
+        # must leave exact uncovered intervals for the approved cabinet.
+        self.assertEqual(
+            [entry["kind"] for entry in sections.build_section_plan(4.0,[
+                {**valid, "start":0.0, "end":4.0}
+            ])], ["photo"])
+        plan = sections.build_section_plan(4.0,[
+            {**valid, "start":0.25, "end":3.75}
+        ])
+        self.assertEqual(
+            [(item["kind"],item["start"],item["end"]) for item in plan],
+            [("jukebox",0.0,0.25),("photo",0.25,3.75),
+             ("jukebox",3.75,4.0)])
+        for bad in (
+            {"start":float("nan")},
+            {"end":float("inf")},
+            {"start":True},
+            {"end":1.1, "start":1.1},
+            {"start":-0.1},
+            {"end":4.1},
+            {"section":"unknown"},
+            {"clip":"../photo-scene-00.mp4"},
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    sections.build_section_plan(4.0,[{**valid,**bad}])
+        with self.assertRaises(ValueError):
+            sections.build_section_plan(301.0,[
+                {**valid, "end":300.5}
+            ])
+        with self.assertRaises(ValueError):
+            sections.build_section_plan(4.0,[])
+
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
                          "FFmpeg not installed")
     def test_render_timed_sections_has_one_uninterrupted_song(self):
