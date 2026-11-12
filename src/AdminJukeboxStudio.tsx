@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
+import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -18,6 +19,7 @@ export default function AdminJukeboxStudio(){
   const [draftBusy,setDraftBusy]=useState(false);
   const [draftNotice,setDraftNotice]=useState("");
   const draftLoadId=useRef(0);
+  const portableInput=useRef<HTMLInputElement|null>(null);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -108,6 +110,36 @@ export default function AdminJukeboxStudio(){
       await saveJukeboxDraft(draft);
       setDraftNotice("Utkastet er lagret i denne nettleseren. Det er ikke lastet opp til kontoen og kan forsvinne om nettleserdata slettes.");
     }catch{setDraftNotice("Lagringen mislyktes. Kontroller nettleserens lagringsplass og innstillinger.");}
+    finally{setDraftBusy(false);}
+  }
+  async function downloadBackup(){
+    if(!songId||draftBusy)return;
+    if(localClips.some(clip=>!clip.file)){setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;}
+    setDraftBusy(true);
+    try{
+      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale)}))};
+      const blob=await exportPortableDraft(draft);
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");link.href=url;link.download=`jukebox-${songId}-backup.json`;
+      document.body.appendChild(link);link.click();link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+      setDraftNotice("Sikkerhetskopien er lastet ned, inkludert bildene. Oppbevar filen privat.");
+    }catch(error){setDraftNotice(error instanceof Error?error.message:"Kunne ikke lage sikkerhetskopi.");}
+    finally{setDraftBusy(false);}
+  }
+  async function importBackup(file:File|null){
+    if(!file||!songId||draftBusy)return;
+    setDraftBusy(true);
+    try{
+      const draft=await importPortableDraft(file,songId);
+      await saveJukeboxDraft(draft);
+      for(const url of localClipUrls.current)URL.revokeObjectURL(url);
+      const clips=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
+      localClipUrls.current=clips.map(clip=>clip.url);
+      setLocalClips(clips);setSceneCount(draft.sceneCount);setFormat(draft.format);
+      setSeconds(draft.seconds);setEndWithLastScene(draft.endWithLastScene);
+      setDraftNotice("Sikkerhetskopien ble hentet inn og lagret lokalt på denne enheten.");
+    }catch(error){setDraftNotice(error instanceof Error?error.message:"Import av prosjekt feilet.");}
     finally{setDraftBusy(false);}
   }
   async function clearDraft(){
@@ -245,9 +277,12 @@ export default function AdminJukeboxStudio(){
       </label>
       <div className="jukebox-actions">
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>void downloadBackup()}>Last ned prosjekt med bilder</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>portableInput.current?.click()}>Åpne prosjektfil</button>
+        <input ref={portableInput} type="file" accept=".json,application/json" style={{display:"none"}} aria-label="Velg Jukebox-prosjektfil" onChange={event=>{void importBackup(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
       </div>
-      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig.</p>
+      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk «Last ned prosjekt med bilder» og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
       {draftNotice&&<p role="status">{draftNotice}</p>}
       {localClips.length>0&&<div className="jukebox-local-grid">
         {localClips.map((clip,index)=><figure key={clip.url}>
