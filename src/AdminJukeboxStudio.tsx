@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
+import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -13,7 +14,10 @@ export default function AdminJukeboxStudio(){
   const [endWithLastScene,setEndWithLastScene]=useState(false);
   const [audioDuration,setAudioDuration]=useState(0);
   const [playhead,setPlayhead]=useState(0);
-  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";finale?:boolean}[]>([]);
+  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean}[]>([]);
+  const [draftBusy,setDraftBusy]=useState(false);
+  const [draftNotice,setDraftNotice]=useState("");
+  const draftLoadId=useRef(0);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -75,6 +79,41 @@ export default function AdminJukeboxStudio(){
     else sceneVideo.current.pause();
   },[playing,activeClipIndex]);
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
+  useEffect(()=>{
+    if(!songId)return;
+    let cancelled=false;
+    const requestId=++draftLoadId.current;
+    setDraftNotice("");
+    void loadJukeboxDraft(songId).then(draft=>{
+      if(cancelled||requestId!==draftLoadId.current||!draft)return;
+      for(const url of localClipUrls.current)URL.revokeObjectURL(url);
+      const restored=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
+      localClipUrls.current=restored.map(clip=>clip.url);
+      setLocalClips(restored);
+      setFormat(draft.format);setSeconds(draft.seconds);setSceneCount(draft.sceneCount);
+      setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
+      setDraftNotice(`Lokalt utkast hentet (${new Date(draft.savedAt).toLocaleString("nb-NO")}).`);
+    }).catch(()=>{if(!cancelled)setDraftNotice("Lokalt utkast kunne ikke leses. Du kan fortsatt bruke forhåndsvisningen.");});
+    return()=>{cancelled=true;};
+  },[songId]);
+  async function saveDraft(){
+    if(!songId||draftBusy)return;
+    if(localClips.some(clip=>!clip.file)){setDraftNotice("Kunne ikke lagre: ett eller flere klipp mangler originalfil.");return;}
+    setDraftBusy(true);
+    try{
+      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale)}))};
+      await saveJukeboxDraft(draft);
+      setDraftNotice("Utkastet er lagret i denne nettleseren. Det er ikke lastet opp til kontoen og kan forsvinne om nettleserdata slettes.");
+    }catch{setDraftNotice("Lagringen mislyktes. Kontroller nettleserens lagringsplass og innstillinger.");}
+    finally{setDraftBusy(false);}
+  }
+  async function clearDraft(){
+    if(!songId||draftBusy)return;
+    setDraftBusy(true);
+    try{await deleteJukeboxDraft(songId);setDraftNotice("Det lagrede utkastet for denne sangen er slettet fra nettleseren.");}
+    catch{setDraftNotice("Kunne ikke slette det lokale utkastet.");}
+    finally{setDraftBusy(false);}
+  }
   function downloadStoryboard(){
     if(!song||plannedDuration<=0||style!=="hybrid")return;
     const entries=[
@@ -120,7 +159,7 @@ export default function AdminJukeboxStudio(){
       file.type.startsWith("video/")||file.type.startsWith("image/")
     ).slice(0,available);
     const additions=chosen.map(file=>({
-      name:file.name,url:URL.createObjectURL(file),
+      name:file.name,url:URL.createObjectURL(file),file,
       kind:(file.type.startsWith("image/")?"image":"video") as "image"|"video"
     }));
     localClipUrls.current.push(...additions.map(clip=>clip.url));
@@ -201,6 +240,12 @@ export default function AdminJukeboxStudio(){
       <label className="jukebox-file-picker">Legg til bilder eller videoklipp
         <input type="file" accept="video/*,image/jpeg,image/png,image/webp" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
       </label>
+      <div className="jukebox-actions">
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
+      </div>
+      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig.</p>
+      {draftNotice&&<p role="status">{draftNotice}</p>}
       {localClips.length>0&&<div className="jukebox-local-grid">
         {localClips.map((clip,index)=><figure key={clip.url}>
           {clip.kind==="image"?<img src={clip.url} alt={`Scene ${index+1}: ${clip.name}`}/>:<video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>}
