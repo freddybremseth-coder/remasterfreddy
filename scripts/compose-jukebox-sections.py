@@ -88,7 +88,14 @@ def compose_sections(audio: Path, jukebox: Path, photo_clips: list[Path],
         else:
             source = f"[{clip_indexes[item['clip']]}:v]"
         span = item["end"]-item["start"]
-        fragments.append(f"{source}{normalize},trim=duration={span:.3f},"
+        # Cabinet motion follows the absolute song clock even when it is
+        # hidden behind photos. Seeking each gap from frame zero makes the
+        # record/light animation visibly jump after every selected image.
+        # Photo scenes, by contrast, start at their own local frame zero.
+        trim = (f"trim=start={item['start']:.3f}:duration={span:.3f}"
+                if item["kind"] == "jukebox"
+                else f"trim=duration={span:.3f}")
+        fragments.append(f"{source}{normalize},{trim},"
                          f"setpts=PTS-STARTPTS[part{i}]")
     fragments.append("".join(f"[part{i}]" for i in range(len(plan)))+
                      f"concat=n={len(plan)}:v=1:a=0,format=yuv420p[v]")
