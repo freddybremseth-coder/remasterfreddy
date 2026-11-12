@@ -22,7 +22,7 @@ MIMES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 SECTIONS = {
     "Fri scene": "verse1", "Åpning": "opening", "Vers 1": "verse1",
     "Refreng": "chorus", "Vers 2": "verse2",
-    "Bro / mellomspill": "bridge", "Vers 3": "verse2",
+    "Bro / mellomspill": "bridge", "Vers 3": "verse3",
     "Avslutning": "outro",
 }
 
