@@ -67,59 +67,64 @@ class TimedSectionTests(unittest.TestCase):
               {"section":"verse1","clip":photos[1].name,"start":2.0,"end":4.5},
               {"section":"outro","clip":photos[2].name,"start":5.0,"end":6.0},
             ]
-            output=root/"result.mp4"
-            plan=sections.compose_sections(song,cabinet,photos,rows,output,False)
-            self.assertEqual(len(plan),5)
-            probe=json.loads(subprocess.check_output([
-                "ffprobe","-v","error","-show_entries",
-                "format=duration:stream=codec_type,codec_name,width,height",
-                "-of","json",str(output)],text=True))
-            self.assertLess(abs(float(probe["format"]["duration"])-6.0),0.5)
-            self.assertEqual([t["codec_type"] for t in probe["streams"]],
-                             ["video","audio"])
-            self.assertEqual(probe["streams"][1]["codec_name"],"aac")
-            self.assertEqual(probe["streams"][0]["width"],1920)
-            self.assertEqual(probe["streams"][0]["height"],1080)
-            # Verify actual visual content, not only the output metadata.
-            # The center pixel must follow the explicit photo windows and
-            # return to the red cabinet in every unassigned interval.
-            def center_rgb(at_seconds):
-                raw = subprocess.check_output([
-                    "ffmpeg", "-hide_banner", "-loglevel", "error",
-                    "-ss", str(at_seconds), "-i", str(output),
-                    "-frames:v", "1",
-                    "-vf", "crop=2:2:(iw-2)/2:(ih-2)/2,scale=1:1,format=rgb24",
-                    "-f", "rawvideo", "-pix_fmt", "rgb24", "-"
-                ])
-                self.assertEqual(len(raw), 3)
-                return tuple(raw)
+            # Both standard YouTube landscape and 9:16 Shorts must honor the
+            # same explicit song-section assignments and cabinet gaps.
+            for portrait in (False, True):
+                with self.subTest(format="shorts" if portrait else "landscape"):
+                output=root/("portrait.mp4" if portrait else "landscape.mp4")
+                plan=sections.compose_sections(song,cabinet,photos,rows,output,portrait)
+                self.assertEqual(len(plan),5)
+                probe=json.loads(subprocess.check_output([
+                    "ffprobe","-v","error","-show_entries",
+                    "format=duration:stream=codec_type,codec_name,width,height",
+                    "-of","json",str(output)],text=True))
+                self.assertLess(abs(float(probe["format"]["duration"])-6.0),0.5)
+                self.assertEqual([t["codec_type"] for t in probe["streams"]],
+                                 ["video","audio"])
+                self.assertEqual(probe["streams"][1]["codec_name"],"aac")
+                self.assertEqual(probe["streams"][0]["width"],1080 if portrait else 1920)
+                self.assertEqual(probe["streams"][0]["height"],1920 if portrait else 1080)
+                # Verify actual visual content, not only the output metadata.
+                # The center pixel must follow the explicit photo windows and
+                # return to the red cabinet in every unassigned interval.
+                def center_rgb(at_seconds):
+                    raw = subprocess.check_output([
+                        "ffmpeg", "-hide_banner", "-loglevel", "error",
+                        "-ss", str(at_seconds), "-i", str(output),
+                        "-frames:v", "1",
+                        "-vf", "crop=2:2:(iw-2)/2:(ih-2)/2,scale=1:1,format=rgb24",
+                        "-f", "rawvideo", "-pix_fmt", "rgb24", "-"
+                    ])
+                    self.assertEqual(len(raw), 3)
+                    return tuple(raw)
 
-            def assert_scene(at_seconds, scene):
-                r, g, b = center_rgb(at_seconds)
-                if scene == "blue":
-                    self.assertGreater(b, r + 60)
-                    self.assertGreater(b, g + 60)
-                elif scene == "yellow":
-                    self.assertGreater(r, b + 60)
-                    self.assertGreater(g, b + 60)
-                elif scene == "green":
-                    self.assertGreater(g, r + 45)
-                    self.assertGreater(g, b + 45)
-                elif scene == "red":
-                    self.assertGreater(r, g + 60)
-                    self.assertGreater(r, b + 60)
-                else:
-                    self.fail(f"Unknown scene: {scene}")
+                def assert_scene(at_seconds, scene):
+                    r, g, b = center_rgb(at_seconds)
+                    if scene == "blue":
+                        self.assertGreater(b, r + 60)
+                        self.assertGreater(b, g + 60)
+                    elif scene == "yellow":
+                        self.assertGreater(r, b + 60)
+                        self.assertGreater(g, b + 60)
+                    elif scene == "green":
+                        self.assertGreater(g, r + 45)
+                        self.assertGreater(g, b + 45)
+                    elif scene == "red":
+                        self.assertGreater(r, g + 60)
+                        self.assertGreater(r, b + 60)
+                    else:
+                        self.fail(f"Unknown scene: {scene}")
 
-            for sample_time, scene in (
-                (0.75, "blue"),    # opening image
-                (1.75, "red"),     # unassigned gap uses cabinet
-                (3.00, "yellow"),  # verse image
-                (4.75, "red"),     # second gap uses cabinet
-                (5.50, "green"),   # outro image
-            ):
-                with self.subTest(time=sample_time, scene=scene):
-                    assert_scene(sample_time, scene)
+                for sample_time, scene in (
+                    (0.75, "blue"),    # opening image
+                    (1.75, "red"),     # unassigned gap uses cabinet
+                    (3.00, "yellow"),  # verse image
+                    (4.75, "red"),     # second gap uses cabinet
+                    (5.50, "green"),   # outro image
+                ):
+                    with self.subTest(time=sample_time, scene=scene):
+                        assert_scene(sample_time, scene)
+
 
 
 if __name__ == "__main__":
