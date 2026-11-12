@@ -12,7 +12,7 @@ export default function AdminJukeboxStudio(){
   const [sceneCount,setSceneCount]=useState(3);
   const [audioDuration,setAudioDuration]=useState(0);
   const [playhead,setPlayhead]=useState(0);
-  const [localClips,setLocalClips]=useState<{name:string;url:string}[]>([]);
+  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video"}[]>([]);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -32,9 +32,10 @@ export default function AdminJukeboxStudio(){
   const introTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(30,plannedDuration*.20);
   const outroTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10);
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
-  const clipTime=middleTime/sceneCount;
+  const effectiveSceneCount=localClips.length||sceneCount;
+  const clipTime=middleTime/effectiveSceneCount;
   const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
-  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/sceneCount))):-1;
+  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/effectiveSceneCount))):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
@@ -77,15 +78,16 @@ export default function AdminJukeboxStudio(){
     if(!song||plannedDuration<=0||style!=="hybrid")return;
     const entries=[
       {type:"jukebox_intro",start:0,duration:introTime},
-      ...Array.from({length:sceneCount},(_,index)=>({
+      ...Array.from({length:effectiveSceneCount},(_,index)=>({
         type:"music_video_scene",sequence:index+1,
         filename:localClips[index]?.name||null,
+        mediaKind:localClips[index]?.kind||null,
         start:introTime+index*clipTime,duration:clipTime,
       })),
       {type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime},
     ];
     const manifest={
-      version:1,renderStatus:"planning_only",songId:song.id,songTitle:song.title,
+      version:2,renderStatus:"planning_only",songId:song.id,songTitle:song.title,
       format,seconds:plannedDuration,style,localMediaIncluded:false,
       entries:entries.map(entry=>({...entry,start:Number(entry.start.toFixed(3)),duration:Number(entry.duration.toFixed(3))})),
     };
@@ -107,12 +109,26 @@ export default function AdminJukeboxStudio(){
   }
   function chooseLocalClips(files:FileList|null){
     if(!files)return;
-    const chosen=Array.from(files).slice(0,12).filter(file=>file.type.startsWith("video/"));
-    const replacements=chosen.map(file=>({name:file.name,url:URL.createObjectURL(file)}));
-    for(const url of localClipUrls.current)URL.revokeObjectURL(url);
-    localClipUrls.current=replacements.map(clip=>clip.url);
-    setLocalClips(replacements);
-    if(chosen.length)setSceneCount(chosen.length);
+    // Append without replacing earlier selections. Keep within the 12-scene
+    // limit enforced by the existing private rendering contract.
+    const available=Math.max(0,12-localClips.length);
+    const chosen=Array.from(files).filter(file=>
+      file.type.startsWith("video/")||file.type.startsWith("image/")
+    ).slice(0,available);
+    const additions=chosen.map(file=>({
+      name:file.name,url:URL.createObjectURL(file),
+      kind:(file.type.startsWith("image/")?"image":"video") as "image"|"video"
+    }));
+    localClipUrls.current.push(...additions.map(clip=>clip.url));
+    setLocalClips(previous=>[...previous,...additions]);
+    if(files.length>available)setJobNotice("Maksimalt 12 scener per video i denne versjonen. Tidligere valgte bilder beholdes.");
+  }
+  function removeLocalClip(index:number){
+    const removed=localClips[index];
+    if(!removed)return;
+    localClipUrls.current=localClipUrls.current.filter(url=>url!==removed.url);
+    URL.revokeObjectURL(removed.url);
+    setLocalClips(previous=>previous.filter((_,position)=>position!==index));
   }
 
   async function togglePlayback(){
@@ -147,38 +163,39 @@ export default function AdminJukeboxStudio(){
       </select></label>}
     </div>
     {style==="hybrid"&&<div className="admin-warning" role="status">
-      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Med valgte lokale klipp vises også scenene i tidslinjen under avspilling.
+      <Clapperboard size={16}/> Hybrid: jukebox i starten ({hybridIntro}), egen musikkvideo i midten, og jukebox tilbake til avslutning ({hybridOutro}). Musikken spiller sammenhengende. Midtscenene må lages eller velges og godkjennes før produksjon. Med valgte lokale bilder og videoer vises scenene i tidslinjen under avspilling.
     </div>}
     {style==="hybrid"&&<div className="jukebox-timeline" aria-label="Klippplan for hybridvideo">
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
       {plannedDuration>0?<div className="jukebox-timeline-track">
         <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
-        {Array.from({length:sceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
+        {Array.from({length:effectiveSceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
         <div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. {localClips.length?"De valgte filene vises nå under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · Avslutning: {stamp(outroTime)}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
-      <h3>Se gjennom egne videoscener</h3>
-      <p>Velg opptil 12 videoer fra enheten for lokal forhåndsvisning. Bruk «Før» og «Etter» for å endre rekkefølge. Filene lastes ikke opp, lagres ikke i kontoen og brukes ikke i produksjonskøen. Klippene spilles av uten lyd her.</p>
-      <label className="jukebox-file-picker">Velg videoklipp
-        <input type="file" accept="video/*" multiple onChange={event=>chooseLocalClips(event.currentTarget.files)}/>
+      <h3>Velg egne bilder og videoscener</h3>
+      <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Dette er en lokal forhåndsvisning; filene lagres ikke i kontoen eller produksjonskøen.</p>
+      <label className="jukebox-file-picker">Legg til bilder eller videoklipp
+        <input type="file" accept="video/*,image/jpeg,image/png,image/webp" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
       </label>
       {localClips.length>0&&<div className="jukebox-local-grid">
         {localClips.map((clip,index)=><figure key={clip.url}>
-          <video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>
+          {clip.kind==="image"?<img src={clip.url} alt={`Scene ${index+1}: ${clip.name}`}/>:<video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>}
           <figcaption>Scene {index+1} · {clip.name}</figcaption>
           <div className="jukebox-clip-order">
             <button type="button" disabled={index===0} onClick={()=>moveLocalClip(index,-1)} aria-label={`Flytt scene ${index+1} opp`}><ArrowUp size={15}/> Før</button>
             <button type="button" disabled={index===localClips.length-1} onClick={()=>moveLocalClip(index,1)} aria-label={`Flytt scene ${index+1} ned`}><ArrowDown size={15}/> Etter</button>
+            <button type="button" onClick={()=>removeLocalClip(index)} aria-label={`Fjern scene ${index+1}`}>Fjern</button>
           </div>
         </figure>)}
       </div>}
     </section>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} aria-label={`Forhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
       {activeClip&&<div className="jukebox-scene-player">
-        <video key={activeClip.url} ref={sceneVideo} src={activeClip.url} muted playsInline loop autoPlay={playing} preload="auto" aria-label={`Musikkvideoscene ${activeClipIndex+1}`}/>
+        {activeClip.kind==="image"?<img key={activeClip.url} src={activeClip.url} alt={`Bildescene ${activeClipIndex+1}`}/>:<video key={activeClip.url} ref={sceneVideo} src={activeClip.url} muted playsInline loop autoPlay={playing} preload="auto" aria-label={`Musikkvideoscene ${activeClipIndex+1}`}/>}
         <div className="jukebox-scene-label">Musikkvideo · scene {activeClipIndex+1} av {localClips.length}</div>
       </div>}
       {!activeClip&&
