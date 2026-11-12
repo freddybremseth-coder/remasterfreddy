@@ -97,7 +97,16 @@ class TimedSectionTests(unittest.TestCase):
                     "-c:v","libx264","-pix_fmt","yuv420p",str(output)],
                     check=True,capture_output=True)
                 return output
-            visual("jukebox.mp4","red")
+            # Cabinet changes color halfway through the six-second song.
+            # Its animation must NOT restart from red after a photo gap.
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "lavfi", "-i", "color=c=red:s=320x180:r=25:d=3",
+                "-f", "lavfi", "-i", "color=c=magenta:s=320x180:r=25:d=3",
+                "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]",
+                "-map", "[v]", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                str(cabinet)
+            ], check=True, capture_output=True)
             for i,color in enumerate(("blue","yellow","green")):
                 photos.append(visual(f"photo-scene-{i:02d}.mp4",color))
             rows=[
@@ -141,7 +150,7 @@ class TimedSectionTests(unittest.TestCase):
                             self.assertGreater(audio_rms(sample_time), 100)
                     # Verify actual visual content, not only the output metadata.
                     # The center pixel must follow the explicit photo windows and
-                    # return to the red cabinet in every unassigned interval.
+                    # use the cabinet at its current song-time position.
                     def center_rgb(at_seconds):
                         raw = subprocess.check_output([
                             "ffmpeg", "-hide_banner", "-loglevel", "error",
@@ -167,6 +176,9 @@ class TimedSectionTests(unittest.TestCase):
                         elif scene == "red":
                             self.assertGreater(r, g + 60)
                             self.assertGreater(r, b + 60)
+                        elif scene == "magenta":
+                            self.assertGreater(r, g + 60)
+                            self.assertGreater(b, g + 60)
                         else:
                             self.fail(f"Unknown scene: {scene}")
 
@@ -174,7 +186,7 @@ class TimedSectionTests(unittest.TestCase):
                         (0.75, "blue"),    # opening image
                         (1.75, "red"),     # unassigned gap uses cabinet
                         (3.00, "yellow"),  # verse image
-                        (4.75, "red"),     # second gap uses cabinet
+                        (4.75, "magenta"), # second gap continues cabinet timeline
                         (5.50, "green"),   # outro image
                     ):
                         with self.subTest(time=sample_time, scene=scene):
