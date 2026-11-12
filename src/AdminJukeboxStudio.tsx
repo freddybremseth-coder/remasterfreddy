@@ -15,7 +15,7 @@ export default function AdminJukeboxStudio(){
   const [endWithLastScene,setEndWithLastScene]=useState(false);
   const [audioDuration,setAudioDuration]=useState(0);
   const [playhead,setPlayhead]=useState(0);
-  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean}[]>([]);
+  const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean;section?:string;weight?:number}[]>([]);
   const [draftBusy,setDraftBusy]=useState(false);
   const [draftLoading,setDraftLoading]=useState(false);
   const [draftNotice,setDraftNotice]=useState("");
@@ -41,9 +41,12 @@ export default function AdminJukeboxStudio(){
   const outroTime=endWithLastScene&&style==="hybrid"?0:(format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10));
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
   const effectiveSceneCount=localClips.length||sceneCount;
-  const clipTime=middleTime/effectiveSceneCount;
+  const sceneWeights=Array.from({length:effectiveSceneCount},(_,index)=>Math.max(1,Math.min(3,localClips[index]?.weight||2)));
+  const weightTotal=sceneWeights.reduce((sum,value)=>sum+value,0);
+  const sceneDurations=sceneWeights.map(weight=>middleTime*weight/weightTotal);
+  const sceneStarts=sceneDurations.map((_,index)=>introTime+sceneDurations.slice(0,index).reduce((sum,value)=>sum+value,0));
   const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
-  const activeClipIndex=inMiddle?Math.min(localClips.length-1,Math.floor((playhead-introTime)/Math.max(.001,middleTime/effectiveSceneCount))):-1;
+  const activeClipIndex=inMiddle?Math.max(0,Math.min(localClips.length-1,sceneStarts.findIndex((start,index)=>playhead<start+sceneDurations[index]))):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
@@ -109,7 +112,7 @@ export default function AdminJukeboxStudio(){
     if(localClips.some(clip=>!clip.file)){setDraftNotice("Kunne ikke lagre: ett eller flere klipp mangler originalfil.");return;}
     setDraftBusy(true);
     try{
-      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale)}))};
+      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2}))};
       await saveJukeboxDraft(draft);
       setDraftNotice("Utkastet er lagret i denne nettleseren. Det er ikke lastet opp til kontoen og kan forsvinne om nettleserdata slettes.");
     }catch{setDraftNotice("Lagringen mislyktes. Kontroller nettleserens lagringsplass og innstillinger.");}
@@ -120,7 +123,7 @@ export default function AdminJukeboxStudio(){
     if(localClips.some(clip=>!clip.file)){setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;}
     setDraftBusy(true);
     try{
-      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale)}))};
+      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2}))};
       const blob=await exportPortableDraft(draft);
       const url=URL.createObjectURL(blob);
       const link=document.createElement("a");link.href=url;link.download=`jukebox-${songId}-backup.json`;
@@ -161,7 +164,9 @@ export default function AdminJukeboxStudio(){
         filename:localClips[index]?.name||null,
         mediaKind:localClips[index]?.kind||null,
         finale:Boolean(localClips[index]?.finale),
-        start:introTime+index*clipTime,duration:clipTime,
+        section:localClips[index]?.section||"Fri scene",
+        weight:sceneWeights[index],
+        start:sceneStarts[index],duration:sceneDurations[index],
       })),
       ...(outroTime>0?[{type:"jukebox_outro",start:plannedDuration-outroTime,duration:outroTime}]:[]),
     ];
@@ -197,7 +202,7 @@ export default function AdminJukeboxStudio(){
       file.type.startsWith("video/")||file.type.startsWith("image/")
     ).slice(0,available);
     const additions=chosen.map(file=>({
-      name:file.name,url:URL.createObjectURL(file),file,
+      name:file.name,url:URL.createObjectURL(file),file,section:"Fri scene",weight:2,
       kind:(file.type.startsWith("image/")?"image":"video") as "image"|"video"
     }));
     localClipUrls.current.push(...additions.map(clip=>clip.url));
@@ -208,12 +213,15 @@ export default function AdminJukeboxStudio(){
     });
     if(files.length>available)setJobNotice("Maksimalt 12 scener per video i denne versjonen. Tidligere valgte bilder beholdes.");
   }
+  function changeScene(index:number,field:"section"|"weight",value:string|number){
+    setLocalClips(previous=>previous.map((clip,position)=>position===index?{...clip,[field]:value}:clip));
+  }
   function setFinale(index:number){
     setLocalClips(previous=>{
       const chosen=previous[index];
       if(!chosen)return previous;
       const others=previous.filter((_,position)=>position!==index).map(clip=>({...clip,finale:false}));
-      return [...others,{...chosen,finale:true}];
+      return [...others,{...chosen,finale:true,section:"Avslutning"}];
     });
     setEndWithLastScene(true);
   }
@@ -266,11 +274,11 @@ export default function AdminJukeboxStudio(){
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
       {plannedDuration>0?<div className="jukebox-timeline-track">
         <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
-        {Array.from({length:effectiveSceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:clipTime}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(introTime+index*clipTime)}–${stamp(introTime+(index+1)*clipTime)}`}>S{index+1}</div>)}
+        {Array.from({length:effectiveSceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:sceneDurations[index]}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(sceneStarts[index])}–${stamp(sceneStarts[index]+sceneDurations[index])}`}>S{index+1}</div>)}
         {outroTime>0&&<div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>}
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Hver scene: ca. {stamp(clipTime)} · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
@@ -292,6 +300,15 @@ export default function AdminJukeboxStudio(){
         {localClips.map((clip,index)=><figure key={clip.url}>
           {clip.kind==="image"?<img src={clip.url} alt={`Scene ${index+1}: ${clip.name}`}/>:<video src={clip.url} controls muted playsInline preload="metadata" aria-label={`Scene ${index+1}: ${clip.name}`}/>}
           <figcaption>Scene {index+1} · {clip.name}{clip.finale?" · Låst som avslutning":""}</figcaption>
+          <div className="jukebox-scene-settings">
+            <label>Del av sangen<select aria-label={`Sangdel scene ${index+1}`} value={clip.section||"Fri scene"} onChange={event=>changeScene(index,"section",event.target.value)}>
+              {["Fri scene","Åpning","Vers 1","Refreng","Vers 2","Bro / mellomspill","Vers 3","Avslutning"].map(value=><option key={value} value={value}>{value}</option>)}
+            </select></label>
+            <label>Visningstid<select aria-label={`Visningstid scene ${index+1}`} value={clip.weight||2} onChange={event=>changeScene(index,"weight",Number(event.target.value))}>
+              <option value={1}>Kort</option><option value={2}>Normal</option><option value={3}>Lang</option>
+            </select></label>
+            {plannedDuration>0&&<span>Ca. {stamp(sceneDurations[index])} · {stamp(sceneStarts[index])}–{stamp(sceneStarts[index]+sceneDurations[index])}</span>}
+          </div>
           <div className="jukebox-clip-order">
             <button type="button" disabled={index===0||Boolean(clip.finale)||Boolean(localClips[index-1]?.finale)} onClick={()=>moveLocalClip(index,-1)} aria-label={`Flytt scene ${index+1} opp`}><ArrowUp size={15}/> Før</button>
             <button type="button" disabled={index===localClips.length-1||Boolean(clip.finale)||Boolean(localClips[index+1]?.finale)} onClick={()=>moveLocalClip(index,1)} aria-label={`Flytt scene ${index+1} ned`}><ArrowDown size={15}/> Etter</button>

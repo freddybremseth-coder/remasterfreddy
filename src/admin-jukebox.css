@@ -106,3 +106,9 @@
 /* A selected ending stays visibly pinned while new photos are inserted before it. */
 .jukebox-clip-order{flex-wrap:wrap;justify-content:flex-start}
 .jukebox-finale-tag{display:inline-flex;align-items:center;padding:7px 9px;color:#ffe6a9;border:1px solid #b48b40;background:#42351c;border-radius:7px;font-size:12px;font-weight:700}
+
+/* Individual photo scene controls: readable on small screens. */
+.jukebox-scene-settings{display:grid;gap:8px;padding:0 10px 10px}
+.jukebox-scene-settings label{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#e3edf3}
+.jukebox-scene-settings select{max-width:100%;min-width:115px;border:1px solid #567c91;border-radius:6px;padding:6px;color:#fff;background:#183446}
+.jukebox-scene-settings span{font-size:11px;color:#c1dce9}
