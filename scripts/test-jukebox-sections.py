@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Real FFmpeg test of exact photo windows, opening/outro and original soundtrack."""
 import importlib.util
+import array
+import math
 import json
 import shutil
 import subprocess
@@ -84,6 +86,23 @@ class TimedSectionTests(unittest.TestCase):
                     self.assertEqual(probe["streams"][1]["codec_name"],"aac")
                     self.assertEqual(probe["streams"][0]["width"],1080 if portrait else 1920)
                     self.assertEqual(probe["streams"][0]["height"],1920 if portrait else 1080)
+                    # Decode separate windows before, during and after visual
+                    # cuts. A present AAC track alone does not prove it plays.
+                    def audio_rms(at_seconds):
+                        pcm = subprocess.check_output([
+                            "ffmpeg", "-hide_banner", "-loglevel", "error",
+                            "-ss", str(at_seconds), "-i", str(output),
+                            "-t", "0.20", "-vn", "-ac", "1", "-ar", "16000",
+                            "-f", "s16le", "-acodec", "pcm_s16le", "-"
+                        ])
+                        samples = array.array("h")
+                        samples.frombytes(pcm)
+                        self.assertGreater(len(samples), 2000)
+                        return math.sqrt(sum(v * v for v in samples) / len(samples))
+
+                    for sample_time in (0.75, 1.75, 3.00, 4.75, 5.50):
+                        with self.subTest(audio_at=sample_time):
+                            self.assertGreater(audio_rms(sample_time), 100)
                     # Verify actual visual content, not only the output metadata.
                     # The center pixel must follow the explicit photo windows and
                     # return to the red cabinet in every unassigned interval.
