@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
-import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
+import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
@@ -31,6 +31,9 @@ export default function AdminJukeboxStudio(){
   const [jobs,setJobs]=useState<JukeboxJob[]>([]);
   const [jobBusy,setJobBusy]=useState(false);
   const [jobNotice,setJobNotice]=useState("");
+  const [privateReadiness,setPrivateReadiness]=useState<PrivateJukeboxReadiness|null>(null);
+  const [readinessBusy,setReadinessBusy]=useState(false);
+  const [readinessError,setReadinessError]=useState("");
   const renderEnabled=import.meta.env.VITE_JUKEBOX_RENDER_ENABLED==="true";
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
@@ -65,6 +68,13 @@ export default function AdminJukeboxStudio(){
     try{setJobs(await loadJukeboxJobs());}catch(err){setJobNotice(err instanceof Error?err.message:"Jukebox-køen er ennå ikke tilgjengelig.");}
   }
   useEffect(()=>{if(renderEnabled)void refreshJobs();},[renderEnabled]);
+  async function checkPrivateReadiness(){
+    if(readinessBusy)return;
+    setReadinessBusy(true);setReadinessError("");setPrivateReadiness(null);
+    try{setPrivateReadiness(await loadPrivateJukeboxReadiness());}
+    catch(error){setReadinessError(error instanceof Error?error.message:"Renderstatus kunne ikke hentes.");}
+    finally{setReadinessBusy(false);}
+  }
   async function queueVideo(){
     if(!songId||!renderEnabled||jobBusy||style==="hybrid")return;
     setJobBusy(true);setError("");setJobNotice("");
@@ -326,6 +336,18 @@ export default function AdminJukeboxStudio(){
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
       </div>
       <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
+      <div className="jukebox-private-render-gate" aria-label="Status for privat MP4-rendering">
+        <h3>Lag privat MP4</h3>
+        <p>Kontroller at Jukebox-serveren og den private renderarbeideren er klare. Statuskontrollen laster ikke opp bildene og starter ingen produksjon.</p>
+        <button type="button" className="admin-secondary" disabled={readinessBusy||draftBusy||draftLoading} onClick={()=>void checkPrivateReadiness()}>{readinessBusy?"Kontrollerer…":"Kontroller privat MP4-status"}</button>
+        {readinessError&&<p role="alert">{readinessError} Bruk «Klargjør privat MP4 – last ned prosjekt» inntil renderløpet er aktivert.</p>}
+        {privateReadiness&&<div role="status">
+          <p>{privateReadiness.liveRenderingVerified?"Renderarbeideren er rapportert verifisert.":"Renderarbeider er ennå ikke verifisert i produksjon."} {privateReadiness.privateMediaReady?"Privat medielagring er klar.":"Privat medielagring eller godkjent kabinettmotiv mangler."}</p>
+          <ul>{privateReadiness.checks.map(check=><li key={check.id}>{check.ready?"Klar":"Mangler"}: {({database:"Databaseskjema",private_storage:"Privat MP4-lagring",private_clips:"Privat klipplagring",cabinet_asset:"Godkjent Rock-Ola-motiv",clip_export:"Eksport av private klipp",private_review:"Privat godkjenning"} as Record<string,string>)[check.id]||check.id}</li>)}</ul>
+        </div>}
+        <button type="button" className="admin-primary" disabled title="Privat renderkø aktiveres først etter verifisert renderarbeider og sikker medieopplasting"><Clapperboard size={16}/> Lag privat MP4 – ikke aktivert ennå</button>
+        <p>Bruk prosjektfilen til privat rendering inntil sikker opplasting og renderarbeider er koblet til. Ingen YouTube-publisering.</p>
+      </div>
       <div className="admin-warning jukebox-render-handoff" role="status">
         <Clapperboard size={18}/>
         <div>
