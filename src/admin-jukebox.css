@@ -135,3 +135,12 @@
 .jukebox-private-render-gate ul{padding-left:22px;display:grid;gap:5px;font-size:13px}
 .jukebox-private-render-gate>button{justify-self:start}
 .jukebox-private-render-gate button:disabled{cursor:not-allowed;opacity:.65}
+
+/* Local, per-song MP4 review. Never uploads or marks a remote job approved. */
+.jukebox-private-review-import{margin:18px 0;padding:16px;background:#10232d;border:1px solid #4b7586;border-radius:12px;display:grid;gap:12px;color:#e5f2f8}
+.jukebox-private-review-import h3,.jukebox-private-review-import p{margin:0}
+.jukebox-private-review-import label{display:grid;gap:7px;font-weight:600}
+.jukebox-private-review-import input{max-width:100%;font:inherit}
+.jukebox-imported-video{display:grid;gap:10px;min-width:0}
+.jukebox-imported-video video{display:block;width:100%;max-height:66vh;aspect-ratio:16/9;object-fit:contain;background:#03090e;border-radius:9px}
+.jukebox-imported-video code{overflow-wrap:anywhere;font-size:12px}
