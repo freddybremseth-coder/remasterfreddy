@@ -6,6 +6,7 @@ import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
 import {validatePrivateMp4File,validatePrivateMp4Duration,hashPrivateMp4} from "./lib/jukebox-private-review";
 import {validateJukeboxSelectedMedia} from "./lib/jukebox-media-validation";
+import {PRIVATE_PHOTO_UPLOAD_ENABLED,uploadPrivateJukeboxPhoto} from "./lib/jukebox-private-photo-upload";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -40,6 +41,9 @@ export default function AdminJukeboxStudio(){
   const [sceneStatus,setSceneStatus]=useState<JukeboxPrivateSceneStatus|null>(null);
   const [sceneStatusBusy,setSceneStatusBusy]=useState(false);
   const [sceneStatusError,setSceneStatusError]=useState("");
+  const [photoUploadBusy,setPhotoUploadBusy]=useState(false);
+  const [photoUploadNotice,setPhotoUploadNotice]=useState("");
+  const photoUploadEpoch=useRef(0);
   const [reviewFile,setReviewFile]=useState<File|null>(null);
   const [reviewUrl,setReviewUrl]=useState("");
   const reviewUrlRef=useRef("");
@@ -117,6 +121,34 @@ export default function AdminJukeboxStudio(){
     document.body.appendChild(anchor);anchor.click();anchor.remove();
     window.setTimeout(()=>URL.revokeObjectURL(url),1500);
   }
+  async function uploadSelectedPhotos(){
+    if(!PRIVATE_PHOTO_UPLOAD_ENABLED||photoUploadBusy||draftBusy||draftLoading||!songId)return;
+    if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sceneJobId.trim())){
+      setPhotoUploadNotice("Oppgi en gyldig privat jobb-ID først.");return;
+    }
+    if(!localClips.length||localClips.some(clip=>clip.kind!=="image"||!(clip.file instanceof Blob))){
+      setPhotoUploadNotice("Velg bare fotografier med tilgjengelige originalfiler. Videoklipp støttes ikke i denne opplastingen.");return;
+    }
+    if(!window.confirm(`Laste opp ${localClips.length} private bilder til jobb ${sceneJobId.trim()}? Bildene kan ikke publiseres fra denne funksjonen.`))return;
+    setPhotoUploadBusy(true);setPhotoUploadNotice("");setSceneStatus(null);
+    const epoch=++photoUploadEpoch.current;
+    const jobId=sceneJobId.trim();
+    try{
+      for(const [index,clip] of localClips.entries()){
+        if(epoch!==photoUploadEpoch.current)throw new Error("Jobben eller sangen ble endret under opplastingen. Kontroller bildestatusen.");
+        if(!clip.file)throw new Error(`Originalfilen til scene ${index+1} mangler.`);
+        const file=clip.file instanceof File?clip.file:new File([clip.file],clip.name,{type:clip.file.type});
+        setPhotoUploadNotice(`Laster opp bilde ${index+1} av ${localClips.length}…`);
+        await uploadPrivateJukeboxPhoto(jobId,index,file);
+      }
+      if(epoch===photoUploadEpoch.current){
+        setPhotoUploadNotice("Alle valgte bilder er sendt og lagringsmetadata kontrollert. Dekoding og rendering gjenstår.");
+        setSceneStatus(await loadJukeboxPrivateSceneStatus(jobId));
+      }
+    }catch(error){if(epoch===photoUploadEpoch.current)
+      setPhotoUploadNotice(error instanceof Error?error.message:"Privat bildeopplasting ble stoppet.");}
+    finally{setPhotoUploadBusy(false);}
+  }
   async function checkSceneJobStatus(){
     if(sceneStatusBusy)return;
     setSceneStatusBusy(true);setSceneStatus(null);setSceneStatusError("");
@@ -155,6 +187,8 @@ export default function AdminJukeboxStudio(){
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
   useEffect(()=>()=>{if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);},[]);
   useEffect(()=>{
+    photoUploadEpoch.current+=1;
+    setPhotoUploadNotice("");setSceneStatus(null);
     reviewEpoch.current+=1;
     if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);
     reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);
@@ -417,10 +451,20 @@ export default function AdminJukeboxStudio(){
           <div className="jukebox-scene-progress-actions">
             <input id="jukebox-scene-job-id" type="text" value={sceneJobId}
               placeholder="Jobb-ID (UUID)" autoComplete="off"
-              onChange={event=>{setSceneJobId(event.target.value);setSceneStatus(null);setSceneStatusError("");}}/>
+              onChange={event=>{photoUploadEpoch.current+=1;setSceneJobId(event.target.value);setSceneStatus(null);setSceneStatusError("");setPhotoUploadNotice("");}}/>
             <button className="admin-secondary" type="button" disabled={sceneStatusBusy}
               onClick={()=>void checkSceneJobStatus()}>{sceneStatusBusy?"Kontrollerer…":"Kontroller bilder"}</button>
           </div>
+          {PRIVATE_PHOTO_UPLOAD_ENABLED
+            ?<div className="jukebox-photo-upload-actions">
+              <p>Sender bare bildene fra den valgte sangen til eksisterende jobb-ID, i vist scenerekkefølge. Opplastingen må startes manuelt.</p>
+              <button type="button" className="admin-secondary" disabled={photoUploadBusy||draftLoading||!localClips.length}
+                onClick={()=>void uploadSelectedPhotos()}>
+                {photoUploadBusy?"Laster opp private bilder…":`Last opp ${localClips.length} bilder privat`}
+              </button>
+            </div>
+            :<p>Privat bildeopplasting er foreløpig deaktivert. Du kan fortsatt lagre og eksportere prosjektet lokalt.</p>}
+          {photoUploadNotice&&<p role="status">{photoUploadNotice}</p>}
           {sceneStatusError&&<p role="alert">{sceneStatusError}</p>}
           {sceneStatus&&<div role="status" className="jukebox-scene-progress-result">
             <strong>{sceneStatus.sceneCount===0?"Ingen reserverte bilder":sceneStatus.allUploadedMetadataMatches?
