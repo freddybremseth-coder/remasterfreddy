@@ -112,3 +112,18 @@
 .jukebox-scene-settings label{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#e3edf3}
 .jukebox-scene-settings select{max-width:100%;min-width:115px;border:1px solid #567c91;border-radius:6px;padding:6px;color:#fff;background:#183446}
 .jukebox-scene-settings span{font-size:11px;color:#c1dce9}
+
+/* Reusable song video templates – compact on mobile. */
+.jukebox-template-intro{margin:18px 0;padding:16px;border:1px solid #547b8b;border-radius:14px;background:linear-gradient(140deg,#102b37,#172834);color:#eaf2f8}
+.jukebox-template-intro h3{margin:0 0 8px}
+.jukebox-template-picker{display:grid;gap:8px;max-width:680px;margin-top:12px}
+.jukebox-template-picker label{font-weight:700}
+.jukebox-template-picker select{width:100%;min-width:0;border-radius:9px;border:1px solid #83a5b4;background:#0d1e2a;color:white;padding:11px}
+.jukebox-template-picker p{font-size:13px;margin:0;color:#d5e4ec}
+
+/* v3-style private preview: soft cut-in and a restrained still-photo push. */
+.jukebox-scene-fade{animation:jukebox-scene-arrive .55s ease-out both}
+.jukebox-scene-fade>img{animation:jukebox-photo-push 14s ease-in-out both;transform-origin:center center}
+@keyframes jukebox-scene-arrive{from{opacity:.15}to{opacity:1}}
+@keyframes jukebox-photo-push{from{transform:scale(1)}to{transform:scale(1.055)}}
+@media(prefers-reduced-motion:reduce){.jukebox-scene-fade,.jukebox-scene-fade>img{animation:none}}

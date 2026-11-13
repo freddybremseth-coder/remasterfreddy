@@ -3,6 +3,7 @@ import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "luci
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
+import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -19,6 +20,7 @@ export default function AdminJukeboxStudio(){
   const [draftBusy,setDraftBusy]=useState(false);
   const [draftLoading,setDraftLoading]=useState(false);
   const [draftNotice,setDraftNotice]=useState("");
+  const [templateId,setTemplateId]=useState("");
   const draftLoadId=useRef(0);
   const portableInput=useRef<HTMLInputElement|null>(null);
   const localClipUrls=useRef<string[]>([]);
@@ -93,6 +95,7 @@ export default function AdminJukeboxStudio(){
     for(const url of localClipUrls.current)URL.revokeObjectURL(url);
     localClipUrls.current=[];
     setLocalClips([]);
+    setTemplateId("");
     setDraftNotice("");
     void loadJukeboxDraft(songId).then(draft=>{
       if(cancelled||requestId!==draftLoadId.current||!draft)return;
@@ -193,6 +196,20 @@ export default function AdminJukeboxStudio(){
       return reordered;
     });
   }
+  function applyTemplate(id:string){
+    const template=getJukeboxTemplate(id);
+    if(!template||draftBusy||draftLoading||!songId)return;
+    if(localClips.length>0&&!window.confirm("Bruk denne malen på bildene du allerede har valgt? Sangdeler og visningstid endres, men bildene beholdes."))return;
+    setTemplateId(id);
+    setStyle("hybrid");setFormat(template.portrait?"portrait":"landscape");
+    setSeconds(template.seconds);setEndWithLastScene(template.endWithLastScene);
+    setSceneCount(template.scenes.length);
+    setLocalClips(previous=>previous.map((clip,index)=>({
+      ...clip,...sceneDefaults(template,index,previous.length),
+      ...(clip.finale?{section:"Avslutning",weight:3}:{}),
+    })));
+    setDraftNotice(`Malen «${template.name}» er valgt. Legg inn egne bilder og trykk «Lagre utkast» når du er fornøyd.`);
+  }
   function chooseLocalClips(files:FileList|null){
     if(!files||draftLoading)return;
     // Append without replacing earlier selections. Keep within the 12-scene
@@ -201,8 +218,10 @@ export default function AdminJukeboxStudio(){
     const chosen=Array.from(files).filter(file=>
       file.type.startsWith("video/")||file.type.startsWith("image/")
     ).slice(0,available);
-    const additions=chosen.map(file=>({
-      name:file.name,url:URL.createObjectURL(file),file,section:"Fri scene",weight:2,
+    const selectedTemplate=getJukeboxTemplate(templateId);
+    const additions=chosen.map((file,index)=>({
+      name:file.name,url:URL.createObjectURL(file),file,
+      ...(selectedTemplate?sceneDefaults(selectedTemplate,localClips.filter(clip=>!clip.finale).length+index,Math.min(12,Math.max(sceneCount,localClips.length+chosen.length))):{section:"Fri scene",weight:2}),
       kind:(file.type.startsWith("image/")?"image":"video") as "image"|"video"
     }));
     localClipUrls.current.push(...additions.map(clip=>clip.url));
@@ -245,6 +264,18 @@ export default function AdminJukeboxStudio(){
     <h2>60-talls jukeboks</h2>
     <p>Velg en sang fra musikkbiblioteket og en videostil. Jukeboxen har roterende vinyl og originalmusikk, uten den kompliserte plateveksleren. Videoer lagres privat for kontroll før eventuell publisering.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
+    <div className="jukebox-template-intro">
+      <h3>Lag en ny musikkvideo med mal</h3>
+      <p>Bruk samme oppbygning som «Drømmer» med roterende vinyl, valgte fotosekvenser og myke overganger som utgangspunkt. Velg en mal for en annen sang, og erstatt bildene med dine egne. Malene styrer bare bildeplanen, ikke den ferdige MP4-renderingen.</p>
+      <div className="jukebox-template-picker">
+        <label htmlFor="jukebox-template-select">Velg videomal</label>
+        <select id="jukebox-template-select" value={templateId} disabled={!songId||draftBusy||draftLoading} onChange={event=>applyTemplate(event.target.value)}>
+          <option value="">Velg mal…</option>
+          {JUKEBOX_TEMPLATES.map(template=><option key={template.id} value={template.id}>{template.name}</option>)}
+        </select>
+        {getJukeboxTemplate(templateId)&&<p>{getJukeboxTemplate(templateId)?.description} Last opp bilder i ønsket rekkefølge og finjuster under hvert bilde.</p>}
+      </div>
+    </div>
     <div className="jukebox-controls">
       <label><span>Sang</span><select aria-label="Velg sang" value={songId} onChange={event=>setSongId(event.target.value)} disabled={loading}>
         {!songs.length&&<option value="">Ingen tilgjengelige lydfiler</option>}
@@ -278,11 +309,11 @@ export default function AdminJukeboxStudio(){
         {outroTime>0&&<div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>}
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling, men lagres ikke.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling og kan lagres som et lokalt utkast.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
-      <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Velg «Siste bilde» for å holde avslutningen på plass når du legger til flere bilder. Dette er en lokal forhåndsvisning; filene lagres ikke i kontoen eller produksjonskøen.</p>
+      <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Velg «Siste bilde» for å holde avslutningen på plass når du legger til flere bilder. Dette er en lokal forhåndsvisning. Bildene kan lagres i denne nettleseren, men ikke i kontoen eller produksjonskøen.</p>
       <label className="jukebox-file-picker">Legg til bilder eller videoklipp
         <input type="file" disabled={draftLoading} accept="video/*,image/jpeg,image/png,image/webp" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
       </label>
@@ -300,7 +331,7 @@ export default function AdminJukeboxStudio(){
         <div>
           <strong>Privat MP4 – klargjøring</strong>
           <p>Bildene, sangdelene, visningstidene og siste bilde kan eksporteres som én privat prosjektfil. Den kan brukes av den separate rendereren sammen med originalmusikken og et visuelt godkjent Rock-Ola-klipp.</p>
-          <p>Selve hybridrenderingen kan ennå ikke startes fra nettleseren. Den godkjente Rock-Ola-masteren og en ekte ende-til-ende-test mangler. Ingen opplasting til YouTube skjer her.</p>
+          <p>Selve hybridrenderingen kan ennå ikke startes fra nettleseren. Privat prøvefilm for «Drømmer» er laget og gjennomgått manuelt, men den automatiske renderkøen og godkjent generell produksjonsmaster mangler. Ingen opplasting til YouTube skjer her.</p>
         </div>
       </div>
       {draftNotice&&<p role="status">{draftNotice}</p>}
@@ -327,7 +358,7 @@ export default function AdminJukeboxStudio(){
       </div>}
     </section>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} aria-label={`Forhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
-      {activeClip&&<div className="jukebox-scene-player">
+      {activeClip&&<div key={activeClip.url} className="jukebox-scene-player jukebox-scene-fade">
         {activeClip.kind==="image"?<img key={activeClip.url} src={activeClip.url} alt={`Bildescene ${activeClipIndex+1}`}/>:<video key={activeClip.url} ref={sceneVideo} src={activeClip.url} muted playsInline loop autoPlay={playing} preload="auto" aria-label={`Musikkvideoscene ${activeClipIndex+1}`}/>}
         <div className="jukebox-scene-label">Musikkvideo · scene {activeClipIndex+1} av {localClips.length}</div>
       </div>}
