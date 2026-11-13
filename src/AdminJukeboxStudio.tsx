@@ -264,6 +264,18 @@ export default function AdminJukeboxStudio(){
     <h2>60-talls jukeboks</h2>
     <p>Velg en sang fra musikkbiblioteket og en videostil. Jukeboxen har roterende vinyl og originalmusikk, uten den kompliserte plateveksleren. Videoer lagres privat for kontroll før eventuell publisering.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
+    <div className="jukebox-template-intro">
+      <h3>Lag en ny musikkvideo med mal</h3>
+      <p>Bruk samme oppbygning som «Drømmer» med roterende vinyl, valgte fotosekvenser og myke overganger som utgangspunkt. Velg en mal for en annen sang, og erstatt bildene med dine egne. Malene styrer bare bildeplanen, ikke den ferdige MP4-renderingen.</p>
+      <div className="jukebox-template-picker">
+        <label htmlFor="jukebox-template-select">Velg videomal</label>
+        <select id="jukebox-template-select" value={templateId} disabled={!songId||draftBusy||draftLoading} onChange={event=>applyTemplate(event.target.value)}>
+          <option value="">Velg mal…</option>
+          {JUKEBOX_TEMPLATES.map(template=><option key={template.id} value={template.id}>{template.name}</option>)}
+        </select>
+        {getJukeboxTemplate(templateId)&&<p>{getJukeboxTemplate(templateId)?.description} Last opp bilder i ønsket rekkefølge og finjuster under hvert bilde.</p>}
+      </div>
+    </div>
     <div className="jukebox-controls">
       <label><span>Sang</span><select aria-label="Velg sang" value={songId} onChange={event=>setSongId(event.target.value)} disabled={loading}>
         {!songs.length&&<option value="">Ingen tilgjengelige lydfiler</option>}
@@ -300,16 +312,6 @@ export default function AdminJukeboxStudio(){
       {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling og kan lagres som et lokalt utkast.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
-      <h3>Lag en ny musikkvideo med mal</h3>
-      <p>Bruk samme oppbygning som «Drømmer» med roterende vinyl, valgte fotosekvenser og myke overganger som utgangspunkt. Velg en mal for en annen sang, og erstatt bildene med dine egne. Malene styrer bare bildeplanen, ikke den ferdige MP4-renderingen.</p>
-      <div className="jukebox-template-picker">
-        <label htmlFor="jukebox-template-select">Velg videomal</label>
-        <select id="jukebox-template-select" value={templateId} disabled={!songId||draftBusy||draftLoading} onChange={event=>applyTemplate(event.target.value)}>
-          <option value="">Velg mal…</option>
-          {JUKEBOX_TEMPLATES.map(template=><option key={template.id} value={template.id}>{template.name}</option>)}
-        </select>
-        {getJukeboxTemplate(templateId)&&<p>{getJukeboxTemplate(templateId)?.description} Last opp bilder i ønsket rekkefølge og finjuster under hvert bilde.</p>}
-      </div>
       <h3>Velg egne bilder og videoscener</h3>
       <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Velg «Siste bilde» for å holde avslutningen på plass når du legger til flere bilder. Dette er en lokal forhåndsvisning. Bildene kan lagres i denne nettleseren, men ikke i kontoen eller produksjonskøen.</p>
       <label className="jukebox-file-picker">Legg til bilder eller videoklipp
