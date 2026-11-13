@@ -349,6 +349,7 @@ export async function loadPrivateJukeboxReadiness():Promise<PrivateJukeboxReadin
 /** Read-only private photo upload status for one owner-scoped job. */
 export interface JukeboxPrivateSceneStatus {
   jobId:string;
+  songId:string;
   sceneCount:number;
   scenes:Array<{
     index:number;

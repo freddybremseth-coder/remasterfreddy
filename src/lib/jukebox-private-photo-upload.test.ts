@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {assertPrivatePhotoReservation,signedPhotoUploadUrl,PRIVATE_PHOTO_UPLOAD_ENABLED} from "./jukebox-private-photo-upload";
+import {assertPrivatePhotoReservation,signedPhotoUploadUrl,matchesPrivateJobSong,PRIVATE_PHOTO_UPLOAD_ENABLED} from "./jukebox-private-photo-upload";
 
 const job="123e4567-e89b-42d3-a456-426614174000";
 const object="423e4567-e89b-42d3-a456-426614174002";
@@ -17,6 +17,13 @@ describe("private Jukebox photo transfer",()=>{
    expect(()=>assertPrivatePhotoReservation({...reservation,publish:true},job,2,file)).toThrow();
    expect(()=>assertPrivatePhotoReservation({...reservation,bucket:"public"},job,2,file)).toThrow();
    expect(()=>assertPrivatePhotoReservation({...reservation,maxBytes:1024},job,2,file)).toThrow();
+ });
+ it("rejects another song or malformed job identity before upload",()=>{
+   const song="123e4567-e89b-42d3-a456-426614174003";
+   expect(matchesPrivateJobSong({jobId:job,songId:song},job,song)).toBe(true);
+   expect(matchesPrivateJobSong({jobId:job,songId:"123e4567-e89b-42d3-a456-426614174004"},job,song)).toBe(false);
+   expect(matchesPrivateJobSong({jobId:"123e4567-e89b-42d3-a456-426614174005",songId:song},job,song)).toBe(false);
+   expect(matchesPrivateJobSong({},job,song)).toBe(false);
  });
  it("only builds HTTPS Supabase Storage signed URLs with the reserved path",()=>{
    const url=signedPhotoUploadUrl("https://ereapsfcsqtdmzosgnnn.supabase.co",reservation);
