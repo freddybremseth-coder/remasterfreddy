@@ -36,6 +36,8 @@ on:
       - 'scripts/test-jukebox-staged-private.py'
       - 'scripts/prepare-jukebox-private-photo-plan.py'
       - 'scripts/test-jukebox-private-photo-plan.py'
+      - 'scripts/run-jukebox-verified-private-render.py'
+      - 'scripts/test-jukebox-verified-private-render.py'
       - 'scripts/stage-jukebox-cabinet.py'
       - 'scripts/test-jukebox-cabinet.py'
       - 'scripts/prepare-jukebox-catalog-spool.py'
@@ -69,6 +71,7 @@ jobs:
           python3 scripts/test-jukebox-portable-project.py
           python3 scripts/test-jukebox-staged-private.py
           python3 scripts/test-jukebox-private-photo-plan.py
+          python3 scripts/test-jukebox-verified-private-render.py
           python3 scripts/test-jukebox-cabinet.py
           python3 scripts/test-jukebox-photos.py
 
