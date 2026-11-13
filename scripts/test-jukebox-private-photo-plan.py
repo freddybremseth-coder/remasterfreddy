@@ -58,9 +58,10 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
             project,data=make_project(root,stage)
             data["clips"][0]["data"]="data:image/png;base64,"+base64.b64encode(b"WRONG"+bytes(2043)).decode()
             project.write_text(json.dumps(data))
+            new_plan=root/"rejected-handoff-plan.json"
             with self.assertRaisesRegex(ValueError,"does not match"):
-                handoff.create_plan(stage,project,root/"plan.json",fixtures.JOB,fixtures.SONG,fixtures.MASTER)
-            self.assertFalse((root/"plan.json").exists())
+                handoff.create_plan(stage,project,new_plan,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            self.assertFalse(new_plan.exists())
     def test_wrong_song_or_multiple_finales_fail(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
