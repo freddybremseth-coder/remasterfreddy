@@ -23,6 +23,11 @@ export function assertPrivatePhotoReservation(raw:unknown,jobId:string,sceneInde
     throw new Error("Privat opplastingsreservasjon samsvarer ikke med valgt jobb og scene.");
   return value as unknown as PhotoReservation;
 }
+export function matchesPrivateJobSong(status:unknown,jobId:string,songId:string):boolean{
+  if(!status||typeof status!=="object"||!UUID.test(jobId)||!UUID.test(songId))return false;
+  const result=status as Record<string,unknown>;
+  return result.jobId===jobId&&result.songId===songId;
+}
 export function signedPhotoUploadUrl(origin:string,reservation:PhotoReservation):string{
   const base=new URL(origin);
   if(base.protocol!=="https:"||!/^([a-z0-9-]+)\.supabase\.co$/.test(base.hostname)
@@ -49,7 +54,7 @@ export async function uploadPrivateJukeboxPhoto(
     headers:{"Authorization":"Bearer "+session.accessToken},
   });
   const context=await check.json().catch(()=>({}));
-  if(!check.ok||context.jobId!==jobId||context.songId!==expectedSongId)
+  if(!check.ok||!matchesPrivateJobSong(context,jobId,expectedSongId))
     throw new Error("Privat jobb-ID tilhører ikke valgt sang, eller kunne ikke kontrolleres. Ingen bilder ble sendt.");
   const response=await fetch("/api/neural-beat-jukebox-photo-reserve",{
     method:"POST",cache:"no-store",
@@ -72,7 +77,7 @@ export async function uploadPrivateJukeboxPhoto(
     headers:{"Authorization":"Bearer "+session.accessToken},
   });
   const result=await verified.json().catch(()=>({}));
-  if(!verified.ok||result.jobId!==jobId||result.songId!==expectedSongId||!Array.isArray(result.scenes)
+  if(!verified.ok||!matchesPrivateJobSong(result,jobId,expectedSongId)||!Array.isArray(result.scenes)
     ||result.scenes.find((scene:{index:number})=>scene.index===sceneIndex)?.status!=="metadata_verified_only")
     throw new Error("Bildet ble sendt, men metadata er ikke bekreftet. Kontroller jobben i bildestatusen.");
   return "metadata_verified_only";
