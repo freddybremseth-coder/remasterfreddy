@@ -333,6 +333,7 @@ export interface PrivateJukeboxReadiness {
   checks:Array<{id:string;ready:boolean}>;
   privateMediaReady:boolean;
   sectionPlacementReady:boolean;
+  photoIntakeConfigured:boolean;
   liveRenderingVerified:boolean;
   canStartPrivateRender:boolean;
   note:string;
