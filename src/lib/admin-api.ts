@@ -345,3 +345,29 @@ export async function loadPrivateJukeboxReadiness():Promise<PrivateJukeboxReadin
     throw new Error(data.error||"Privat renderstatus er ikke tilgjengelig.");
   return data as PrivateJukeboxReadiness;
 }
+
+/** Read-only private photo upload status for one owner-scoped job. */
+export interface JukeboxPrivateSceneStatus {
+  jobId:string;
+  sceneCount:number;
+  scenes:Array<{
+    index:number;
+    kind:"image"|"video"|null;
+    status:"awaiting_upload"|"metadata_verified_only"|"rejected_metadata"|"invalid_reservation";
+  }>;
+  contiguous:boolean;
+  allUploadedMetadataMatches:boolean;
+  workerDecoded:false;
+  canStartPrivateRender:false;
+  publish:false;
+  note:string;
+}
+export async function loadJukeboxPrivateSceneStatus(jobId:string):Promise<JukeboxPrivateSceneStatus>{
+  if(!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(jobId))
+    throw new Error("Oppgi en gyldig Jukebox-jobb-ID.");
+  const response=await adminFetch("/api/neural-beat-jukebox-scene-status?jobId="+encodeURIComponent(jobId),{method:"GET"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!Array.isArray(data.scenes))
+    throw new Error(data.error||"Privat bildestatus er ikke tilgjengelig.");
+  return data as JukeboxPrivateSceneStatus;
+}
