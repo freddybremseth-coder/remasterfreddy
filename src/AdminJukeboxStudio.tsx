@@ -4,6 +4,7 @@ import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
+import {validatePrivateMp4File,validatePrivateMp4Duration,hashPrivateMp4} from "./lib/jukebox-private-review";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -34,6 +35,14 @@ export default function AdminJukeboxStudio(){
   const [privateReadiness,setPrivateReadiness]=useState<PrivateJukeboxReadiness|null>(null);
   const [readinessBusy,setReadinessBusy]=useState(false);
   const [readinessError,setReadinessError]=useState("");
+  const [reviewFile,setReviewFile]=useState<File|null>(null);
+  const [reviewUrl,setReviewUrl]=useState("");
+  const reviewUrlRef=useRef("");
+  const [reviewDuration,setReviewDuration]=useState(0);
+  const [reviewError,setReviewError]=useState("");
+  const [reviewHash,setReviewHash]=useState("");
+  const [reviewBusy,setReviewBusy]=useState(false);
+  const reviewEpoch=useRef(0);
   const renderEnabled=import.meta.env.VITE_JUKEBOX_RENDER_ENABLED==="true";
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
@@ -68,6 +77,41 @@ export default function AdminJukeboxStudio(){
     try{setJobs(await loadJukeboxJobs());}catch(err){setJobNotice(err instanceof Error?err.message:"Jukebox-køen er ennå ikke tilgjengelig.");}
   }
   useEffect(()=>{if(renderEnabled)void refreshJobs();},[renderEnabled]);
+  function choosePrivateMp4(file:File|null){
+    reviewEpoch.current+=1;
+    if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);
+    reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);setReviewDuration(0);
+    setReviewHash("");setReviewError("");
+    if(!file)return;
+    const invalid=validatePrivateMp4File(file);
+    if(invalid){setReviewError(invalid);return;}
+    const url=URL.createObjectURL(file);reviewUrlRef.current=url;
+    setReviewUrl(url);setReviewFile(file);
+  }
+  async function approveLocalPreview(){
+    if(!reviewFile||reviewBusy||!song||!plannedDuration)return;
+    const error=validatePrivateMp4Duration(reviewDuration,plannedDuration);
+    if(error){setReviewError(error);return;}
+    setReviewBusy(true);setReviewError("");
+    const epoch=reviewEpoch.current;
+    try{
+      const digest=await hashPrivateMp4(reviewFile);
+      if(epoch===reviewEpoch.current)setReviewHash(digest);
+    }catch{if(epoch===reviewEpoch.current)setReviewError("Kunne ikke kontrollere filens SHA-256 i denne nettleseren.");}
+    finally{setReviewBusy(false);}
+  }
+  function downloadReviewReceipt(){
+    if(!reviewFile||!reviewHash||!song)return;
+    const receipt={version:1,type:"private-local-jukebox-mp4-review",
+      songId:song.id,songTitle:song.title,fileName:reviewFile.name,
+      bytes:reviewFile.size,sha256:reviewHash,durationSeconds:reviewDuration,
+      format,reviewedAt:new Date().toISOString(),youtubePublished:false,
+      note:"Privat kontroll på denne enheten. Ikke en servergodkjenning eller publisering."};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(receipt,null,2)],{type:"application/json"}));
+    const anchor=document.createElement("a");anchor.href=url;anchor.download=`jukebox-private-review-${song.id}.json`;
+    document.body.appendChild(anchor);anchor.click();anchor.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
   async function checkPrivateReadiness(){
     if(readinessBusy)return;
     setReadinessBusy(true);setReadinessError("");setPrivateReadiness(null);
@@ -97,6 +141,13 @@ export default function AdminJukeboxStudio(){
     else sceneVideo.current.pause();
   },[playing,activeClipIndex]);
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
+  useEffect(()=>()=>{if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);},[]);
+  useEffect(()=>{
+    reviewEpoch.current+=1;
+    if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);
+    reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);
+    setReviewDuration(0);setReviewHash("");setReviewError("");
+  },[songId]);
   useEffect(()=>{
     if(!songId)return;
     let cancelled=false;
@@ -396,6 +447,27 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>}
     </div>
+    <section className="jukebox-private-review-import" aria-label="Kontroller en ferdig privat MP4">
+      <h3>Se og kontroller en ferdig privat MP4</h3>
+      <p>Åpne en MP4 som allerede er rendret for denne sangen. Den spilles av lokalt, uten opplasting til serveren eller YouTube. Kontroll av varighet og SHA-256 kan lagres som en privat kvittering.</p>
+      <label>Velg privat MP4-fil
+        <input type="file" accept=".mp4,video/mp4" onChange={event=>{choosePrivateMp4(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
+      </label>
+      {reviewError&&<p role="alert">{reviewError}</p>}
+      {reviewUrl&&reviewFile&&<div className="jukebox-imported-video">
+        <video controls playsInline preload="metadata" src={reviewUrl}
+          onLoadedMetadata={event=>{const duration=event.currentTarget.duration;setReviewDuration(duration);setReviewError(validatePrivateMp4Duration(duration,plannedDuration)||"");setReviewHash("");}}
+          onError={()=>setReviewError("Kunne ikke spille av MP4-filen i denne nettleseren.")}/>
+        <p>{reviewFile.name} · {Math.round(reviewFile.size/1024/1024*10)/10} MB
+          {reviewDuration>0?` · ${stamp(reviewDuration)}`:""}</p>
+        <div className="jukebox-actions">
+          <button type="button" className="admin-secondary" disabled={reviewBusy||!reviewDuration||Boolean(validatePrivateMp4Duration(reviewDuration,plannedDuration))||Boolean(reviewError)}
+            onClick={()=>void approveLocalPreview()}>{reviewBusy?"Kontrollerer SHA-256…":"Bekreft privat MP4-kontroll"}</button>
+          {reviewHash&&<button type="button" className="admin-secondary" onClick={downloadReviewReceipt}>Last ned kontrollkvittering</button>}
+        </div>
+        {reviewHash&&<p role="status">Privat fil kontrollert lokalt. SHA-256: <code>{reviewHash}</code>. Dette godkjenner ikke YouTube-publisering.</p>}
+      </div>}
+    </section>
     <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=0;}else setPlayhead(position);}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
