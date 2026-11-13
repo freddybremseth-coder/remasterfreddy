@@ -26,7 +26,7 @@ export default async function handler(request: any, response: any) {
     if(!raw||typeof raw!=="object"||!Array.isArray(raw.checks))
       return response.status(502).json({error:"Ugyldig svar fra privat renderkontroll."});
     // Expose only known booleans and fixed, generic descriptions.
-    const ids=["database","private_storage","private_clips","cabinet_asset","clip_export","private_review"];
+    const ids=["database","private_storage","private_clips","cabinet_asset","clip_export","photo_intake","private_review"];
     const checks=ids.map(id=>({
       id,ready:raw.checks.some((check:any)=>check?.id===id&&check?.ready===true)
     }));
@@ -34,6 +34,7 @@ export default async function handler(request: any, response: any) {
       checks,
       privateMediaReady:raw.privateMediaReady===true,
       sectionPlacementReady:raw.sectionPlacementReady===true,
+      photoIntakeConfigured:raw.photoIntakeConfigured===true,
       liveRenderingVerified:raw.liveRenderingVerified===true,
       // Never treat configuration checks alone as evidence of an active render worker.
       canStartPrivateRender:false,
