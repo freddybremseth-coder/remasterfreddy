@@ -70,6 +70,15 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
                              [(32.5,76.25),(76.25,120)])
             self.assertEqual(assigned[-1]["section"],"outro")
 
+    def test_explicit_eight_second_rockola_intro_is_honored(self):
+        scenes=[{"section":"opening","weight":2,"cueStart":8.0},
+                {"section":"chorus","weight":3,"cueStart":90.0},
+                {"section":"outro","weight":3,"cueStart":240.0}]
+        assignments=renderer.timed_assignments(scenes,278.0,False,True)
+        self.assertEqual([x["start"] for x in assignments],[8.0,90.0,240.0])
+        self.assertEqual(assignments[-1]["end"],278.0)
+        self.assertEqual(assignments[0]["end"],90.0)
+
     def test_partial_or_reversed_cues_never_create_render_plan(self):
         for times in ((35,None),(70,50),(float("nan"),90),(True,90)):
             with self.subTest(times=times), tempfile.TemporaryDirectory() as tmp:

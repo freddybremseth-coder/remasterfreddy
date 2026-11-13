@@ -70,10 +70,13 @@ export default function AdminJukeboxStudio(){
   const sceneDurations=sceneWeights.map(weight=>middleTime*weight/weightTotal);
   const weightedStarts=sceneDurations.map((_,index)=>introTime+sceneDurations.slice(0,index).reduce((sum,value)=>sum+value,0));
   const hasManualCues=localClips.some(clip=>clip.cueStart!==undefined);
-  const manualTiming=resolveSceneTiming(localClips,introTime,plannedDuration,outroTime);
+  // When all cues are explicit, the first image start defines the cabinet intro.
+  // Legacy weight-based videos retain the old suggested intro duration.
+  const manualTiming=resolveSceneTiming(localClips,0,plannedDuration,outroTime);
+  const actualIntroTime=manualTiming?.starts[0]??introTime;
   const actualSceneStarts=manualTiming?.starts??weightedStarts;
   const actualSceneDurations=manualTiming?.durations??sceneDurations;
-  const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
+  const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=actualIntroTime&&playhead<plannedDuration-outroTime;
   const activeClipIndex=inMiddle?actualSceneStarts.findIndex((start,index)=>playhead>=start&&playhead<start+actualSceneDurations[index]):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
@@ -283,7 +286,7 @@ export default function AdminJukeboxStudio(){
       return;
     }
     const entries=[
-      {type:"jukebox_intro",start:0,duration:introTime},
+      {type:"jukebox_intro",start:0,duration:actualIntroTime},
       ...Array.from({length:effectiveSceneCount},(_,index)=>({
         type:"music_video_scene",sequence:index+1,
         filename:localClips[index]?.name||null,
@@ -429,14 +432,14 @@ export default function AdminJukeboxStudio(){
     {style==="hybrid"&&<div className="jukebox-timeline" aria-label="Klippplan for hybridvideo">
       <h3>Klippplan {plannedDuration>0?`· ${stamp(plannedDuration)}`:"· avventer lydlengde"}</h3>
       {plannedDuration>0?<div className="jukebox-timeline-track">
-        <div className="jukebox-timeline-endcap" style={{flexGrow:introTime}} title={`Jukebox 00:00–${stamp(introTime)}`}>Jukebox</div>
+        <div className="jukebox-timeline-endcap" style={{flexGrow:actualIntroTime}} title={`Jukebox 00:00–${stamp(actualIntroTime)}`}>Jukebox</div>
         {Array.from({length:effectiveSceneCount},(_,index)=><div key={index} className="jukebox-timeline-scene" style={{flexGrow:actualSceneDurations[index]}} title={`Scene ${index+1}${localClips[index]?` · ${localClips[index].name}`:""}: ${stamp(actualSceneStarts[index])}–${stamp(actualSceneStarts[index]+actualSceneDurations[index])}`}>S{index+1}</div>)}
         {outroTime>0&&<div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>}
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {hasManualCues&&!manualTiming&&<p role="alert">Tidsmarkører er ufullstendige eller overlapper. Forhåndsvisningen bruker foreløpig automatisk fordeling. Angi en gyldig starttid for hver scene, etter introen og før avslutningen.</p>}
+      {hasManualCues&&!manualTiming&&<p role="alert">Tidsmarkører er ufullstendige eller overlapper. Forhåndsvisningen bruker foreløpig automatisk fordeling. Angi en gyldig starttid for hver scene, etter sangstart og før avslutningen.</p>}
       {manualTiming&&<p role="status">Eksakte tidsmarkører brukes i forhåndsvisningen og i eksportert klippplan.</p>}
-      {plannedDuration>0&&<p>Intro: {stamp(introTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling og kan lagres som et lokalt utkast.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
+      {plannedDuration>0&&<p>Intro: {stamp(actualIntroTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling og kan lagres som et lokalt utkast.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
