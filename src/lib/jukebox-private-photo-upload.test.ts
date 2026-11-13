@@ -6,7 +6,7 @@ const object="423e4567-e89b-42d3-a456-426614174002";
 const reservation={
  path:`staging/${job}/scene-2/${object}.png`,
  token:"valid-signed-token-123456",bucket:"remaster-jukebox-clips",
- maxBytes:10485760,sceneIndex:2,status:"staging_only",publish:false
+ maxBytes:10485760,sceneIndex:2,status:"staging_only",publish:false as const
 };
 describe("private Jukebox photo transfer",()=>{
  it("is disabled in the default build",()=>expect(PRIVATE_PHOTO_UPLOAD_ENABLED).toBe(false));
