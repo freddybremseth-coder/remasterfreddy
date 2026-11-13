@@ -1,5 +1,5 @@
 /** Private browser-only draft storage; never uploads media or publishes videos. */
-export type JukeboxDraftClip={name:string;kind:"image"|"video";file:Blob;finale:boolean;section?:string;weight?:number};
+export type JukeboxDraftClip={name:string;kind:"image"|"video";file:Blob;finale:boolean;section?:string;weight?:number;cueStart?:number};
 export type JukeboxDraft={
   version:1;songId:string;format:"landscape"|"portrait";
   seconds:"full"|"15"|"30"|"60";endWithLastScene:boolean;

@@ -10,6 +10,7 @@ import base64
 import binascii
 import hashlib
 import json
+import math
 from pathlib import Path
 from importlib.util import spec_from_file_location, module_from_spec
 
@@ -76,6 +77,19 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
     if any(clip.get("finale") is True for clip in clips) and not data["endWithLastScene"]:
         raise ValueError("Pinned final scene requires last-image ending")
 
+    cue_present = ["cueStart" in clip for clip in clips]
+    if any(cue_present) and not all(cue_present):
+        raise ValueError("Manual scene timestamps must be supplied for every photo")
+    if any(cue_present):
+        if any(type(clip["cueStart"]) not in (int, float) or
+               not math.isfinite(clip["cueStart"]) or
+               clip["cueStart"] < 0 or clip["cueStart"] > 3600
+               for clip in clips):
+            raise ValueError("Invalid manual photo timestamp")
+        if any(clips[index]["cueStart"] <= clips[index-1]["cueStart"]
+               for index in range(1, len(clips))):
+            raise ValueError("Manual photo timestamps must be strictly increasing")
+
     total=0
     scenes=[]
     for index,(item,clip) in enumerate(zip(images,clips)):
@@ -112,7 +126,8 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
             raise ValueError("Invalid final-scene flag")
         scenes.append({"filename":filename,
                        "section":"outro" if clip["finale"] else SECTIONS[section],
-                       "weight":weight})
+                       "weight":weight,
+                       **({"cueStart":clip["cueStart"]} if any(cue_present) else {})})
     plan={"version":1,"jobId":expected_job_id,"songId":expected_song_id,
           "format":data["videoFormat"],
           "seconds":"full" if data["seconds"]=="full" else int(data["seconds"]),

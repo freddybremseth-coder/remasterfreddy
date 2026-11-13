@@ -96,6 +96,9 @@ def validate_staged_scene_plan(stage_dir: Path, scene_plan: Path, expected_job: 
                 or type(scene.get("weight")) is not int
                 or scene["weight"] not in (1, 2, 3)):
             raise ValueError("Invalid video section or weight")
+        if "cueStart" in scene and (type(scene["cueStart"]) not in (int, float)
+                or not math.isfinite(scene["cueStart"]) or scene["cueStart"] < 0):
+            raise ValueError("Invalid manual scene timestamp")
         file = stage_dir / filename
         if file.is_symlink() or not file.is_file():
             raise ValueError("Staged photo missing or is a symbolic link")
@@ -117,6 +120,22 @@ def timed_assignments(scenes: list[dict], seconds: float, portrait: bool,
     intro = min(3, seconds * .12) if portrait else min(30, seconds * .20)
     outro = 0 if end_with_last else (min(3, seconds * .12) if portrait else min(15, seconds * .10))
     middle = seconds - intro - outro
+    cues = ["cueStart" in scene for scene in scenes]
+    if any(cues) and not all(cues):
+        raise ValueError("Incomplete manual scene timestamps")
+    if all(cues):
+        starts = [float(scene["cueStart"]) for scene in scenes]
+        if (starts[0] < intro or any(start >= seconds - outro for start in starts)
+                or any(starts[i] <= starts[i-1] for i in range(1, len(starts)))):
+            raise ValueError("Manual scenes are overlapping or outside song window")
+        result = [
+            {"section": scene["section"], "clip": f"photo-scene-{index:02d}.mp4",
+             "start": round(start, 4),
+             "end": round(starts[index+1] if index+1 < len(starts) else seconds-outro, 4)}
+            for index, (scene, start) in enumerate(zip(scenes, starts))
+        ]
+        module("compose-jukebox-sections.py").build_section_plan(seconds, result)
+        return result
     total = sum(scene["weight"] for scene in scenes)
     cursor = intro
     result = []

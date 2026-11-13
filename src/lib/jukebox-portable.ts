@@ -1,7 +1,7 @@
 import type {JukeboxDraft,JukeboxDraftClip} from "./jukebox-drafts";
 const MAX_CLIPS=12;
 const MAX_TOTAL_BYTES=40*1024*1024;
-type PortableClip={name:string;kind:"image"|"video";finale:boolean;section?:string;weight?:number;mime:string;data:string};
+type PortableClip={name:string;kind:"image"|"video";finale:boolean;section?:string;weight?:number;cueStart?:number;mime:string;data:string};
 type PortableDraft={
   format:"remaster-jukebox-portable";version:1;
   songId:string;videoFormat:"landscape"|"portrait";
@@ -21,7 +21,7 @@ export async function exportPortableDraft(draft:JukeboxDraft):Promise<Blob>{
   if(size>MAX_TOTAL_BYTES)throw new Error("Prosjektet er over 40 MB. Bruk lokal lagring for større videoer.");
   const clips:PortableClip[]=[];
   for(const clip of draft.clips){
-    clips.push({name:clip.name,kind:clip.kind,finale:clip.finale,section:clip.section||"Fri scene",weight:clip.weight||2,
+    clips.push({name:clip.name,kind:clip.kind,finale:clip.finale,section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart,
       mime:clip.file.type||"application/octet-stream",data:await readAsDataUrl(clip.file)});
   }
   const portable:PortableDraft={format:"remaster-jukebox-portable",version:1,
@@ -60,7 +60,11 @@ export async function importPortableDraft(file:File,expectedSongId:string):Promi
     if(total>MAX_TOTAL_BYTES)throw new Error("Sikkerhetskopien inneholder mer enn 40 MB med medier.");
     const section=typeof value.section==="string"&&value.section.length<=80?value.section:"Fri scene";
     const weight=[1,2,3].includes(Number(value.weight))?Number(value.weight):2;
-    return {name:value.name,kind:value.kind,file,finale:value.finale,section,weight};
+    const cueStart=value.cueStart;
+    if(cueStart!==undefined&&(!Number.isFinite(cueStart)||cueStart<0||cueStart>36000))
+      throw new Error("Ugyldig tidsmarkør i prosjektfilen.");
+    return {name:value.name,kind:value.kind,file,finale:value.finale,section,weight,
+      ...(cueStart===undefined?{}:{cueStart})};
   });
   if(clips.filter(c=>c.finale).length>1)throw new Error("Flere avslutningsbilder er valgt.");
   const chosen=clips.findIndex(c=>c.finale);
