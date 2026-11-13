@@ -63,8 +63,9 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
         or type(receipt.get("imageCount")) is not int
         or receipt["imageCount"]!=len(images)):
         raise ValueError("The photo project and private stage have different image counts")
-    if data.get("sceneCount")!=len(clips):
-        raise ValueError("All planned photo scenes must have an image")
+    if (type(data.get("sceneCount")) is not int
+        or not len(clips)<=data["sceneCount"]<=12):
+        raise ValueError("Project scene count is smaller than selected photos")
     if any(not isinstance(clip,dict) for clip in clips):
         raise ValueError("Invalid photo entry")
     if sum(clip.get("finale") is True for clip in clips)>1:
