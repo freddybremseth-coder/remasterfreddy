@@ -54,7 +54,7 @@ class StagedPrivateTests(unittest.TestCase):
             root=Path(tmp);stage,path,_,_=prepare(root)
             with self.assertRaisesRegex(ValueError,"receipt"):
                 render.validate_staged_scene_plan(stage,path,JOB,"123e4567-e89b-42d3-a456-426614174002",MASTER)
-            (stage/"photo-01.png").write_bytes(b"tampered"+bytes(2041))
+            (stage/"photo-01.png").write_bytes(b"tampered"+bytes(2040))
             with self.assertRaisesRegex(ValueError,"checksum"):
                 render.validate_staged_scene_plan(stage,path,JOB,SONG,MASTER)
 
