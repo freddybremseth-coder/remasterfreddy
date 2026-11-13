@@ -33,16 +33,24 @@ export function signedPhotoUploadUrl(origin:string,reservation:PhotoReservation)
   return url.toString();
 }
 export async function uploadPrivateJukeboxPhoto(
-  jobId:string,sceneIndex:number,file:File,
+  jobId:string,expectedSongId:string,sceneIndex:number,file:File,
 ):Promise<"metadata_verified_only">{
   if(!PRIVATE_PHOTO_UPLOAD_ENABLED)throw new Error("Privat bildeopplasting er ikke aktivert.");
-  if(!UUID.test(jobId)||!Number.isInteger(sceneIndex)||sceneIndex<0||sceneIndex>11)
+  if(!UUID.test(jobId)||!UUID.test(expectedSongId)||!Number.isInteger(sceneIndex)||sceneIndex<0||sceneIndex>11)
     throw new Error("Ugyldig jobb eller bildeplass.");
   if(!ALLOWED.has(file.type))throw new Error("Bare JPG, PNG og WebP kan lastes opp som private bilder.");
   const invalid=validateJukeboxSelectedMedia(file);
   if(invalid)throw new Error(invalid);
   const session=await getAdminSession();
   if(!session)throw new Error("Adminøkten er utløpt. Logg inn på nytt.");
+  // Check the owner-scoped job's actual song before minting any write token.
+  const check=await fetch("/api/neural-beat-jukebox-scene-status?jobId="+encodeURIComponent(jobId),{
+    method:"GET",cache:"no-store",
+    headers:{"Authorization":"Bearer "+session.accessToken},
+  });
+  const context=await check.json().catch(()=>({}));
+  if(!check.ok||context.jobId!==jobId||context.songId!==expectedSongId)
+    throw new Error("Privat jobb-ID tilhører ikke valgt sang, eller kunne ikke kontrolleres. Ingen bilder ble sendt.");
   const response=await fetch("/api/neural-beat-jukebox-photo-reserve",{
     method:"POST",cache:"no-store",
     headers:{"Authorization":"Bearer "+session.accessToken,"Content-Type":"application/json"},
@@ -64,7 +72,7 @@ export async function uploadPrivateJukeboxPhoto(
     headers:{"Authorization":"Bearer "+session.accessToken},
   });
   const result=await verified.json().catch(()=>({}));
-  if(!verified.ok||!Array.isArray(result.scenes)
+  if(!verified.ok||result.jobId!==jobId||result.songId!==expectedSongId||!Array.isArray(result.scenes)
     ||result.scenes.find((scene:{index:number})=>scene.index===sceneIndex)?.status!=="metadata_verified_only")
     throw new Error("Bildet ble sendt, men metadata er ikke bekreftet. Kontroller jobben i bildestatusen.");
   return "metadata_verified_only";
