@@ -358,7 +358,7 @@ export default function AdminJukeboxStudio(){
       </div>}
     </section>}
     <div className={`jukebox-stage jukebox-${format} ${playing?"jukebox-active":""}`} key={`${songId}-${format}-${sceneKey}`} aria-label={`Forhåndsvisning: ${song?.title||"ingen sang valgt"}`}>
-      {activeClip&&<div className="jukebox-scene-player">
+      {activeClip&&<div key={activeClip.url} className="jukebox-scene-player jukebox-scene-fade">
         {activeClip.kind==="image"?<img key={activeClip.url} src={activeClip.url} alt={`Bildescene ${activeClipIndex+1}`}/>:<video key={activeClip.url} ref={sceneVideo} src={activeClip.url} muted playsInline loop autoPlay={playing} preload="auto" aria-label={`Musikkvideoscene ${activeClipIndex+1}`}/>}
         <div className="jukebox-scene-label">Musikkvideo · scene {activeClipIndex+1} av {localClips.length}</div>
       </div>}
