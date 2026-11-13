@@ -34,7 +34,7 @@ export default async function handler(request:any,response:any){
         .json({error:message});
     }
     const raw=await upstream.json();
-    if(!raw||raw.jobId!==id||!Array.isArray(raw.scenes)||raw.scenes.length>12
+    if(!raw||raw.jobId!==id||typeof raw.songId!=="string"||!UUID.test(raw.songId)||!Array.isArray(raw.scenes)||raw.scenes.length>12
       ||!Number.isInteger(raw.sceneCount)||raw.sceneCount!==raw.scenes.length)
       return response.status(502).json({error:"Ugyldig svar fra privat bildestatus."});
     const scenes=[];
@@ -46,7 +46,7 @@ export default async function handler(request:any,response:any){
       scenes.push({index:scene.index,status:scene.status,kind:scene.kind});
     }
     return response.status(200).json({
-      jobId:id,sceneCount:scenes.length,scenes,
+      jobId:id,songId:raw.songId,sceneCount:scenes.length,scenes,
       contiguous:raw.contiguous===true,
       allUploadedMetadataMatches:raw.allUploadedMetadataMatches===true,
       workerDecoded:false,canStartPrivateRender:false,publish:false,
