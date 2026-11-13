@@ -327,3 +327,20 @@ export async function queueJukeboxVideo(input: {
   if (!response.ok || !data.job) throw new Error(data.error || "Kunne ikke legge Jukebox-video i kø.");
   return { job: data.job as JukeboxJob, reused: Boolean(data.reused) };
 }
+
+/** Read-only preflight, never queues or publishes a video. */
+export interface PrivateJukeboxReadiness {
+  checks:Array<{id:string;ready:boolean}>;
+  privateMediaReady:boolean;
+  sectionPlacementReady:boolean;
+  liveRenderingVerified:boolean;
+  canStartPrivateRender:boolean;
+  note:string;
+}
+export async function loadPrivateJukeboxReadiness():Promise<PrivateJukeboxReadiness>{
+  const response=await adminFetch("/api/neural-beat-jukebox-readiness",{method:"GET"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!Array.isArray(data.checks))
+    throw new Error(data.error||"Privat renderstatus er ikke tilgjengelig.");
+  return data as PrivateJukeboxReadiness;
+}
