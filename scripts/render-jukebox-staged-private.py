@@ -125,7 +125,7 @@ def timed_assignments(scenes: list[dict], seconds: float, portrait: bool,
         raise ValueError("Incomplete manual scene timestamps")
     if all(cues):
         starts = [float(scene["cueStart"]) for scene in scenes]
-        if (starts[0] < intro or any(start >= seconds - outro for start in starts)
+        if (starts[0] < 0 or any(start >= seconds - outro for start in starts)
                 or any(starts[i] <= starts[i-1] for i in range(1, len(starts)))):
             raise ValueError("Manual scenes are overlapping or outside song window")
         result = [
