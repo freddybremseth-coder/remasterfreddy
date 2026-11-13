@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "asset": "Rock-Ola still-motion 16:9 candidate",
+  "approvalScope": "single_private_Drommer_e2e_trial_only",
+  "approvedBy": "project_owner_in_chat",
+  "approvedOn": "2026-11-13",
+  "sourceFilename": "rockola-still-motion-candidate-16x9.mp4",
+  "song": {
+    "title": "Drømmer",
+    "id": "e3158f1d-ada7-4332-8218-b313d5fe8ffa",
+    "brand": "remasterfreddy"
+  },
+  "verifiedSource": {
+    "sha256": "a3d977ba48f3a3ef3a39299c416f05e143af6ff77d18b91ae84545b868fd4779",
+    "bytes": 189536,
+    "durationSeconds": 8,
+    "width": 1280,
+    "height": 720,
+    "codec": "h264",
+    "audioStreams": 0
+  },
+  "constraints": {
+    "privateUseOnly": true,
+    "renderEnabledAutomatically": false,
+    "publicPublicationAllowed": false,
+    "privateYoutubeUploadAllowed": false,
+    "productionDefaultCabinetApproved": false,
+    "sourceTransferVerified": false,
+    "cloudStorageObjectVerified": false,
+    "realSongMasterChecksumVerified": false,
+    "manualInspectionOfFinalMp4Required": true
+  },
+  "nextChecks": [
+    "Transfer the exact verified file to trusted private renderer, hash it again",
+    "Verify and hash the actual Drømmer master bytes from catalog",
+    "Render one private 16:9 trial from actual master and approved photo project",
+    "Review intro, photo placements, final Kai/Kari image, music continuity and full decoded MP4 before any wider rollout"
+  ],
+  "notes": "Owner approved the inspected candidate for first private test. Not a general approval of public deployment or media publication."
+}
