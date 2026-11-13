@@ -244,7 +244,7 @@ export default function AdminJukeboxStudio(){
     if(localClips.some(clip=>!clip.file)){setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;}
     setDraftBusy(true);
     try{
-      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2}))};
+      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
       const blob=await exportPortableDraft(draft);
       const url=URL.createObjectURL(blob);
       const link=document.createElement("a");link.href=url;link.download=`jukebox-${songId}-backup.json`;
