@@ -144,3 +144,12 @@
 .jukebox-imported-video{display:grid;gap:10px;min-width:0}
 .jukebox-imported-video video{display:block;width:100%;max-height:66vh;aspect-ratio:16/9;object-fit:contain;background:#03090e;border-radius:9px}
 .jukebox-imported-video code{overflow-wrap:anywhere;font-size:12px}
+
+/* Per-job private upload progress, read-only until trusted image decoding is live. */
+.jukebox-scene-progress{display:grid;gap:9px;margin:14px 0;padding:14px;border-radius:10px;border:1px solid #4b7586;background:#132c38}
+.jukebox-scene-progress h4,.jukebox-scene-progress p{margin:0}
+.jukebox-scene-progress label{font-weight:600}
+.jukebox-scene-progress-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.jukebox-scene-progress-actions input{flex:1 1 225px;min-width:0;padding:10px;border:1px solid #86a0b2;border-radius:8px;background:#0d1f2b;color:#fff;font:inherit}
+.jukebox-scene-progress-result{padding:10px;border:1px solid #4b7586;border-radius:8px}
+.jukebox-scene-progress-result ul{margin:7px 0;padding-left:20px}
