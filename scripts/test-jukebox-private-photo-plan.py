@@ -66,7 +66,7 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
             root=Path(tmp)
             stage,_,_,_=fixtures.prepare(root)
             project,data=make_project(root,stage)
-            with self.assertRaisesRegex(ValueError,"does not match"):
+            with self.assertRaisesRegex(ValueError,"Untrusted staged receipt identity"):
                 handoff.create_plan(stage,project,root/"plan.json",fixtures.JOB,
                                     "123e4567-e89b-42d3-a456-426614174002",fixtures.MASTER)
             data["clips"][0]["finale"]=True
