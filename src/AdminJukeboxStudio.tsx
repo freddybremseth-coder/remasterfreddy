@@ -139,11 +139,13 @@ export default function AdminJukeboxStudio(){
         if(!clip.file)throw new Error(`Originalfilen til scene ${index+1} mangler.`);
         const file=clip.file instanceof File?clip.file:new File([clip.file],clip.name,{type:clip.file.type});
         setPhotoUploadNotice(`Laster opp bilde ${index+1} av ${localClips.length}…`);
-        await uploadPrivateJukeboxPhoto(jobId,index,file);
+        await uploadPrivateJukeboxPhoto(jobId,songId,index,file);
       }
       if(epoch===photoUploadEpoch.current){
         setPhotoUploadNotice("Alle valgte bilder er sendt og lagringsmetadata kontrollert. Dekoding og rendering gjenstår.");
-        setSceneStatus(await loadJukeboxPrivateSceneStatus(jobId));
+        const refreshed=await loadJukeboxPrivateSceneStatus(jobId);
+        if(refreshed.songId!==songId)throw new Error("Jobben ble koblet til feil sang.");
+        setSceneStatus(refreshed);
       }
     }catch(error){if(epoch===photoUploadEpoch.current)
       setPhotoUploadNotice(error instanceof Error?error.message:"Privat bildeopplasting ble stoppet.");}
@@ -152,7 +154,11 @@ export default function AdminJukeboxStudio(){
   async function checkSceneJobStatus(){
     if(sceneStatusBusy)return;
     setSceneStatusBusy(true);setSceneStatus(null);setSceneStatusError("");
-    try{setSceneStatus(await loadJukeboxPrivateSceneStatus(sceneJobId.trim()));}
+    try{
+      const result=await loadJukeboxPrivateSceneStatus(sceneJobId.trim());
+      if(result.songId!==songId)throw new Error("Denne private jobben tilhører en annen sang. Velg riktig sang eller jobb-ID.");
+      setSceneStatus(result);
+    }
     catch(error){setSceneStatusError(error instanceof Error?error.message:"Bildestatus er ikke tilgjengelig.");}
     finally{setSceneStatusBusy(false);}
   }
