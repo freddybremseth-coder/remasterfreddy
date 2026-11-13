@@ -42,6 +42,7 @@ export default function AdminJukeboxStudio(){
   const [reviewError,setReviewError]=useState("");
   const [reviewHash,setReviewHash]=useState("");
   const [reviewBusy,setReviewBusy]=useState(false);
+  const reviewEpoch=useRef(0);
   const renderEnabled=import.meta.env.VITE_JUKEBOX_RENDER_ENABLED==="true";
   const [sceneKey,setSceneKey]=useState(0);
   const audio=useRef<HTMLAudioElement|null>(null);
@@ -77,6 +78,7 @@ export default function AdminJukeboxStudio(){
   }
   useEffect(()=>{if(renderEnabled)void refreshJobs();},[renderEnabled]);
   function choosePrivateMp4(file:File|null){
+    reviewEpoch.current+=1;
     if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);
     reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);setReviewDuration(0);
     setReviewHash("");setReviewError("");
@@ -91,10 +93,11 @@ export default function AdminJukeboxStudio(){
     const error=validatePrivateMp4Duration(reviewDuration,plannedDuration);
     if(error){setReviewError(error);return;}
     setReviewBusy(true);setReviewError("");
+    const epoch=reviewEpoch.current;
     try{
       const digest=await hashPrivateMp4(reviewFile);
-      setReviewHash(digest);
-    }catch{setReviewError("Kunne ikke kontrollere filens SHA-256 i denne nettleseren.");}
+      if(epoch===reviewEpoch.current)setReviewHash(digest);
+    }catch{if(epoch===reviewEpoch.current)setReviewError("Kunne ikke kontrollere filens SHA-256 i denne nettleseren.");}
     finally{setReviewBusy(false);}
   }
   function downloadReviewReceipt(){
@@ -140,6 +143,7 @@ export default function AdminJukeboxStudio(){
   useEffect(()=>()=>{for(const url of localClipUrls.current)URL.revokeObjectURL(url);},[]);
   useEffect(()=>()=>{if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);},[]);
   useEffect(()=>{
+    reviewEpoch.current+=1;
     if(reviewUrlRef.current)URL.revokeObjectURL(reviewUrlRef.current);
     reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);
     setReviewDuration(0);setReviewHash("");setReviewError("");
