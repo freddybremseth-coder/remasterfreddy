@@ -51,6 +51,49 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
             self.assertEqual(len(images),2)
             self.assertEqual(renderer.timed_assignments(scenes,100,False,True)[-1]["end"],100)
 
+
+    def test_exact_cues_reach_verified_renderer_without_weight_recalculation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            stage,_,_,_=fixtures.prepare(root)
+            project,data=make_project(root,stage)
+            data["clips"][0]["cueStart"]=32.5
+            data["clips"][1]["cueStart"]=76.25
+            project.write_text(json.dumps(data))
+            output=root/"timed-plan.json"
+            handoff.create_plan(stage,project,output,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            _,scenes,_=renderer.validate_staged_scene_plan(
+                stage,output,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            self.assertEqual([s["cueStart"] for s in scenes],[32.5,76.25])
+            assigned=renderer.timed_assignments(scenes,120,False,True)
+            self.assertEqual([(a["start"],a["end"]) for a in assigned],
+                             [(32.5,76.25),(76.25,120)])
+            self.assertEqual(assigned[-1]["section"],"outro")
+
+    def test_partial_or_reversed_cues_never_create_render_plan(self):
+        for times in ((35,None),(70,50),(float("nan"),90),(True,90)):
+            with self.subTest(times=times), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                stage,_,_,_=fixtures.prepare(root)
+                project,data=make_project(root,stage)
+                for clip,time in zip(data["clips"],times):
+                    if time is not None: clip["cueStart"]=time
+                project.write_text(json.dumps(data))
+                output=root/"blocked.json"
+                with self.assertRaises(ValueError):
+                    handoff.create_plan(stage,project,output,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+                self.assertFalse(output.exists())
+
+    def test_exact_cues_reject_outside_song_and_overlong_photo(self):
+        scenes=[{"section":"chorus","weight":2,"cueStart":30},
+                {"section":"outro","weight":2,"cueStart":60}]
+        with self.assertRaisesRegex(ValueError,"outside"):
+            renderer.timed_assignments(scenes,60,False,True)
+        scenes[0]["cueStart"]=25
+        scenes[1]["cueStart"]=330
+        with self.assertRaises(ValueError):
+            renderer.timed_assignments(scenes,700,False,True)
+
     def test_mismatched_and_swapped_images_fail(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
