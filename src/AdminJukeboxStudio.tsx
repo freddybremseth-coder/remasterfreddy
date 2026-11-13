@@ -5,6 +5,7 @@ import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} 
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
 import {validatePrivateMp4File,validatePrivateMp4Duration,hashPrivateMp4} from "./lib/jukebox-private-review";
+import {validateJukeboxSelectedMedia} from "./lib/jukebox-media-validation";
 import "./admin-jukebox.css";
 
 /** Admin Jukebox preview with a feature-gated render queue; never publishes automatically. */
@@ -276,9 +277,11 @@ export default function AdminJukeboxStudio(){
     // Append without replacing earlier selections. Keep within the 12-scene
     // limit enforced by the existing private rendering contract.
     const available=Math.max(0,12-localClips.length);
-    const chosen=Array.from(files).filter(file=>
-      file.type.startsWith("video/")||file.type.startsWith("image/")
-    ).slice(0,available);
+    const selected=Array.from(files);
+    const rejected=selected.map(file=>validateJukeboxSelectedMedia(file)).filter((message):message is string=>Boolean(message));
+    const chosen=selected.filter(file=>!validateJukeboxSelectedMedia(file)).slice(0,available);
+    if(rejected.length)setDraftNotice(rejected.join(" "));
+    else if(chosen.length)setDraftNotice(`${chosen.length} bildefiler eller videoer lagt til. Husk å lagre utkastet.`);
     const selectedTemplate=getJukeboxTemplate(templateId);
     const additions=chosen.map((file,index)=>({
       name:file.name,url:URL.createObjectURL(file),file,
@@ -375,8 +378,8 @@ export default function AdminJukeboxStudio(){
     {style==="hybrid"&&<section className="jukebox-local-clips" aria-label="Lokale musikkvideoscener">
       <h3>Velg egne bilder og videoscener</h3>
       <p>Velg bilder og videoer (opptil 12 scener). Legg til flere senere uten å miste tidligere valg. Bruk «Før», «Etter» og «Fjern» for å justere. Velg «Siste bilde» for å holde avslutningen på plass når du legger til flere bilder. Dette er en lokal forhåndsvisning. Bildene kan lagres i denne nettleseren, men ikke i kontoen eller produksjonskøen.</p>
-      <label className="jukebox-file-picker">Legg til bilder eller videoklipp
-        <input type="file" disabled={draftLoading} accept="video/*,image/jpeg,image/png,image/webp" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
+      <label className="jukebox-file-picker">Legg til bilder eller videoklipp (JPG, PNG, WebP, MP4, WebM eller MOV)
+        <input type="file" disabled={draftLoading} accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,.mov" multiple onChange={event=>{chooseLocalClips(event.currentTarget.files);event.currentTarget.value="";}}/>
       </label>
       {draftLoading&&<p role="status">Henter lagrede bilder for denne sangen…</p>}
       <div className="jukebox-actions">
