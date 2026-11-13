@@ -74,7 +74,7 @@ export default function AdminJukeboxStudio(){
   const actualSceneStarts=manualTiming?.starts??weightedStarts;
   const actualSceneDurations=manualTiming?.durations??sceneDurations;
   const inMiddle=style==="hybrid"&&localClips.length>0&&plannedDuration>0&&playhead>=introTime&&playhead<plannedDuration-outroTime;
-  const activeClipIndex=inMiddle?Math.max(0,Math.min(localClips.length-1,actualSceneStarts.findIndex((start,index)=>playhead>=start&&playhead<start+actualSceneDurations[index]))):-1;
+  const activeClipIndex=inMiddle?actualSceneStarts.findIndex((start,index)=>playhead>=start&&playhead<start+actualSceneDurations[index]):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
 
@@ -278,6 +278,10 @@ export default function AdminJukeboxStudio(){
   }
   function downloadStoryboard(){
     if(!song||plannedDuration<=0||style!=="hybrid")return;
+    if(hasManualCues&&!manualTiming){
+      setDraftNotice("Klippplanen kan ikke eksporteres med ufullstendige eller overlappende tidsmarkører.");
+      return;
+    }
     const entries=[
       {type:"jukebox_intro",start:0,duration:introTime},
       ...Array.from({length:effectiveSceneCount},(_,index)=>({
