@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
-import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
+import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
@@ -36,6 +36,10 @@ export default function AdminJukeboxStudio(){
   const [privateReadiness,setPrivateReadiness]=useState<PrivateJukeboxReadiness|null>(null);
   const [readinessBusy,setReadinessBusy]=useState(false);
   const [readinessError,setReadinessError]=useState("");
+  const [sceneJobId,setSceneJobId]=useState("");
+  const [sceneStatus,setSceneStatus]=useState<JukeboxPrivateSceneStatus|null>(null);
+  const [sceneStatusBusy,setSceneStatusBusy]=useState(false);
+  const [sceneStatusError,setSceneStatusError]=useState("");
   const [reviewFile,setReviewFile]=useState<File|null>(null);
   const [reviewUrl,setReviewUrl]=useState("");
   const reviewUrlRef=useRef("");
@@ -112,6 +116,13 @@ export default function AdminJukeboxStudio(){
     const anchor=document.createElement("a");anchor.href=url;anchor.download=`jukebox-private-review-${song.id}.json`;
     document.body.appendChild(anchor);anchor.click();anchor.remove();
     window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
+  async function checkSceneJobStatus(){
+    if(sceneStatusBusy)return;
+    setSceneStatusBusy(true);setSceneStatus(null);setSceneStatusError("");
+    try{setSceneStatus(await loadJukeboxPrivateSceneStatus(sceneJobId.trim()));}
+    catch(error){setSceneStatusError(error instanceof Error?error.message:"Bildestatus er ikke tilgjengelig.");}
+    finally{setSceneStatusBusy(false);}
   }
   async function checkPrivateReadiness(){
     if(readinessBusy)return;
@@ -399,6 +410,30 @@ export default function AdminJukeboxStudio(){
           <p>{privateReadiness.liveRenderingVerified?"Renderarbeideren er rapportert verifisert.":"Renderarbeider er ennå ikke verifisert i produksjon."} {privateReadiness.privateMediaReady?"Privat medielagring er klar.":"Privat medielagring eller godkjent kabinettmotiv mangler."} {privateReadiness.photoIntakeConfigured?"Fotoopplasting er konfigurert, men krever fortsatt en verifisert renderarbeider.":"Fotoopplasting er ikke aktivert."}</p>
           <ul>{privateReadiness.checks.map(check=><li key={check.id}>{check.ready?"Klar":"Mangler"}: {({database:"Databaseskjema",private_storage:"Privat MP4-lagring",private_clips:"Privat klipplagring",cabinet_asset:"Godkjent Rock-Ola-motiv",clip_export:"Eksport av private klipp",photo_intake:"Privat fotoopplasting",private_review:"Privat godkjenning"} as Record<string,string>)[check.id]||check.id}</li>)}</ul>
         </div>}
+        <div className="jukebox-scene-progress">
+          <h4>Bildestatus for en privat jobb</h4>
+          <p>Bruk ID-en fra en eksisterende privat Jukebox-jobb. Kontrollen sjekker bare lagringsmetadata, og kan ikke starte videoarbeideren.</p>
+          <label htmlFor="jukebox-scene-job-id">Jobb-ID</label>
+          <div className="jukebox-scene-progress-actions">
+            <input id="jukebox-scene-job-id" type="text" value={sceneJobId}
+              placeholder="Jobb-ID (UUID)" autoComplete="off"
+              onChange={event=>{setSceneJobId(event.target.value);setSceneStatus(null);setSceneStatusError("");}}/>
+            <button className="admin-secondary" type="button" disabled={sceneStatusBusy}
+              onClick={()=>void checkSceneJobStatus()}>{sceneStatusBusy?"Kontrollerer…":"Kontroller bilder"}</button>
+          </div>
+          {sceneStatusError&&<p role="alert">{sceneStatusError}</p>}
+          {sceneStatus&&<div role="status" className="jukebox-scene-progress-result">
+            <strong>{sceneStatus.sceneCount===0?"Ingen reserverte bilder":sceneStatus.allUploadedMetadataMatches?
+              "Alle reserverte bilder funnet – dekoding gjenstår":"Bildefilene er ikke klare"}</strong>
+            <ul>{sceneStatus.scenes.map(scene=><li key={scene.index}>
+              Scene {scene.index+1}: {scene.status==="metadata_verified_only"?"Fil funnet (metadata samsvarer)"
+              :scene.status==="awaiting_upload"?"Venter på opplasting"
+              :scene.status==="rejected_metadata"?"Feil filstørrelse eller filtype"
+              :"Ugyldig scenereservasjon"}
+            </li>)}</ul>
+            <p>Dette er ikke godkjenning for rendering. Faktisk dekoding og kontroll av hele sceneplanen gjenstår.</p>
+          </div>}
+        </div>
         <button type="button" className="admin-primary" disabled title="Privat renderkø aktiveres først etter verifisert renderarbeider og sikker medieopplasting"><Clapperboard size={16}/> Lag privat MP4 – ikke aktivert ennå</button>
         <p>Bruk prosjektfilen til privat rendering inntil sikker opplasting og renderarbeider er koblet til. Ingen YouTube-publisering.</p>
       </div>
