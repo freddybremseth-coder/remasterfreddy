@@ -16,7 +16,7 @@ describe("private Jukebox photo transfer",()=>{
    expect(()=>assertPrivatePhotoReservation(reservation,job,3,file)).toThrow();
    expect(()=>assertPrivatePhotoReservation({...reservation,publish:true},job,2,file)).toThrow();
    expect(()=>assertPrivatePhotoReservation({...reservation,bucket:"public"},job,2,file)).toThrow();
-   expect(()=>assertPrivatePhotoReservation(reservation,job,2,new Blob([new Uint8Array(10485761)]))).toThrow();
+   expect(()=>assertPrivatePhotoReservation({...reservation,maxBytes:1024},job,2,file)).toThrow();
  });
  it("only builds HTTPS Supabase Storage signed URLs with the reserved path",()=>{
    const url=signedPhotoUploadUrl("https://ereapsfcsqtdmzosgnnn.supabase.co",reservation);
