@@ -23,7 +23,7 @@ const tabs: Array<{ id: AdminTab; label: string; description: string; icon: type
   { id: "hybrid", label: "Hybrid Video", description: "Trygg forhåndsvisning uten publisering", icon: Clapperboard },
   { id: "mixes", label: "Mix Studio", description: "3–30 min musikk + merkevarer", icon: Waves },
   { id: "reels", label: "Reels Studio", description: "15–60 sek · Art, Books og Homes", icon: Clapperboard },
-  { id: "jukebox", label: "Jukeboks", description: "60-talls vinyl · trygg forhåndsvisning", icon: Music2 },
+  { id: "jukebox", label: "Jukeboks", description: "Lag og last ned musikkvideo", icon: Music2 },
   { id: "assets", label: "Bildebank", description: "Bilder, logoer og thumbnails", icon: Image },
   { id: "jobs", label: "Produksjonsjobber", description: "Status og eventhistorikk", icon: ListChecks },
   { id: "analytics", label: "Statistikk", description: "YouTube-data og vekstanalyse", icon: BarChart3 },
@@ -32,7 +32,10 @@ const tabs: Array<{ id: AdminTab; label: string; description: string; icon: type
 
 export default function AdminApp() {
   const [state, setState] = useState<AdminState>("loading");
-  const [activeTab, setActiveTab] = useState<AdminTab>("publishing");
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    return tabs.some(tab => tab.id === requested) ? requested as AdminTab : "publishing";
+  });
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -156,7 +159,12 @@ export default function AdminApp() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>
+              <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => {
+                setActiveTab(tab.id);
+                const url = new URL(window.location.href);
+                url.searchParams.set("tab", tab.id);
+                window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+              }}>
                 <Icon size={20} />
                 <span><strong>{tab.label}</strong><small>{tab.description}</small></span>
               </button>
