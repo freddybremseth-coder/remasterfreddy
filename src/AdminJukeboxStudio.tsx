@@ -4,6 +4,7 @@ import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {resolveSceneTiming} from "./lib/jukebox-scene-timing";
+import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
 import {validatePrivateMp4File,validatePrivateMp4Duration,hashPrivateMp4} from "./lib/jukebox-private-review";
 import {validateJukeboxSelectedMedia} from "./lib/jukebox-media-validation";
@@ -19,6 +20,17 @@ export default function AdminJukeboxStudio(){
   const [sceneCount,setSceneCount]=useState(3);
   const [endWithLastScene,setEndWithLastScene]=useState(false);
   const [audioDuration,setAudioDuration]=useState(0);
+  const [localAudioFile,setLocalAudioFile]=useState<File|null>(null);
+  const [localAudioUrl,setLocalAudioUrl]=useState("");
+  const localAudioUrlRef=useRef("");
+  const [directVideoBusy,setDirectVideoBusy]=useState(false);
+  const [directVideoProgress,setDirectVideoProgress]=useState(0);
+  const [directVideoError,setDirectVideoError]=useState("");
+  const [directVideoUrl,setDirectVideoUrl]=useState("");
+  const [directVideoFilename,setDirectVideoFilename]=useState("");
+  const [directVideoFormat,setDirectVideoFormat]=useState("");
+  const directVideoUrlRef=useRef("");
+  const directVideoAbort=useRef<AbortController|null>(null);
   const [playhead,setPlayhead]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean;section?:string;weight?:number;cueStart?:number}[]>([]);
   const [draftBusy,setDraftBusy]=useState(false);
@@ -82,6 +94,60 @@ export default function AdminJukeboxStudio(){
   const activeClipIndex=inMiddle?actualSceneStarts.findIndex((start,index)=>playhead>=start&&playhead<start+actualSceneDurations[index]):-1;
   const activeClip=activeClipIndex>=0?localClips[activeClipIndex]:null;
   const stamp=(time:number)=>`${Math.floor(time/60).toString().padStart(2,"0")}:${Math.floor(time%60).toString().padStart(2,"0")}`;
+
+  function chooseLocalMaster(file:File|null){
+    if(localAudioUrlRef.current)URL.revokeObjectURL(localAudioUrlRef.current);
+    const url=file?URL.createObjectURL(file):"";
+    localAudioUrlRef.current=url;
+    setLocalAudioFile(file);setLocalAudioUrl(url);
+    setDirectVideoError("");
+  }
+  async function produceDirectVideo(){
+    if(directVideoBusy)return;
+    if(!songId||!song){setDirectVideoError("Velg en sang først.");return;}
+    if(!Number.isFinite(plannedDuration)||plannedDuration<=1||sourceExcerptInvalid){
+      setDirectVideoError("Lydvarighet eller lydutdrag er ugyldig.");return;
+    }
+    if(style==="hybrid"&&!localClips.length){
+      setDirectVideoError("Velg minst ett bilde til musikkvideoen.");return;
+    }
+    if(style==="hybrid"&&hasManualCues&&!manualTiming){
+      setDirectVideoError("Alle bildene må ha komplette og gyldige tidsmarkører.");return;
+    }
+    if(localClips.some(clip=>!clip.file)){
+      setDirectVideoError("Et eller flere bilder mangler originalfil.");return;
+    }
+    if(!song.audioUrl&&!localAudioFile){
+      setDirectVideoError("Velg originalmusikk fra biblioteket eller en lokal MP3.");return;
+    }
+    audio.current?.pause();sceneVideo.current?.pause();setPlaying(false);
+    if(directVideoUrlRef.current){URL.revokeObjectURL(directVideoUrlRef.current);directVideoUrlRef.current="";}
+    setDirectVideoUrl("");setDirectVideoError("");setDirectVideoProgress(0);
+    setDirectVideoBusy(true);
+    const controller=new AbortController();directVideoAbort.current=controller;
+    try{
+      const stageClips=style==="hybrid"?localClips.map((clip,index)=>({
+        name:clip.name,kind:clip.kind,file:clip.file!,
+        start:actualSceneStarts[index],
+        end:index+1<localClips.length?actualSceneStarts[index+1]:plannedDuration-outroTime,
+      })):[];
+      const result=await renderBrowserJukebox({
+        songTitle:song.title,format,audioStartSeconds,durationSeconds:plannedDuration,
+        audioUrl:song.audioUrl,audioFile:localAudioFile,
+        introSeconds:style==="jukebox"?plannedDuration:actualIntroTime,
+        outroSeconds:style==="jukebox"?0:outroTime,
+        clips:stageClips,signal:controller.signal,onProgress:setDirectVideoProgress,
+      });
+      const safeTitle=(song.title||"jukebox").normalize("NFKD").replace(/[^a-zA-Z0-9-_]+/g,"-").slice(0,52);
+      const filename=`Re-master-Freddy-${safeTitle}-${Math.round(plannedDuration)}s.${result.extension}`;
+      const url=URL.createObjectURL(result.blob);
+      directVideoUrlRef.current=url;
+      setDirectVideoUrl(url);setDirectVideoFilename(filename);
+      setDirectVideoFormat(result.extension.toUpperCase());
+    }catch(error){
+      setDirectVideoError(error instanceof Error?error.message:"Kunne ikke lage videoen.");
+    }finally{setDirectVideoBusy(false);directVideoAbort.current=null;}
+  }
 
   async function refresh(){
     setLoading(true);setError("");
@@ -192,9 +258,17 @@ export default function AdminJukeboxStudio(){
   }
   useEffect(()=>{
     setPlaying(false);setPlayhead(0);setAudioStartSeconds(0);setAudioDuration(0);setSceneKey(value=>value+1);
+    setLocalAudioFile(null);setLocalAudioUrl("");
+    if(localAudioUrlRef.current)URL.revokeObjectURL(localAudioUrlRef.current);
+    localAudioUrlRef.current="";
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
+  useEffect(()=>()=>{
+    directVideoAbort.current?.abort();
+    if(directVideoUrlRef.current)URL.revokeObjectURL(directVideoUrlRef.current);
+    if(localAudioUrlRef.current)URL.revokeObjectURL(localAudioUrlRef.current);
+  },[]);
   useEffect(()=>{
     if(!sceneVideo.current)return;
     if(playing){void sceneVideo.current.play().catch(()=>{});}
@@ -504,15 +578,14 @@ export default function AdminJukeboxStudio(){
             <p>Dette er ikke godkjenning for rendering. Faktisk dekoding og kontroll av hele sceneplanen gjenstår.</p>
           </div>}
         </div>
-        <button type="button" className="admin-primary" disabled title="Privat renderkø aktiveres først etter verifisert renderarbeider og sikker medieopplasting"><Clapperboard size={16}/> Lag privat MP4 – ikke aktivert ennå</button>
-        <p>Bruk prosjektfilen til privat rendering inntil sikker opplasting og renderarbeider er koblet til. Ingen YouTube-publisering.</p>
+        <p>Du kan nå lage og laste ned video direkte i nettleseren via «Produser privat video» nedenfor. Den separate serverkøen er fortsatt deaktivert.</p>
       </div>
       <div className="admin-warning jukebox-render-handoff" role="status">
         <Clapperboard size={18}/>
         <div>
           <strong>Privat MP4 – klargjøring</strong>
           <p>Bildene, sangdelene, visningstidene og siste bilde kan eksporteres som én privat prosjektfil. Den kan brukes av den separate rendereren sammen med originalmusikken og et visuelt godkjent Rock-Ola-klipp.</p>
-          <p>Selve hybridrenderingen kan ennå ikke startes fra nettleseren. Privat prøvefilm for «Drømmer» er laget og gjennomgått manuelt, men den automatiske renderkøen og godkjent generell produksjonsmaster mangler. Ingen opplasting til YouTube skjer her.</p>
+          <p>Direkte lokal videoproduksjon er tilgjengelig nedenfor. Den separate serverrendereren og godkjent generell Rock-Ola-videomaster er fortsatt under arbeid. Ingenting sendes automatisk til YouTube.</p>
         </div>
       </div>
       {draftNotice&&<p role="status">{draftNotice}</p>}
@@ -560,6 +633,31 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>}
     </div>
+    <section className="jukebox-direct-production admin-card" aria-label="Produser privat Jukebox-video">
+      <h3>Produser video nå – privat i nettleseren</h3>
+      <p>Velg sang og bilder over, og lag en videofil direkte på datamaskinen. Dette fungerer uten serverkø og uten YouTube-publisering. MP4 brukes når nettleseren støtter det; ellers får du WebM som kan spilles av og lastes ned.</p>
+      <label className="jukebox-file-picker">Lokal MP3 (valgfritt – bruk hvis nettleseren ikke får hentet bibliotekets lydfil)
+        <input type="file" accept="audio/mpeg,audio/mp3,.mp3" disabled={directVideoBusy} onChange={event=>{chooseLocalMaster(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
+      </label>
+      {localAudioFile&&<p role="status">Lokal original: {localAudioFile.name} <button className="admin-secondary" type="button" disabled={directVideoBusy} onClick={()=>chooseLocalMaster(null)}>Bruk bibliotekets lydfil igjen</button></p>}
+      <p>Valgt: <strong>{song?.title||"Ingen sang"}</strong> · {format==="portrait"?"Shorts 9:16":"Liggende 16:9"} · {plannedDuration>0?stamp(plannedDuration):"Ukjent spilletid"} {audioStartSeconds>0?`· lyd fra ${stamp(audioStartSeconds)}`:""}.</p>
+      <p>Opptaket tar like lang tid som videoen. La denne fanen stå åpen og synlig mens den produseres. Bildene og musikken blir ikke sendt til noen ny server.</p>
+      <div className="jukebox-actions">
+        <button className="admin-primary" type="button"
+          disabled={directVideoBusy||!songId||sourceExcerptInvalid||plannedDuration<=1||draftLoading}
+          onClick={()=>void produceDirectVideo()}>
+          <Clapperboard size={17}/> {directVideoBusy?`Produserer video … ${directVideoProgress}%`:"Produser privat video"}
+        </button>
+        {directVideoBusy&&<button type="button" className="admin-secondary" onClick={()=>directVideoAbort.current?.abort()}>Avbryt</button>}
+      </div>
+      {directVideoBusy&&<progress max={100} value={directVideoProgress} aria-label="Fremdrift videoproduksjon" style={{width:"100%"}}/>}
+      {directVideoError&&<p role="alert">{directVideoError}</p>}
+      {directVideoUrl&&<div className="jukebox-imported-video" role="status">
+        <p><strong>Privat video ferdig ({directVideoFormat})</strong> – se den og last den ned. Ingenting er publisert.</p>
+        <video src={directVideoUrl} controls playsInline preload="metadata" aria-label="Privat generert Jukebox-video"/>
+        <a className="admin-primary" href={directVideoUrl} download={directVideoFilename}><Download size={17}/> Last ned {directVideoFormat} – {directVideoFilename}</a>
+      </div>}
+    </section>
     <section className="jukebox-private-review-import" aria-label="Kontroller en ferdig privat MP4">
       <h3>Se og kontroller en ferdig privat MP4</h3>
       <p>Åpne en MP4 som allerede er rendret for denne sangen. Den spilles av lokalt, uten opplasting til serveren eller YouTube. Kontroll av varighet og SHA-256 kan lagres som en privat kvittering.</p>
@@ -581,7 +679,7 @@ export default function AdminJukeboxStudio(){
         {reviewHash&&<p role="status">Privat fil kontrollert lokalt. SHA-256: <code>{reviewHash}</code>. Dette godkjenner ikke YouTube-publisering.</p>}
       </div>}
     </section>
-    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime-audioStartSeconds;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=audioStartSeconds;}else setPlayhead(Math.max(0,position));}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
+    <audio ref={audio} src={localAudioUrl||song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime-audioStartSeconds;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=audioStartSeconds;}else setPlayhead(Math.max(0,position));}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
       <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading||sourceExcerptInvalid} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
@@ -594,7 +692,7 @@ export default function AdminJukeboxStudio(){
       </button>
       {renderEnabled&&<button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater produksjonsstatus</button>}
     </div>
-    {style==="hybrid"&&<p className="jukebox-hybrid-note">Eksportér fotoprosjektet under «Velg egne bilder og videoscener» for privat rendering. Produksjonskøen for hybridvideo åpnes først når godkjent Rock-Ola-fil, renderarbeider og en ekte test er verifisert. Ingen publisering skjer automatisk.</p>}
+    {style==="hybrid"&&<p className="jukebox-hybrid-note">Du kan produsere en privat musikkvideo direkte i nettleseren. Den serverbaserte køen og automatisk YouTube-publisering er fortsatt deaktivert.</p>}
     {jobNotice&&<p role="status">{jobNotice}</p>}
     {renderEnabled&&jobs.length>0&&<div aria-label="Jukebox-jobber">
       <h3>Produksjonsstatus</h3>
@@ -607,6 +705,6 @@ export default function AdminJukeboxStudio(){
         </div>:job.state==="ready"?<p>Privat video er ikke tilgjengelig ennå. Oppdater status eller kontroller lagringen.</p>:null}
       </article>)}
     </div>}
-    <div className="admin-warning"><Clapperboard size={16}/> {renderEnabled?"Videoer går til privat produksjonskø og må godkjennes før YouTube-publisering.":"Jukebox-produksjon aktiveres etter at rendereren og lagringen er verifisert. Forhåndsvisning fungerer nå; ingen video sendes til YouTube."}</div>
+    <div className="admin-warning"><Clapperboard size={16}/> Lokal videoproduksjon kan brukes nå, helt privat på din enhet. Serverkø og YouTube-publisering er separate funksjoner.</div>
   </section>;
 }
