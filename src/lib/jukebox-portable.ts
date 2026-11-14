@@ -5,7 +5,7 @@ type PortableClip={name:string;kind:"image"|"video";finale:boolean;section?:stri
 type PortableDraft={
   format:"remaster-jukebox-portable";version:1;
   songId:string;videoFormat:"landscape"|"portrait";
-  seconds:"full"|"15"|"30"|"45"|"60";sceneCount:number;
+  seconds:"full"|"15"|"30"|"45"|"60";audioStartSeconds?:number;sceneCount:number;
   endWithLastScene:boolean;clips:PortableClip[];
 };
 function readAsDataUrl(blob:Blob):Promise<string>{
@@ -25,7 +25,7 @@ export async function exportPortableDraft(draft:JukeboxDraft):Promise<Blob>{
       mime:clip.file.type||"application/octet-stream",data:await readAsDataUrl(clip.file)});
   }
   const portable:PortableDraft={format:"remaster-jukebox-portable",version:1,
-    songId:draft.songId,videoFormat:draft.format,seconds:draft.seconds,
+    songId:draft.songId,videoFormat:draft.format,seconds:draft.seconds, ...(draft.audioStartSeconds?{audioStartSeconds:draft.audioStartSeconds}:{}),
     sceneCount:draft.sceneCount,endWithLastScene:draft.endWithLastScene,clips};
   return new Blob([JSON.stringify(portable)],{type:"application/json"});
 }
@@ -48,6 +48,9 @@ export async function importPortableDraft(file:File,expectedSongId:string):Promi
     ||!Number.isInteger(item.sceneCount)||Number(item.sceneCount)<1||Number(item.sceneCount)>MAX_CLIPS
     ||typeof item.endWithLastScene!=="boolean"||!Array.isArray(item.clips)||item.clips.length>MAX_CLIPS)
     throw new Error("Prosjektinnstillingene i sikkerhetskopien er ugyldige.");
+  const offset=item.audioStartSeconds??0;
+  if(typeof offset!=="number"||!Number.isFinite(offset)||offset<0||offset>3600||(offset!==0&&item.seconds==="full"))
+    throw new Error("Ugyldig starttid i originalmusikken.");
   let total=0;
   const clips:JukeboxDraftClip[]=item.clips.map(value=>{
     if(!value||typeof value!=="object"||typeof value.name!=="string"||value.name.length>240||
@@ -70,5 +73,5 @@ export async function importPortableDraft(file:File,expectedSongId:string):Promi
   const chosen=clips.findIndex(c=>c.finale);
   if(chosen>=0&&chosen!==clips.length-1)throw new Error("Avslutningsbildet må ligge sist.");
   return {version:1,songId:expectedSongId,format:item.videoFormat!,seconds:item.seconds!,
-    sceneCount:item.sceneCount!,endWithLastScene:item.endWithLastScene!,clips,savedAt:Date.now()};
+    audioStartSeconds:offset,sceneCount:item.sceneCount!,endWithLastScene:item.endWithLastScene!,clips,savedAt:Date.now()};
 }
