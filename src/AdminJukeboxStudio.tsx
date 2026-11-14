@@ -31,7 +31,7 @@ export default function AdminJukeboxStudio(){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
-  const [seconds,setSeconds]=useState<"full"|"15"|"30"|"60">("full");
+  const [seconds,setSeconds]=useState<"full"|"15"|"30"|"45"|"60">("full");
   const [jobs,setJobs]=useState<JukeboxJob[]>([]);
   const [jobBusy,setJobBusy]=useState(false);
   const [jobNotice,setJobNotice]=useState("");
@@ -181,7 +181,7 @@ export default function AdminJukeboxStudio(){
     if(!songId||!renderEnabled||jobBusy||style==="hybrid")return;
     setJobBusy(true);setError("");setJobNotice("");
     try{
-      const request={songId,format,...(seconds==="full"?{}:{seconds:Number(seconds) as 15|30|60})};
+      const request={songId,format,...(seconds==="full"?{}:{seconds:Number(seconds) as 15|30|45|60})};
       const result=await queueJukeboxVideo(request);
       setJobNotice(result.reused?"Eksisterende Jukebox-jobb funnet.":"Jukebox-video lagt i produksjonskøen.");
       await refreshJobs();
@@ -416,8 +416,8 @@ export default function AdminJukeboxStudio(){
         <option value="jukebox">Jukebox hele veien</option>
         <option value="hybrid">Jukebox + musikkvideo</option>
       </select></label>
-      <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"60")}>
-        <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="60">60 sekunder</option>
+      <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"45"|"60")}>
+        <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="45">45 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
       {style==="hybrid"&&<label><span>Avslutning</span><select aria-label="Velg avslutning" value={endWithLastScene?"last_scene":"jukebox"} onChange={event=>setEndWithLastScene(event.target.value==="last_scene")}>
         <option value="jukebox">Avslutt med Jukebox</option><option value="last_scene">Avslutt med siste bilde eller klipp</option>
