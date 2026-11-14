@@ -14,9 +14,12 @@ const base={
 };
 describe("direct private browser video production",()=>{
   it("prefers native MP4 encoding but falls back to real WebM extension",()=>{
-    expect(chooseBrowserJukeboxMime(mime=>mime==="video/mp4")).toEqual({
-      mimeType:"video/mp4",extension:"mp4",
+    expect(chooseBrowserJukeboxMime(mime=>mime==='video/mp4;codecs="avc1.42E01E,mp4a.40.2"')).toEqual({
+      mimeType:'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',extension:"mp4",
     });
+    // Chromium may report generic MP4 and actually encode VP9/Opus.
+    // Require explicit AVC/AAC instead of mislabeling the output.
+    expect(chooseBrowserJukeboxMime(mime=>mime==="video/mp4")).toBe(null);
     expect(chooseBrowserJukeboxMime(mime=>mime==="video/webm")).toEqual({
       mimeType:"video/webm",extension:"webm",
     });
