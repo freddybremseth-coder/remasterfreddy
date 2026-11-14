@@ -467,6 +467,7 @@ export default function AdminJukeboxStudio(){
   return <section className="admin-card admin-jukebox-studio">
     <p className="admin-eyebrow">Re-master Freddy · musikkvideo</p>
     <h2>60-talls jukeboks</h2>
+    <p><a href="#jukebox-direct-production">Gå direkte til «Produser privat video»</a> – du kan nå lage og laste ned musikkvideoer her.</p>
     <p>Velg en sang fra musikkbiblioteket og en videostil. Jukeboxen har roterende vinyl og originalmusikk, uten den kompliserte plateveksleren. Videoer lagres privat for kontroll før eventuell publisering.</p>
     {error&&<div role="alert" className="admin-error">{error}</div>}
     <div className="jukebox-template-intro">
@@ -535,7 +536,7 @@ export default function AdminJukeboxStudio(){
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
       </div>
       <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
-      <div className="jukebox-private-render-gate" aria-label="Status for privat MP4-rendering">
+      <details className="jukebox-private-render-gate" aria-label="Avanserte serverinnstillinger"><summary>Avansert: serverkø og privat bildelagring (ikke nødvendig for lokal video)</summary>
         <h3>Lag privat MP4</h3>
         <p>Kontroller at Jukebox-serveren og den private renderarbeideren er klare. Statuskontrollen laster ikke opp bildene og starter ingen produksjon.</p>
         <button type="button" className="admin-secondary" disabled={readinessBusy||draftBusy||draftLoading} onClick={()=>void checkPrivateReadiness()}>{readinessBusy?"Kontrollerer…":"Kontroller privat MP4-status"}</button>
@@ -579,7 +580,7 @@ export default function AdminJukeboxStudio(){
           </div>}
         </div>
         <p>Du kan nå lage og laste ned video direkte i nettleseren via «Produser privat video» nedenfor. Den separate serverkøen er fortsatt deaktivert.</p>
-      </div>
+      </details>
       <div className="admin-warning jukebox-render-handoff" role="status">
         <Clapperboard size={18}/>
         <div>
@@ -633,7 +634,7 @@ export default function AdminJukeboxStudio(){
         <div className="jukebox-caption" title={song?.title}>{song?.title||"Velg en sang"}</div>
       </div>}
     </div>
-    <section className="jukebox-direct-production admin-card" aria-label="Produser privat Jukebox-video">
+    <section id="jukebox-direct-production" className="jukebox-direct-production admin-card" aria-label="Produser privat Jukebox-video">
       <h3>Produser video nå – privat i nettleseren</h3>
       <p>Velg sang og bilder over, og lag en videofil direkte på datamaskinen. Dette fungerer uten serverkø og uten YouTube-publisering. MP4 brukes når nettleseren støtter det; ellers får du WebM som kan spilles av og lastes ned.</p>
       <label className="jukebox-file-picker">Lokal MP3 (valgfritt – bruk hvis nettleseren ikke får hentet bibliotekets lydfil)
@@ -686,12 +687,12 @@ export default function AdminJukeboxStudio(){
       </button>
       <button className="admin-secondary" type="button" onClick={()=>{setSceneKey(value=>value+1);void refresh();}} disabled={loading}><RefreshCw size={16}/> Oppdater sanger</button>
     </div>
-    <div className="jukebox-actions">
-      <button className="admin-primary" type="button" disabled={!renderEnabled||!songId||jobBusy||style==="hybrid"||audioStartSeconds!==0} onClick={()=>void queueVideo()}>
-        <Clapperboard size={17}/> {jobBusy?"Oppretter jobb…":style==="hybrid"?"Hybrid venter på musikkvideo":"Lag Jukebox-video"}
+    {renderEnabled&&<div className="jukebox-actions">
+      <button className="admin-primary" type="button" disabled={!songId||jobBusy||style==="hybrid"||audioStartSeconds!==0} onClick={()=>void queueVideo()}>
+        <Clapperboard size={17}/> {jobBusy?"Oppretter jobb…":"Send til separat serverkø"}
       </button>
-      {renderEnabled&&<button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater produksjonsstatus</button>}
-    </div>
+      <button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater serverstatus</button>
+    </div>}
     {style==="hybrid"&&<p className="jukebox-hybrid-note">Du kan produsere en privat musikkvideo direkte i nettleseren. Den serverbaserte køen og automatisk YouTube-publisering er fortsatt deaktivert.</p>}
     {jobNotice&&<p role="status">{jobNotice}</p>}
     {renderEnabled&&jobs.length>0&&<div aria-label="Jukebox-jobber">
