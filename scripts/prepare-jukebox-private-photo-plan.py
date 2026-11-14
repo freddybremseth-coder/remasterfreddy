@@ -54,7 +54,7 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
         or type(data.get("version")) is not int or data["version"]!=1
         or data.get("songId")!=expected_song_id
         or data.get("videoFormat") not in ("landscape","portrait")
-        or str(data.get("seconds")) not in ("full","15","30","60")
+        or str(data.get("seconds")) not in ("full","15","30","45","60")
         or type(data.get("endWithLastScene")) is not bool):
         raise ValueError("Exported project does not match selected song")
     images=receipt.get("images")
