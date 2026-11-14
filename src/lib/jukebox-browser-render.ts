@@ -306,7 +306,11 @@ export async function renderBrowserJukebox(
     source.onended=()=>{
       if(recorder?.state!=="inactive")window.setTimeout(()=>recorder?.state!=="inactive"&&recorder?.stop(),170);
     };
-    recorder.start(1000);
+    // Avoid timesliced WebM: Chromium cannot reliably write Duration/Cues
+    // when emitting partial MediaRecorder chunks, so downloaded videos
+    // can report Infinity/unknown duration and break seeking.
+    // All chunks remain local; non-timesliced output is more portable.
+    recorder.start();
     source.start(startAt,options.audioStartSeconds,total);
     frame=requestAnimationFrame(tick);
     const blob=await done;
