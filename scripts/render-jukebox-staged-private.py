@@ -70,6 +70,11 @@ def validate_staged_scene_plan(stage_dir: Path, scene_plan: Path, expected_job: 
             or plan.get("seconds") not in ("full", 15, 30, 45, 60)
             or type(plan.get("endWithLastScene")) is not bool):
         raise ValueError("Invalid private render scene plan")
+    audio_start = plan.get("audioStartSeconds", 0)
+    if (type(audio_start) not in (int, float) or not math.isfinite(audio_start)
+        or audio_start < 0 or audio_start > 3600
+        or (audio_start != 0 and plan["seconds"] == "full")):
+        raise ValueError("Invalid source audio excerpt start")
     receipts = receipt.get("images")
     scenes = plan.get("scenes")
     if not isinstance(receipts, list) or not isinstance(scenes, list):
@@ -157,10 +162,16 @@ def render_stage(stage_dir: Path, scene_plan: Path, audio: Path, cabinet: Path, 
     portable.verify_sha256(audio, master_sha)
     portable.verify_sha256(cabinet, cabinet_sha)
     composer = module("compose-jukebox-video.py")
-    duration = composer.probe_media(audio, "audio")
+    original_duration = composer.probe_media(audio, "audio")
+    audio_start = float(plan.get("audioStartSeconds", 0))
+    duration = original_duration
     composer.probe_media(cabinet, "video")
+    if audio_start >= original_duration:
+        raise ValueError("Audio excerpt starts beyond master")
     if plan["seconds"] != "full":
         duration = min(duration, plan["seconds"])
+        if audio_start and audio_start + plan["seconds"] > original_duration + 0.001:
+            raise ValueError("Audio excerpt extends beyond master")
     portrait = plan["format"] == "portrait"
     assignments = timed_assignments(scenes, duration, portrait, plan["endWithLastScene"])
     if output.exists() or output.resolve() in (
@@ -169,6 +180,7 @@ def render_stage(stage_dir: Path, scene_plan: Path, audio: Path, cabinet: Path, 
     receipt = {"version": 1, "jobId": job_id, "songId": song_id,
                "masterSha256": master_sha, "cabinetSha256": cabinet_sha,
                "format": plan["format"], "durationSeconds": duration,
+               "audioStartSeconds": audio_start,
                "assignments": assignments, "publish": False}
     if plan_only:
         return receipt
@@ -183,7 +195,7 @@ def render_stage(stage_dir: Path, scene_plan: Path, audio: Path, cabinet: Path, 
                                   portrait)
             clips.append(dest)
         sections.compose_sections(audio, cabinet, clips, assignments, output,
-                                  portrait, seconds=duration)
+                                  portrait, seconds=duration, audio_start=audio_start)
         receipt["videoSha256"] = file_sha256(output)
         receipt["videoBytes"] = output.stat().st_size
     return receipt

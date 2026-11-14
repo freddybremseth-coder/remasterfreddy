@@ -57,6 +57,11 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
         or str(data.get("seconds")) not in ("full","15","30","45","60")
         or type(data.get("endWithLastScene")) is not bool):
         raise ValueError("Exported project does not match selected song")
+    offset = data.get("audioStartSeconds", 0)
+    if (type(offset) not in (int, float) or not math.isfinite(offset)
+        or offset < 0 or offset > 3600 or
+        (offset != 0 and data["seconds"] == "full")):
+        raise ValueError("Invalid source audio excerpt start")
     images=receipt.get("images")
     clips=data.get("clips")
     if (not isinstance(images,list) or not isinstance(clips,list)
@@ -131,6 +136,7 @@ def create_plan(stage_dir:Path, project:Path, output:Path, expected_job_id:str,
     plan={"version":1,"jobId":expected_job_id,"songId":expected_song_id,
           "format":data["videoFormat"],
           "seconds":"full" if data["seconds"]=="full" else int(data["seconds"]),
+          "audioStartSeconds":offset,
           "endWithLastScene":data["endWithLastScene"],
           "scenes":scenes,"publish":False}
     if output.exists():

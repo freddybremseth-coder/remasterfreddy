@@ -32,6 +32,7 @@ export default function AdminJukeboxStudio(){
   const [error,setError]=useState("");
   const [playing,setPlaying]=useState(false);
   const [seconds,setSeconds]=useState<"full"|"15"|"30"|"45"|"60">("full");
+  const [audioStartSeconds,setAudioStartSeconds]=useState(0);
   const [jobs,setJobs]=useState<JukeboxJob[]>([]);
   const [jobBusy,setJobBusy]=useState(false);
   const [jobNotice,setJobNotice]=useState("");
@@ -60,7 +61,8 @@ export default function AdminJukeboxStudio(){
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
   const hybridIntro=format==="portrait"?"inntil 3 sekunder":"inntil 30 sekunder";
   const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
-  const plannedDuration=audioDuration>0?Math.min(audioDuration,seconds==="full"?audioDuration:Number(seconds)):0;
+  const plannedDuration=audioDuration>0?Math.max(0,Math.min(audioDuration-audioStartSeconds,seconds==="full"?audioDuration:Number(seconds))):0;
+  const sourceExcerptInvalid=seconds==="full"?audioStartSeconds!==0:(audioStartSeconds+Number(seconds)>audioDuration+0.001||!Number.isFinite(audioStartSeconds)||audioStartSeconds<0);
   const introTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(30,plannedDuration*.20);
   const outroTime=endWithLastScene&&style==="hybrid"?0:(format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10));
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
@@ -178,7 +180,7 @@ export default function AdminJukeboxStudio(){
     finally{setReadinessBusy(false);}
   }
   async function queueVideo(){
-    if(!songId||!renderEnabled||jobBusy||style==="hybrid")return;
+    if(!songId||!renderEnabled||jobBusy||style==="hybrid"||audioStartSeconds!==0)return;
     setJobBusy(true);setError("");setJobNotice("");
     try{
       const request={songId,format,...(seconds==="full"?{}:{seconds:Number(seconds) as 15|30|45|60})};
@@ -189,7 +191,7 @@ export default function AdminJukeboxStudio(){
     finally{setJobBusy(false);}
   }
   useEffect(()=>{
-    setPlaying(false);setPlayhead(0);setAudioDuration(0);setSceneKey(value=>value+1);
+    setPlaying(false);setPlayhead(0);setAudioStartSeconds(0);setAudioDuration(0);setSceneKey(value=>value+1);
     if(audio.current){audio.current.pause();audio.current.currentTime=0;}
   },[songId]);
   useEffect(()=>()=>{audio.current?.pause();},[]);
@@ -224,7 +226,7 @@ export default function AdminJukeboxStudio(){
       const restored=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
       localClipUrls.current=restored.map(clip=>clip.url);
       setLocalClips(restored);
-      setFormat(draft.format);setSeconds(draft.seconds);setSceneCount(draft.sceneCount);
+      setFormat(draft.format);setSeconds(draft.seconds);setAudioStartSeconds(draft.audioStartSeconds??0);setSceneCount(draft.sceneCount);
       setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
       setDraftNotice(`Lokalt utkast hentet (${new Date(draft.savedAt).toLocaleString("nb-NO")}).`);
     }).catch(()=>{if(!cancelled)setDraftNotice("Lokalt utkast kunne ikke leses. Du kan fortsatt bruke forhåndsvisningen.");})
@@ -233,10 +235,11 @@ export default function AdminJukeboxStudio(){
   },[songId]);
   async function saveDraft(){
     if(!songId||draftBusy||draftLoading)return;
+    if(sourceExcerptInvalid){setDraftNotice("Startpunktet ligger utenfor originallåten.");return;}
     if(localClips.some(clip=>!clip.file)){setDraftNotice("Kunne ikke lagre: ett eller flere klipp mangler originalfil.");return;}
     setDraftBusy(true);
     try{
-      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
+      const draft:JukeboxDraft={version:1,songId,format,seconds,audioStartSeconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
       await saveJukeboxDraft(draft);
       setDraftNotice("Utkastet er lagret i denne nettleseren. Det er ikke lastet opp til kontoen og kan forsvinne om nettleserdata slettes.");
     }catch{setDraftNotice("Lagringen mislyktes. Kontroller nettleserens lagringsplass og innstillinger.");}
@@ -247,7 +250,7 @@ export default function AdminJukeboxStudio(){
     if(localClips.some(clip=>!clip.file)){setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;}
     setDraftBusy(true);
     try{
-      const draft:JukeboxDraft={version:1,songId,format,seconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
+      const draft:JukeboxDraft={version:1,songId,format,seconds,audioStartSeconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
       const blob=await exportPortableDraft(draft);
       const url=URL.createObjectURL(blob);
       const link=document.createElement("a");link.href=url;link.download=`jukebox-${songId}-backup.json`;
@@ -267,7 +270,7 @@ export default function AdminJukeboxStudio(){
       const clips=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
       localClipUrls.current=clips.map(clip=>clip.url);
       setLocalClips(clips);setSceneCount(draft.sceneCount);setFormat(draft.format);
-      setSeconds(draft.seconds);setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
+      setSeconds(draft.seconds);setAudioStartSeconds(draft.audioStartSeconds??0);setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
       setDraftNotice("Sikkerhetskopien ble hentet inn og lagret lokalt på denne enheten.");
     }catch(error){setDraftNotice(error instanceof Error?error.message:"Import av prosjekt feilet.");}
     finally{setDraftBusy(false);}
@@ -300,7 +303,7 @@ export default function AdminJukeboxStudio(){
     ];
     const manifest={
       version:2,renderStatus:"planning_only",songId:song.id,songTitle:song.title,
-      format,seconds:plannedDuration,style,localMediaIncluded:false,
+      format,seconds:plannedDuration,audioStartSeconds,style,localMediaIncluded:false,
       endWithLastScene,manualCuesComplete:Boolean(manualTiming),
       timingReviewRequired:hasManualCues&&!manualTiming,
       entries:entries.map(entry=>({...entry,start:Number(entry.start.toFixed(3)),duration:Number(entry.duration.toFixed(3))})),
@@ -381,9 +384,9 @@ export default function AdminJukeboxStudio(){
   }
 
   async function togglePlayback(){
-    if(!audio.current||!song?.audioUrl)return;
+    if(!audio.current||!song?.audioUrl||sourceExcerptInvalid)return;
     if(playing){audio.current.pause();sceneVideo.current?.pause();setPlaying(false);return;}
-    try{await audio.current.play();setPlaying(true);}
+    try{if(audio.current.currentTime<audioStartSeconds||audio.current.currentTime>=audioStartSeconds+plannedDuration)audio.current.currentTime=audioStartSeconds;await audio.current.play();setPlaying(true);}
     catch{setError("Lydfilen kunne ikke avspilles. Velg en annen sang eller kontroller tilgangen.");}
   }
 
@@ -416,9 +419,11 @@ export default function AdminJukeboxStudio(){
         <option value="jukebox">Jukebox hele veien</option>
         <option value="hybrid">Jukebox + musikkvideo</option>
       </select></label>
-      <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>setSeconds(event.target.value as "full"|"15"|"30"|"45"|"60")}>
+      <label><span>Lengde</span><select aria-label="Videolengde" value={seconds} onChange={event=>{const next=event.target.value as "full"|"15"|"30"|"45"|"60";setSeconds(next);if(next==="full")setAudioStartSeconds(0);}}>
         <option value="full">Hele låten</option><option value="15">15 sekunder</option><option value="30">30 sekunder</option><option value="45">45 sekunder</option><option value="60">60 sekunder</option>
       </select></label>
+      {seconds!=="full"&&<label><span>Start i originalmusikken (sekunder)</span><input type="number" aria-label="Start i originalmusikken" min={0} max={Math.max(0,audioDuration-Number(seconds))} step="0.1" value={audioStartSeconds} onChange={event=>setAudioStartSeconds(Number(event.target.value))}/></label>}
+      {seconds!=="full"&&<p role="status">Utdrag: {stamp(audioStartSeconds)}–{stamp(audioStartSeconds+Number(seconds))} i originallåten. Tidene under bildene gjelder den ferdige filmen fra 00:00. {sourceExcerptInvalid?"Starttid er utenfor sangens lengde.":audioStartSeconds>0?"Utdraget støttes i privat prosjektfil. Jobbkøen avventer sikker kilde-offset-støtte.":""}</p>}
       {style==="hybrid"&&<label><span>Avslutning</span><select aria-label="Velg avslutning" value={endWithLastScene?"last_scene":"jukebox"} onChange={event=>setEndWithLastScene(event.target.value==="last_scene")}>
         <option value="jukebox">Avslutt med Jukebox</option><option value="last_scene">Avslutt med siste bilde eller klipp</option>
       </select></label>}
@@ -576,15 +581,15 @@ export default function AdminJukeboxStudio(){
         {reviewHash&&<p role="status">Privat fil kontrollert lokalt. SHA-256: <code>{reviewHash}</code>. Dette godkjenner ikke YouTube-publisering.</p>}
       </div>}
     </section>
-    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=0;}else setPlayhead(position);}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
+    <audio ref={audio} src={song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime-audioStartSeconds;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=audioStartSeconds;}else setPlayhead(Math.max(0,position));}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
-      <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading} onClick={()=>void togglePlayback()}>
+      <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading||sourceExcerptInvalid} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
       </button>
       <button className="admin-secondary" type="button" onClick={()=>{setSceneKey(value=>value+1);void refresh();}} disabled={loading}><RefreshCw size={16}/> Oppdater sanger</button>
     </div>
     <div className="jukebox-actions">
-      <button className="admin-primary" type="button" disabled={!renderEnabled||!songId||jobBusy||style==="hybrid"} onClick={()=>void queueVideo()}>
+      <button className="admin-primary" type="button" disabled={!renderEnabled||!songId||jobBusy||style==="hybrid"||audioStartSeconds!==0} onClick={()=>void queueVideo()}>
         <Clapperboard size={17}/> {jobBusy?"Oppretter jobb…":style==="hybrid"?"Hybrid venter på musikkvideo":"Lag Jukebox-video"}
       </button>
       {renderEnabled&&<button className="admin-secondary" type="button" onClick={()=>void refreshJobs()}><RefreshCw size={16}/> Oppdater produksjonsstatus</button>}
