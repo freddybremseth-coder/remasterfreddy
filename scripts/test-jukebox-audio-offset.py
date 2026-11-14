@@ -33,7 +33,7 @@ class SourceOffsetTests(unittest.TestCase):
                 self.assertEqual(plan[0]["end"],0.5)
                 args=ffmpeg.call_args.args[0]
                 audio_index=args.index(str(root/"original.wav"))
-                self.assertEqual(args[audio_index-2:audio_index],["-ss","3.000"])
+                self.assertEqual(args[audio_index-3:audio_index],["-ss","3.000","-i"])
                 self.assertEqual(args[args.index("-t")+1],"2.000")
                 self.assertIn("-map",args)
             # A 3-second offset into a six-second master leaves two seconds.
