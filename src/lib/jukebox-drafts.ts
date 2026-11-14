@@ -2,7 +2,7 @@
 export type JukeboxDraftClip={name:string;kind:"image"|"video";file:Blob;finale:boolean;section?:string;weight?:number;cueStart?:number};
 export type JukeboxDraft={
   version:1;songId:string;format:"landscape"|"portrait";
-  seconds:"full"|"15"|"30"|"45"|"60";endWithLastScene:boolean;
+  seconds:"full"|"15"|"30"|"45"|"60";audioStartSeconds?:number;endWithLastScene:boolean;
   sceneCount:number;clips:JukeboxDraftClip[];savedAt:number;
 };
 const DB_NAME="remaster-jukebox-private-drafts";
