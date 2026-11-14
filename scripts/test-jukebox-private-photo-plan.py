@@ -74,6 +74,37 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
                              [(3.0,28.0),(28.0,45.0)])
             self.assertFalse(plan["publish"])
 
+    def test_45_second_short_from_197_seconds_carries_source_offset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            stage,_,_,_=fixtures.prepare(root)
+            project,data=make_project(root,stage)
+            data["seconds"]=45
+            data["videoFormat"]="portrait"
+            data["audioStartSeconds"]=197.0
+            data["clips"][0]["cueStart"]=3.7
+            data["clips"][1]["cueStart"]=31.5
+            project.write_text(json.dumps(data))
+            plan_path=root/"offset-plan.json"
+            handoff.create_plan(stage,project,plan_path,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            _,scenes,plan=renderer.validate_staged_scene_plan(
+                stage,plan_path,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            self.assertEqual(plan["audioStartSeconds"],197.0)
+            self.assertEqual(plan["seconds"],45)
+            self.assertEqual([(a["start"],a["end"]) for a in
+                              renderer.timed_assignments(scenes,45,True,True)],
+                             [(3.7,31.5),(31.5,45)])
+            self.assertFalse(plan["publish"])
+            data["audioStartSeconds"]=float("nan")
+            project.write_text(json.dumps(data))
+            with self.assertRaises(ValueError):
+                handoff.create_plan(stage,project,root/"bad-offset.json",fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            data["audioStartSeconds"]=197
+            data["seconds"]="full"
+            project.write_text(json.dumps(data))
+            with self.assertRaises(ValueError):
+                handoff.create_plan(stage,project,root/"bad-full.json",fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+
     def test_exact_cues_reach_verified_renderer_without_weight_recalculation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
