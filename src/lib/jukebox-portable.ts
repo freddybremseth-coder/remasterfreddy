@@ -5,7 +5,7 @@ type PortableClip={name:string;kind:"image"|"video";finale:boolean;section?:stri
 type PortableDraft={
   format:"remaster-jukebox-portable";version:1;
   songId:string;videoFormat:"landscape"|"portrait";
-  seconds:"full"|"15"|"30"|"60";sceneCount:number;
+  seconds:"full"|"15"|"30"|"45"|"60";sceneCount:number;
   endWithLastScene:boolean;clips:PortableClip[];
 };
 function readAsDataUrl(blob:Blob):Promise<string>{
@@ -44,7 +44,7 @@ export async function importPortableDraft(file:File,expectedSongId:string):Promi
   const item=data as Partial<PortableDraft>;
   if(item.format!=="remaster-jukebox-portable"||item.version!==1||item.songId!==expectedSongId)
     throw new Error("Sikkerhetskopien er ikke for den valgte sangen.");
-  if(!["landscape","portrait"].includes(String(item.videoFormat))||!["full","15","30","60"].includes(String(item.seconds))
+  if(!["landscape","portrait"].includes(String(item.videoFormat))||!["full","15","30","45","60"].includes(String(item.seconds))
     ||!Number.isInteger(item.sceneCount)||Number(item.sceneCount)<1||Number(item.sceneCount)>MAX_CLIPS
     ||typeof item.endWithLastScene!=="boolean"||!Array.isArray(item.clips)||item.clips.length>MAX_CLIPS)
     throw new Error("Prosjektinnstillingene i sikkerhetskopien er ugyldige.");
