@@ -40,8 +40,10 @@ export function chooseBrowserJukeboxMime(
   supports:(mime:string)=>boolean,
 ):{mimeType:string;extension:"mp4"|"webm"}|null{
   for(const mimeType of [
+    // Explicit H.264 + AAC only. A generic video/mp4 probe can
+    // silently select VP9/Opus on Chromium, producing a misleading MP4.
     'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
-    "video/mp4",
+    'video/mp4;codecs="avc1.4D401F,mp4a.40.2"',
     'video/webm;codecs="vp9,opus"',
     'video/webm;codecs="vp8,opus"',
     "video/webm",
