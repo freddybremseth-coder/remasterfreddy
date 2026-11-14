@@ -58,9 +58,11 @@ def compose_sections(audio: Path, jukebox: Path, photo_clips: list[Path],
         raise ValueError("Invalid audio excerpt start")
     if audio_start and seconds is None:
         raise ValueError("An audio excerpt requires an explicit short duration")
-    length = min(original_length - audio_start, seconds) if seconds is not None else original_length
-    if audio_start and audio_start + length > original_length + 0.001:
+    if seconds is not None and (not math.isfinite(seconds) or seconds <= 0):
+        raise ValueError("Invalid requested short duration")
+    if audio_start and (seconds is None or audio_start + seconds > original_length + 0.001):
         raise ValueError("Audio excerpt extends past original master")
+    length = min(original_length - audio_start, seconds) if seconds is not None else original_length
     composer.probe_media(jukebox,"video")
     plan = build_section_plan(length,assignments)
     photo_map = {p.name:p for p in photo_clips}
