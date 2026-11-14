@@ -67,7 +67,7 @@ def validate_staged_scene_plan(stage_dir: Path, scene_plan: Path, expected_job: 
             or plan.get("songId") != expected_song
             or plan.get("publish") is not False
             or plan.get("format") not in ("landscape", "portrait")
-            or plan.get("seconds") not in ("full", 15, 30, 60)
+            or plan.get("seconds") not in ("full", 15, 30, 45, 60)
             or type(plan.get("endWithLastScene")) is not bool):
         raise ValueError("Invalid private render scene plan")
     receipts = receipt.get("images")

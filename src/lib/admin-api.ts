@@ -318,7 +318,7 @@ export async function loadJukeboxJobs(): Promise<JukeboxJob[]> {
 
 /** Queue only; does not trigger YouTube publication. */
 export async function queueJukeboxVideo(input: {
-  songId: string; format: "landscape" | "portrait"; seconds?: 15 | 30 | 60;
+  songId: string; format: "landscape" | "portrait"; seconds?: 15 | 30 | 45 | 60;
 }): Promise<{ job: JukeboxJob; reused: boolean }> {
   const response = await adminFetch("/api/neural-beat-jukebox", {
     method: "POST", body: JSON.stringify(input),
