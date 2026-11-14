@@ -52,6 +52,28 @@ class PrivatePhotoHandoffTests(unittest.TestCase):
             self.assertEqual(renderer.timed_assignments(scenes,100,False,True)[-1]["end"],100)
 
 
+    def test_45_second_short_survives_photo_project_and_renderer_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            stage,_,_,_=fixtures.prepare(root)
+            project,data=make_project(root,stage)
+            data["videoFormat"]="portrait"
+            data["seconds"]=45
+            data["clips"][0]["cueStart"]=3.0
+            data["clips"][1]["cueStart"]=28.0
+            project.write_text(json.dumps(data))
+            output=root/"private-short-45-plan.json"
+            handoff.create_plan(stage,project,output,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            files,scenes,plan=renderer.validate_staged_scene_plan(
+                stage,output,fixtures.JOB,fixtures.SONG,fixtures.MASTER)
+            self.assertEqual(len(files),2)
+            self.assertEqual(plan["seconds"],45)
+            self.assertEqual(plan["format"],"portrait")
+            self.assertEqual([(s["start"],s["end"]) for s in
+                              renderer.timed_assignments(scenes,45,True,True)],
+                             [(3.0,28.0),(28.0,45.0)])
+            self.assertFalse(plan["publish"])
+
     def test_exact_cues_reach_verified_renderer_without_weight_recalculation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
