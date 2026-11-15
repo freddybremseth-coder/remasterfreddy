@@ -499,6 +499,16 @@ export default function AdminJukeboxStudio(){
     <h2>60-talls jukeboks</h2>
     <p><a href="#jukebox-direct-production">Gå direkte til «Produser privat video»</a> – du kan nå lage og laste ned musikkvideoer her.</p>
     <p>Velg en sang fra musikkbiblioteket og en videostil. Jukeboxen har roterende vinyl og originalmusikk, uten den kompliserte plateveksleren. Videoer lagres privat for kontroll før eventuell publisering.</p>
+    <div className="jukebox-actions" aria-label="Start med et eksisterende prosjekt">
+      <button type="button" className="admin-primary" disabled={loading||!songs.length||draftBusy||draftLoading}
+        onClick={()=>portableInput.current?.click()}>
+        <Clapperboard size={17}/> Åpne prosjektfil
+      </button>
+      <input ref={portableInput} type="file" accept=".json,application/json" style={{display:"none"}}
+        aria-label="Velg Jukebox-prosjektfil"
+        onChange={event=>{void importBackup(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
+      <span>Åpne en lagret Jukebox-video – sang, bilder og tidslinje velges automatisk.</span>
+    </div>
     {error&&<div role="alert" className="admin-error">{error}</div>}
     <div className="jukebox-template-intro">
       <h3>Lag en ny musikkvideo med mal</h3>
@@ -562,7 +572,7 @@ export default function AdminJukeboxStudio(){
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadBackup()}>Klargjør privat MP4 – last ned prosjekt</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>portableInput.current?.click()}>Åpne prosjektfil</button>
-        <input ref={portableInput} type="file" accept=".json,application/json" style={{display:"none"}} aria-label="Velg Jukebox-prosjektfil" onChange={event=>{void importBackup(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
+
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
       </div>
       <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
