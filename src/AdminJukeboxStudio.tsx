@@ -5,6 +5,7 @@ import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} 
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
 import {resolveSceneTiming} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
+import {jukeboxDurationState} from "./lib/jukebox-duration";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
 import {validatePrivateMp4File,validatePrivateMp4Duration,hashPrivateMp4} from "./lib/jukebox-private-review";
 import {validateJukeboxSelectedMedia} from "./lib/jukebox-media-validation";
@@ -76,8 +77,7 @@ export default function AdminJukeboxStudio(){
   const song=useMemo(()=>songs.find(item=>item.id===songId),[songs,songId]);
   const hybridIntro=format==="portrait"?"inntil 3 sekunder":"inntil 30 sekunder";
   const hybridOutro=format==="portrait"?"inntil 3 sekunder":"inntil 15 sekunder";
-  const plannedDuration=audioDuration>0?Math.max(0,Math.min(audioDuration-audioStartSeconds,seconds==="full"?audioDuration:Number(seconds))):0;
-  const sourceExcerptInvalid=seconds==="full"?audioStartSeconds!==0:(audioStartSeconds+Number(seconds)>audioDuration+0.001||!Number.isFinite(audioStartSeconds)||audioStartSeconds<0);
+  const {plannedDuration,sourceExcerptInvalid,metadataKnown}=jukeboxDurationState(seconds,audioDuration,audioStartSeconds);
   const introTime=format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(30,plannedDuration*.20);
   const outroTime=endWithLastScene&&style==="hybrid"?0:(format==="portrait"?Math.min(3,plannedDuration*.12):Math.min(15,plannedDuration*.10));
   const middleTime=Math.max(0,plannedDuration-introTime-outroTime);
@@ -103,13 +103,17 @@ export default function AdminJukeboxStudio(){
     const url=file?URL.createObjectURL(file):"";
     localAudioUrlRef.current=url;
     setLocalAudioFile(file);setLocalAudioUrl(url);
+    setAudioDuration(0); // Do not reuse stale metadata from a different song or file.
     setDirectVideoError("");
   }
   async function produceDirectVideo(){
     if(directVideoBusy)return;
     if(!songId||!song){setDirectVideoError("Velg en sang først.");return;}
-    if(!Number.isFinite(plannedDuration)||plannedDuration<=1||sourceExcerptInvalid){
-      setDirectVideoError("Lydvarighet eller lydutdrag er ugyldig.");return;
+    if(sourceExcerptInvalid){
+      setDirectVideoError("Utdraget ligger utenfor lydfilens kjente lengde. Velg et tidligere startpunkt eller en lengre originalfil.");return;
+    }
+    if(!Number.isFinite(plannedDuration)||plannedDuration<=1){
+      setDirectVideoError("Kan ikke lese lengden på hele sangen. Velg lokal original-MP3 nedenfor og prøv igjen, eller velg en bestemt Shorts-lengde.");return;
     }
     if(style==="hybrid"&&!localClips.length){
       setDirectVideoError("Velg minst ett bilde til musikkvideoen.");return;
@@ -484,7 +488,7 @@ export default function AdminJukeboxStudio(){
   }
 
   async function togglePlayback(){
-    if(!audio.current||!song?.audioUrl||sourceExcerptInvalid)return;
+    if(!audio.current||!(localAudioUrl||song?.audioUrl)||sourceExcerptInvalid)return;
     if(playing){audio.current.pause();sceneVideo.current?.pause();setPlaying(false);return;}
     try{if(audio.current.currentTime<audioStartSeconds||audio.current.currentTime>=audioStartSeconds+plannedDuration)audio.current.currentTime=audioStartSeconds;await audio.current.play();setPlaying(true);}
     catch{setError("Lydfilen kunne ikke avspilles. Velg en annen sang eller kontroller tilgangen.");}
@@ -667,11 +671,13 @@ export default function AdminJukeboxStudio(){
         <input type="file" accept="audio/mpeg,audio/mp3,.mp3" disabled={directVideoBusy} onChange={event=>{chooseLocalMaster(event.currentTarget.files?.[0]||null);event.currentTarget.value="";}}/>
       </label>
       {localAudioFile&&<p role="status">Lokal original: {localAudioFile.name} <button className="admin-secondary" type="button" disabled={directVideoBusy} onClick={()=>chooseLocalMaster(null)}>Bruk bibliotekets lydfil igjen</button></p>}
+      {!metadataKnown&&seconds!=="full"&&<p role="status">Spilletiden fra sangbiblioteket er ennå ikke tilgjengelig. {seconds}-sekundersvideoen kan likevel startes; originalfilen kontrolleres før opptak. Hvis musikken ikke kan hentes automatisk, velg lokal MP3 over.</p>}
+      {!metadataKnown&&seconds==="full"&&<p role="status">Hele sangens lengde er ikke lastet ennå. Velg lokal MP3 dersom musikken ikke leses fra biblioteket.</p>}
       <p>Valgt: <strong>{song?.title||"Ingen sang"}</strong> · {format==="portrait"?"Shorts 9:16":"Liggende 16:9"} · {plannedDuration>0?stamp(plannedDuration):"Ukjent spilletid"} {audioStartSeconds>0?`· lyd fra ${stamp(audioStartSeconds)}`:""}.</p>
       <p>Opptaket tar like lang tid som videoen. La denne fanen stå åpen og synlig mens den produseres. Bildene og musikken blir ikke sendt til noen ny server.</p>
       <div className="jukebox-actions">
         <button className="admin-primary" type="button"
-          disabled={directVideoBusy||!songId||sourceExcerptInvalid||plannedDuration<=1||draftLoading}
+          disabled={directVideoBusy||draftLoading}
           onClick={()=>void produceDirectVideo()}>
           <Clapperboard size={17}/> {directVideoBusy?`Produserer video … ${directVideoProgress}%`:"Produser privat video"}
         </button>
@@ -706,9 +712,9 @@ export default function AdminJukeboxStudio(){
         {reviewHash&&<p role="status">Privat fil kontrollert lokalt. SHA-256: <code>{reviewHash}</code>. Dette godkjenner ikke YouTube-publisering.</p>}
       </div>}
     </section>
-    <audio ref={audio} src={localAudioUrl||song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(event.currentTarget.duration)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime-audioStartSeconds;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=audioStartSeconds;}else setPlayhead(Math.max(0,position));}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
+    <audio ref={audio} src={localAudioUrl||song?.audioUrl} onLoadedMetadata={event=>setAudioDuration(Number.isFinite(event.currentTarget.duration)?event.currentTarget.duration:0)} onTimeUpdate={event=>{const position=event.currentTarget.currentTime-audioStartSeconds;if(plannedDuration>0&&position>=plannedDuration){event.currentTarget.pause();sceneVideo.current?.pause();setPlaying(false);setPlayhead(0);event.currentTarget.currentTime=audioStartSeconds;}else setPlayhead(Math.max(0,position));}} onEnded={()=>{setPlaying(false);setPlayhead(0);}} preload="metadata"/>
     <div className="jukebox-actions">
-      <button className="admin-primary" type="button" disabled={!song?.audioUrl||loading||sourceExcerptInvalid} onClick={()=>void togglePlayback()}>
+      <button className="admin-primary" type="button" disabled={!(localAudioUrl||song?.audioUrl)||loading||sourceExcerptInvalid} onClick={()=>void togglePlayback()}>
         {playing?<Pause size={17}/>:<Play size={17}/>} {playing?"Pause forhåndsvisning":"Spill forhåndsvisning"}
       </button>
       <button className="admin-secondary" type="button" onClick={()=>{setSceneKey(value=>value+1);void refresh();}} disabled={loading}><RefreshCw size={16}/> Oppdater sanger</button>
