@@ -635,7 +635,7 @@ export default function AdminJukeboxStudio(){
           onClick={()=>void openSavedVariant(variant)}>
           {variant.seconds==="full"?"Hele sangen":variant.seconds+" sekunder"} · {variant.format==="portrait"?"9:16":"16:9"}
         </button>)}
-      </div>
+      </div>}
       <p>Fullversjon og Short lagres separat i denne nettleseren. Du kan åpne dem fra «Lagrede versjoner» over. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
       <details className="jukebox-private-render-gate" aria-label="Avanserte serverinnstillinger"><summary>Avansert: serverkø og privat bildelagring (ikke nødvendig for lokal video)</summary>
         <h3>Lag privat MP4</h3>
