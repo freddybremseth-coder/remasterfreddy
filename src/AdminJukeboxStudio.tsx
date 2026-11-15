@@ -38,6 +38,9 @@ export default function AdminJukeboxStudio(){
   const [draftNotice,setDraftNotice]=useState("");
   const [templateId,setTemplateId]=useState("");
   const draftLoadId=useRef(0);
+  // Keep an imported project in memory while switching to its catalog song.
+  // Import must not depend on IndexedDB quota or private browsing settings.
+  const pendingPortableImport=useRef<JukeboxDraft|null>(null);
   const portableInput=useRef<HTMLInputElement|null>(null);
   const localClipUrls=useRef<string[]>([]);
   const [loading,setLoading]=useState(true);
@@ -284,6 +287,14 @@ export default function AdminJukeboxStudio(){
     reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);
     setReviewDuration(0);setReviewHash("");setReviewError("");
   },[songId]);
+  function showDraft(draft:JukeboxDraft){
+    for(const url of localClipUrls.current)URL.revokeObjectURL(url);
+    const restored=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
+    localClipUrls.current=restored.map(clip=>clip.url);
+    setLocalClips(restored);setSceneCount(draft.sceneCount);setFormat(draft.format);
+    setSeconds(draft.seconds);setAudioStartSeconds(draft.audioStartSeconds??0);
+    setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");setTemplateId("");
+  }
   useEffect(()=>{
     if(!songId)return;
     let cancelled=false;
@@ -294,14 +305,17 @@ export default function AdminJukeboxStudio(){
     setLocalClips([]);
     setTemplateId("");
     setDraftNotice("");
+    const imported=pendingPortableImport.current;
+    if(imported?.songId===songId){
+      pendingPortableImport.current=null;
+      showDraft(imported);
+      setDraftNotice("Prosjektfilen er åpnet med riktig sang. Du kan produsere videoen nå.");
+      setDraftLoading(false);
+      return()=>{cancelled=true;};
+    }
     void loadJukeboxDraft(songId).then(draft=>{
       if(cancelled||requestId!==draftLoadId.current||!draft)return;
-      for(const url of localClipUrls.current)URL.revokeObjectURL(url);
-      const restored=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
-      localClipUrls.current=restored.map(clip=>clip.url);
-      setLocalClips(restored);
-      setFormat(draft.format);setSeconds(draft.seconds);setAudioStartSeconds(draft.audioStartSeconds??0);setSceneCount(draft.sceneCount);
-      setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
+      showDraft(draft);
       setDraftNotice(`Lokalt utkast hentet (${new Date(draft.savedAt).toLocaleString("nb-NO")}).`);
     }).catch(()=>{if(!cancelled)setDraftNotice("Lokalt utkast kunne ikke leses. Du kan fortsatt bruke forhåndsvisningen.");})
       .finally(()=>{if(!cancelled&&requestId===draftLoadId.current)setDraftLoading(false);});
@@ -335,17 +349,29 @@ export default function AdminJukeboxStudio(){
     finally{setDraftBusy(false);}
   }
   async function importBackup(file:File|null){
-    if(!file||!songId||draftBusy||draftLoading)return;
+    if(!file||draftBusy||draftLoading)return;
     setDraftBusy(true);
     try{
-      const draft=await importPortableDraft(file,songId);
-      await saveJukeboxDraft(draft);
-      for(const url of localClipUrls.current)URL.revokeObjectURL(url);
-      const clips=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
-      localClipUrls.current=clips.map(clip=>clip.url);
-      setLocalClips(clips);setSceneCount(draft.sceneCount);setFormat(draft.format);
-      setSeconds(draft.seconds);setAudioStartSeconds(draft.audioStartSeconds??0);setEndWithLastScene(draft.endWithLastScene);setStyle("hybrid");
-      setDraftNotice("Sikkerhetskopien ble hentet inn og lagret lokalt på denne enheten.");
+      // The project itself supplies its exact song identity. This lets the user
+      // open Drømmer even when a different song happens to be selected.
+      const draft=await importPortableDraft(file);
+      if(!songs.some(item=>item.id===draft.songId)){
+        throw new Error("Sangen i prosjektfilen finnes ikke i musikkbiblioteket. Legg inn sangen først og prøv igjen.");
+      }
+      let saved=true;
+      try{await saveJukeboxDraft(draft);}
+      catch{saved=false;} // The already-decoded photos are still usable now.
+      const notice=saved
+        ?"Prosjektet er åpnet med riktig sang og lagret lokalt. Du kan nå produsere videoen."
+        :"Prosjektet er åpnet og kan produseres nå, men ble ikke lagret permanent i nettleseren. Behold JSON-filen.";
+      if(draft.songId===songId){
+        showDraft(draft);
+        setDraftNotice(notice);
+      }else{
+        pendingPortableImport.current=draft;
+        setSongId(draft.songId);
+        setDraftNotice(notice);
+      }
     }catch(error){setDraftNotice(error instanceof Error?error.message:"Import av prosjekt feilet.");}
     finally{setDraftBusy(false);}
   }
