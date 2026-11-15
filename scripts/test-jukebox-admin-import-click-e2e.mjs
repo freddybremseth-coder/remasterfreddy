@@ -107,6 +107,12 @@ try{
     return selection?.querySelectorAll("option").length===2&&selection.value!==id;
   },SONG_ID);
   assert.equal(await picker.inputValue(),OTHER_ID,"Precondition: another song selected");
+  // Avoid racing the initial asynchronous browser-draft lookup.
+  await page.waitForFunction(()=>{
+    const button=[...document.querySelectorAll("button")]
+      .find(el=>el.textContent?.includes("Klargjør privat MP4"));
+    return Boolean(button&&!button.disabled);
+  },null,{timeout:25000});
   const pngs=await page.evaluate(async()=>{
     const result=[];
     for(let i=0;i<6;i++){
@@ -176,11 +182,7 @@ try{
   assert.equal(v.width,1080);assert.equal(v.height,1920);
   const length=Number(media.format.duration);
   assert.ok(length>=44&&length<48,"Expected actual 45-second video, got "+length);
-  const decode=execFileSync("ffmpeg",[
-    "-nostdin","-hide_banner","-v","info","-xerror","-i",downloaded,
-    "-map","0:a:0","-af","volumedetect","-f","null","-",
-  ],{timeout:80000,encoding:"utf8",maxBuffer:2048*1024,stdio:["ignore","pipe","pipe"]});
-  // ffmpeg writes volume data to stderr, so separately capture stderr below.
+  // FFmpeg writes volumedetect statistics to stderr. Verify actual sound.
   const {spawnSync}=await import("node:child_process");
   const loud=spawnSync("ffmpeg",[
     "-nostdin","-hide_banner","-v","info","-i",downloaded,
