@@ -36,14 +36,17 @@ function decodeDataUrl(data:string,mime:string):Blob{
   for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
   return new Blob([bytes],{type:mime});
 }
-export async function importPortableDraft(file:File,expectedSongId:string):Promise<JukeboxDraft>{
+export async function importPortableDraft(file:File,expectedSongId?:string):Promise<JukeboxDraft>{
   if(file.size>MAX_TOTAL_BYTES*1.4)throw new Error("Sikkerhetskopien er for stor (maks. ca. 55 MB).");
   let data:unknown;
   try{data=JSON.parse(await file.text());}catch{throw new Error("Filen er ikke en gyldig Jukebox-sikkerhetskopi.");}
   if(!data||typeof data!=="object")throw new Error("Ugyldig sikkerhetskopi.");
   const item=data as Partial<PortableDraft>;
-  if(item.format!=="remaster-jukebox-portable"||item.version!==1||item.songId!==expectedSongId)
-    throw new Error("Sikkerhetskopien er ikke for den valgte sangen.");
+  if(item.format!=="remaster-jukebox-portable"||item.version!==1||
+    typeof item.songId!=="string"||!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(item.songId))
+    throw new Error("Sikkerhetskopien mangler en gyldig sang-ID.");
+  if(expectedSongId!==undefined&&item.songId!==expectedSongId)
+    throw new Error("Prosjektet er knyttet til en annen sang. Velg riktig sang, eller importer prosjektet fra Jukebox-fanen.");
   if(!["landscape","portrait"].includes(String(item.videoFormat))||!["full","15","30","45","60"].includes(String(item.seconds))
     ||!Number.isInteger(item.sceneCount)||Number(item.sceneCount)<1||Number(item.sceneCount)>MAX_CLIPS
     ||typeof item.endWithLastScene!=="boolean"||!Array.isArray(item.clips)||item.clips.length>MAX_CLIPS)
@@ -72,6 +75,6 @@ export async function importPortableDraft(file:File,expectedSongId:string):Promi
   if(clips.filter(c=>c.finale).length>1)throw new Error("Flere avslutningsbilder er valgt.");
   const chosen=clips.findIndex(c=>c.finale);
   if(chosen>=0&&chosen!==clips.length-1)throw new Error("Avslutningsbildet må ligge sist.");
-  return {version:1,songId:expectedSongId,format:item.videoFormat!,seconds:item.seconds!,
+  return {version:1,songId:item.songId,format:item.videoFormat!,seconds:item.seconds!,
     audioStartSeconds:offset,sceneCount:item.sceneCount!,endWithLastScene:item.endWithLastScene!,clips,savedAt:Date.now()};
 }
