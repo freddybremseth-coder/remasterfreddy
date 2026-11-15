@@ -155,7 +155,11 @@ try{
     SONG_ID,{timeout:20000});
   await page.getByText("Prosjektfilen er åpnet med riktig sang",{exact:false})
     .waitFor({timeout:30000});
-  // Regression for the reported real UI blocker: not all six photos have\n  // manual start markers. The UI must interpolate the gaps and permit export.\n  await page.getByText("Eksakte tidsmarkører brukes i forhåndsvisningen", {exact:false})\n    .waitFor({timeout:20000});\n  const button=page.getByRole("button",{name:"Produser privat video",exact:true});
+  // Regression for the reported real UI blocker: not all six photos have
+  // manual start markers. The UI must interpolate the gaps and permit export.
+  await page.getByText("Eksakte tidsmarkører brukes i forhåndsvisningen",{exact:false})
+    .waitFor({timeout:20000});
+  const button=page.getByRole("button",{name:"Produser privat video",exact:true});
   await button.waitFor({timeout:20000});
   assert.equal(await button.isEnabled(),true,
     "The direct production button must NOT be disabled by unavailable audio metadata");
