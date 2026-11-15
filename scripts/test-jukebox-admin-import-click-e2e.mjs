@@ -17,7 +17,7 @@ const host="http://127.0.0.1:5174";
 const SONG_ID="e3158f1d-ada7-4332-8218-b313d5fe8ffa";
 const OTHER_ID="123e4567-e89b-42d3-a456-426614174000";
 const startSeconds=197,shortSeconds=45;
-const cueTimes=[4,9.8,17.36,25.2,31.04,36.8];
+const cueTimes=[4,undefined,17.36,undefined,31.04,36.8];
 const vite=spawn(process.execPath,[
   "node_modules/vite/bin/vite.js","--host","127.0.0.1","--port","5174","--strictPort",
 ],{
@@ -141,7 +141,7 @@ try{
     clips:cueTimes.map((cueStart,index)=>({
       name:index===5?"09-kai-kari-finale.png":`synthetic-scene-${index+1}.png`,
       kind:"image",finale:index===5,
-      section:index===5?"Avslutning":"Vers 1",weight:2,cueStart,
+      section:index===5?"Avslutning":"Vers 1",weight:2, ...(cueStart===undefined?{}:{cueStart}),
       mime:"image/png",data:pngs[index],
     })),
   };
@@ -155,6 +155,10 @@ try{
     SONG_ID,{timeout:20000});
   await page.getByText("Prosjektfilen er åpnet med riktig sang",{exact:false})
     .waitFor({timeout:30000});
+  // Regression for the reported real UI blocker: not all six photos have
+  // manual start markers. The UI must interpolate the gaps and permit export.
+  await page.getByText("Eksakte tidsmarkører brukes i forhåndsvisningen",{exact:false})
+    .waitFor({timeout:20000});
   const button=page.getByRole("button",{name:"Produser privat video",exact:true});
   await button.waitFor({timeout:20000});
   assert.equal(await button.isEnabled(),true,
@@ -201,7 +205,7 @@ try{
     "-i",downloaded,"-map","0:v:0","-map","0:a:0","-f","null","-"],
     {timeout:90000,maxBuffer:512*1024});
   console.log(JSON.stringify({
-    result:"PASS",test:"actual admin import -> click -> downloaded video with audible offset",
+    result:"PASS",test:"actual admin partial-timestamp import -> click -> downloaded video with audible offset",
     songAutoSelected:true,sourceOffsetSeconds:197,scenes:6,
     durationSeconds:length,bytes:content.length,
     videoCodec:v.codec_name,audioCodec:a.codec_name,
