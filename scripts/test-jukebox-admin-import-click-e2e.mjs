@@ -159,6 +159,20 @@ try{
   // manual start markers. The UI must interpolate the gaps and permit export.
   await page.getByText("Eksakte tidsmarkører brukes i forhåndsvisningen",{exact:false})
     .waitFor({timeout:20000});
+  // Browser acceptance: keep full and Short projects separately, then
+  // return to the Short without losing the original's picture list.
+  await page.getByRole("combobox",{name:"Videoformat"}).selectOption("landscape");
+  await page.getByRole("combobox",{name:"Videolengde"}).selectOption("full");
+  await page.getByRole("button",{name:"Lagre utkast på denne enheten"}).click();
+  await page.getByRole("button",{name:"Lag og åpne 45s Short fra bildene"}).click();
+  assert.equal(await page.getByRole("combobox",{name:"Videoformat"}).inputValue(),"portrait");
+  assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"45");
+  const saved=page.getByLabel("Lagrede videoversjoner");
+  await saved.getByRole("button",{name:"Hele sangen · 16:9"}).click();
+  assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"full");
+  await saved.getByRole("button",{name:"45 sekunder · 9:16"}).click();
+  assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"45");
+  await page.getByRole("spinbutton",{name:"Start i originalmusikken"}).fill("197");
   const button=page.getByRole("button",{name:"Produser privat video",exact:true});
   await button.waitFor({timeout:20000});
   assert.equal(await button.isEnabled(),true,
