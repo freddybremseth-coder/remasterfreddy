@@ -187,6 +187,7 @@ try{
   await button.click();
   const download=page.locator(".jukebox-direct-production a[download]");
   await download.waitFor({state:"visible",timeout:150000});
+  await page.getByLabel("Ferdige private videoer").getByText("45 sekunders video · 9:16",{exact:false}).waitFor({timeout:10000});
   assert.match(await download.getAttribute("download"),/\.((mp4)|(webm))$/);
   dir=await mkdtemp(join(tmpdir(),"jukebox-admin-e2e-"));
   const [file]=await Promise.all([

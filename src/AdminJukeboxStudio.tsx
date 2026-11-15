@@ -28,10 +28,9 @@ export default function AdminJukeboxStudio(){
   const [directVideoBusy,setDirectVideoBusy]=useState(false);
   const [directVideoProgress,setDirectVideoProgress]=useState(0);
   const [directVideoError,setDirectVideoError]=useState("");
-  const [directVideoUrl,setDirectVideoUrl]=useState("");
-  const [directVideoFilename,setDirectVideoFilename]=useState("");
-  const [directVideoFormat,setDirectVideoFormat]=useState("");
-  const directVideoUrlRef=useRef("");
+  type ExportedVideo={key:string;songId:string;url:string;filename:string;container:string;format:"portrait"|"landscape";seconds:string;audioStartSeconds:number};
+  const [exportedVideos,setExportedVideos]=useState<ExportedVideo[]>([]);
+  const exportedVideosRef=useRef<ExportedVideo[]>([]);
   const directVideoAbort=useRef<AbortController|null>(null);
   const [playhead,setPlayhead]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean;section?:string;weight?:number;cueStart?:number}[]>([]);
@@ -130,8 +129,7 @@ export default function AdminJukeboxStudio(){
       setDirectVideoError("Velg originalmusikk fra biblioteket eller en lokal MP3.");return;
     }
     audio.current?.pause();sceneVideo.current?.pause();setPlaying(false);
-    if(directVideoUrlRef.current){URL.revokeObjectURL(directVideoUrlRef.current);directVideoUrlRef.current="";}
-    setDirectVideoUrl("");setDirectVideoError("");setDirectVideoProgress(0);
+    setDirectVideoError("");setDirectVideoProgress(0);
     setDirectVideoBusy(true);
     const controller=new AbortController();directVideoAbort.current=controller;
     try{
@@ -150,9 +148,19 @@ export default function AdminJukeboxStudio(){
       const safeTitle=(song.title||"jukebox").normalize("NFKD").replace(/[^a-zA-Z0-9-_]+/g,"-").slice(0,52);
       const filename=`Re-master-Freddy-${safeTitle}-${Math.round(plannedDuration)}s.${result.extension}`;
       const url=URL.createObjectURL(result.blob);
-      directVideoUrlRef.current=url;
-      setDirectVideoUrl(url);setDirectVideoFilename(filename);
-      setDirectVideoFormat(result.extension.toUpperCase());
+      // Retain the full-length export while producing a Short (and vice
+      // versa). Replacing only this exact variant revokes only that old URL.
+      const key=JSON.stringify([songId,format,seconds,audioStartSeconds]);
+      const fresh:ExportedVideo={key,songId,url,filename,
+        container:result.extension.toUpperCase(),format,seconds,audioStartSeconds};
+      const old=exportedVideosRef.current.find(item=>item.key===key);
+      if(old)URL.revokeObjectURL(old.url);
+      const next=[fresh,...exportedVideosRef.current.filter(item=>item.key!==key)];
+      // Browser exports are temporary blob URLs, not permanent storage.
+      // Keep a bounded number to avoid retaining unlimited large movies.
+      for(const item of next.slice(4))URL.revokeObjectURL(item.url);
+      exportedVideosRef.current=next.slice(0,4);
+      setExportedVideos(exportedVideosRef.current);
     }catch(error){
       setDirectVideoError(error instanceof Error?error.message:"Kunne ikke lage videoen.");
     }finally{setDirectVideoBusy(false);directVideoAbort.current=null;}
@@ -275,7 +283,8 @@ export default function AdminJukeboxStudio(){
   useEffect(()=>()=>{audio.current?.pause();},[]);
   useEffect(()=>()=>{
     directVideoAbort.current?.abort();
-    if(directVideoUrlRef.current)URL.revokeObjectURL(directVideoUrlRef.current);
+    for(const item of exportedVideosRef.current)URL.revokeObjectURL(item.url);
+    exportedVideosRef.current=[];
     if(localAudioUrlRef.current)URL.revokeObjectURL(localAudioUrlRef.current);
   },[]);
   useEffect(()=>{
@@ -756,10 +765,14 @@ export default function AdminJukeboxStudio(){
       </div>
       {directVideoBusy&&<progress max={100} value={directVideoProgress} aria-label="Fremdrift videoproduksjon" style={{width:"100%"}}/>}
       {directVideoError&&<p role="alert">{directVideoError}</p>}
-      {directVideoUrl&&<div className="jukebox-imported-video" role="status">
-        <p><strong>Privat video ferdig ({directVideoFormat})</strong> – se den og last den ned. Ingenting er publisert.</p>
-        <video src={directVideoUrl} controls playsInline preload="metadata" aria-label="Privat generert Jukebox-video"/>
-        <a className="admin-primary" href={directVideoUrl} download={directVideoFilename}><Download size={17}/> Last ned {directVideoFormat} – {directVideoFilename}</a>
+      {exportedVideos.filter(item=>item.songId===songId).length>0&&<div className="jukebox-exported-videos" role="status" aria-label="Ferdige private videoer">
+        <h4>Ferdige videoer – fullversjon og Shorts beholdes hver for seg</h4>
+        <p>Videoene ligger midlertidig i denne åpne nettleserfanen, ikke i kontoen. Last ned hver fil før du lukker fanen. Ingenting er publisert.</p>
+        {exportedVideos.filter(item=>item.songId===songId).map(item=><div className="jukebox-imported-video" key={item.key}>
+          <p><strong>{item.seconds==="full"?"Hele sangen":item.seconds+" sekunders video"} · {item.format==="portrait"?"9:16 Short":"16:9"} · {item.container}</strong></p>
+          <video src={item.url} controls playsInline preload="metadata" aria-label={`Ferdig ${item.seconds==="full"?"fullvideo":"Short"}`}/>
+          <a className="admin-primary" href={item.url} download={item.filename}><Download size={17}/> Last ned {item.container} – {item.filename}</a>
+        </div>)}
       </div>}
     </section>
     <section className="jukebox-private-review-import" aria-label="Kontroller en ferdig privat MP4">
