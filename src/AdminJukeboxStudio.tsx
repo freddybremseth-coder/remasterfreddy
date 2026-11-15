@@ -3,6 +3,7 @@ import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "luci
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
+import {makeJukeboxShortDraft} from "./lib/jukebox-short-draft";
 import {resolveSceneTimingWithDefaults} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {jukeboxDurationState} from "./lib/jukebox-duration";
@@ -352,6 +353,34 @@ export default function AdminJukeboxStudio(){
     }catch(error){setDraftNotice(error instanceof Error?error.message:"Kunne ikke lage sikkerhetskopi.");}
     finally{setDraftBusy(false);}
   }
+  async function downloadShortProject(){
+    if(!songId||draftBusy||draftLoading)return;
+    if(localClips.some(clip=>!clip.file)){
+      setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;
+    }
+    setDraftBusy(true);
+    try{
+      const source:JukeboxDraft={
+        version:1,songId,format,seconds,audioStartSeconds,
+        endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),
+        clips:localClips.map(clip=>({
+          name:clip.name,kind:clip.kind,file:clip.file!,
+          finale:Boolean(clip.finale),section:clip.section||"Fri scene",
+          weight:clip.weight||2,cueStart:clip.cueStart,
+        })),
+      };
+      const short=makeJukeboxShortDraft(source,seconds==="full"?0:audioStartSeconds);
+      const blob=await exportPortableDraft(short);
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;link.download=`jukebox-${songId}-short-45s.json`;
+      document.body.appendChild(link);link.click();link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+      setDraftNotice("Eget Shorts-prosjekt (45 s, 9:16) lastet ned med de samme bildene. Originalprosjektet er uendret. Åpne Shorts-filen via «Åpne prosjektfil» for å produsere den privat.");
+    }catch(error){
+      setDraftNotice(error instanceof Error?error.message:"Kunne ikke lage Shorts-prosjektfil.");
+    }finally{setDraftBusy(false);}
+  }
   async function importBackup(file:File|null){
     if(!file||draftBusy||draftLoading)return;
     setDraftBusy(true);
@@ -571,6 +600,7 @@ export default function AdminJukeboxStudio(){
       <div className="jukebox-actions">
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadBackup()}>Klargjør privat MP4 – last ned prosjekt</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadShortProject()}>Lag separat 45s Shorts-prosjekt</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>portableInput.current?.click()}>Åpne prosjektfil</button>
 
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
