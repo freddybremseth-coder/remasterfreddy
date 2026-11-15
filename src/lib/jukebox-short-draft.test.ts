@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {makeJukeboxShortDraft} from "./jukebox-short-draft";
+import {makeJukeboxShortDraft,shouldPreserveExistingJukeboxDraft} from "./jukebox-short-draft";
 import type {JukeboxDraft} from "./jukebox-drafts";
 
 const original:JukeboxDraft={
@@ -12,6 +12,12 @@ const original:JukeboxDraft={
   ],
 };
 describe("Jukebox separate Short project",()=>{
+  it("preserves existing full video when importing a separate Short",()=>{
+    const short=makeJukeboxShortDraft(original);
+    expect(shouldPreserveExistingJukeboxDraft(original,short)).toBe(true);
+    expect(shouldPreserveExistingJukeboxDraft(short,short)).toBe(false);
+    expect(shouldPreserveExistingJukeboxDraft(null,short)).toBe(false);
+  });
   it("reuses the pictures while recalculating timestamps for a 45-second portrait video",()=>{
     const short=makeJukeboxShortDraft(original,90);
     expect(short.format).toBe("portrait");
