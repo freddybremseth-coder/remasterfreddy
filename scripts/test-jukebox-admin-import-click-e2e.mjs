@@ -107,10 +107,13 @@ try{
     return selection?.querySelectorAll("option").length===2&&selection.value!==id;
   },SONG_ID);
   assert.equal(await picker.inputValue(),OTHER_ID,"Precondition: another song selected");
-  // Avoid racing the initial asynchronous browser-draft lookup.
+  // The import button is deliberately available at the top, even when
+  // the editor starts in "Jukebox hele veien" mode.
+  await page.getByRole("button",{name:"Åpne prosjektfil",exact:true}).first()
+    .waitFor({state:"visible",timeout:25000});
   await page.waitForFunction(()=>{
     const button=[...document.querySelectorAll("button")]
-      .find(el=>el.textContent?.includes("Klargjør privat MP4"));
+      .find(el=>el.textContent?.trim()==="Åpne prosjektfil");
     return Boolean(button&&!button.disabled);
   },null,{timeout:25000});
   const pngs=await page.evaluate(async()=>{
