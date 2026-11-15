@@ -3,7 +3,7 @@ import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "luci
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
-import {makeJukeboxShortDraft} from "./lib/jukebox-short-draft";
+import {makeJukeboxShortDraft,shouldPreserveExistingJukeboxDraft} from "./lib/jukebox-short-draft";
 import {resolveSceneTimingWithDefaults} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {jukeboxDurationState} from "./lib/jukebox-duration";
@@ -314,7 +314,7 @@ export default function AdminJukeboxStudio(){
     if(imported?.songId===songId){
       pendingPortableImport.current=null;
       showDraft(imported);
-      setDraftNotice("Prosjektfilen er åpnet med riktig sang. Du kan produsere videoen nå.");
+      setDraftNotice("Prosjektfilen er åpnet med riktig sang. Et annet lagret videoformat er beholdt dersom det fantes. Du kan produsere videoen nå.");
       setDraftLoading(false);
       return()=>{cancelled=true;};
     }
@@ -391,12 +391,20 @@ export default function AdminJukeboxStudio(){
       if(!songs.some(item=>item.id===draft.songId)){
         throw new Error("Sangen i prosjektfilen finnes ikke i musikkbiblioteket. Legg inn sangen først og prøv igjen.");
       }
-      let saved=true;
-      try{await saveJukeboxDraft(draft);}
-      catch{saved=false;} // The already-decoded photos are still usable now.
-      const notice=saved
-        ?"Prosjektet er åpnet med riktig sang og lagret lokalt. Du kan nå produsere videoen."
-        :"Prosjektet er åpnet og kan produseres nå, men ble ikke lagret permanent i nettleseren. Behold JSON-filen.";
+      // Local storage is keyed by song ID, not by video format. Never let
+      // importing a 45s Short silently overwrite a full-length project.
+      const existing=await loadJukeboxDraft(draft.songId).catch(()=>null);
+      const preserveExisting=shouldPreserveExistingJukeboxDraft(existing,draft);
+      let saved=!preserveExisting;
+      if(!preserveExisting){
+        try{await saveJukeboxDraft(draft);}
+        catch{saved=false;} // The decoded images are still usable in memory.
+      }
+      const notice=preserveExisting
+        ?"Shorts-prosjektet er åpnet uten å overskrive den lagrede fullversjonen. Du kan produsere det nå. Behold Shorts-JSON-filen for senere bruk; «Lagre utkast» vil erstatte lagret prosjekt for sangen."
+        :saved
+          ?"Prosjektet er åpnet med riktig sang og lagret lokalt. Du kan nå produsere videoen."
+          :"Prosjektet er åpnet og kan produseres nå, men ble ikke lagret permanent i nettleseren. Behold JSON-filen.";
       if(draft.songId===songId){
         showDraft(draft);
         setDraftNotice(notice);
