@@ -14,3 +14,12 @@ export function makeJukeboxShortDraft(
     clips:source.clips.map(clip=>({...clip,cueStart:undefined})),
   };
 }
+
+/** Browser drafts currently have one storage slot per song.
+ * Preserve a different video format or duration instead of silently replacing it. */
+export function shouldPreserveExistingJukeboxDraft(
+  existing:Pick<JukeboxDraft,"format"|"seconds">|null,
+  incoming:Pick<JukeboxDraft,"format"|"seconds">,
+):boolean{
+  return Boolean(existing&&(existing.format!==incoming.format||existing.seconds!==incoming.seconds));
+}
