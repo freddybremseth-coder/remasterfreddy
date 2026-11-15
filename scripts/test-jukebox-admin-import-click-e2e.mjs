@@ -165,12 +165,15 @@ try{
   await page.getByRole("combobox",{name:"Videolengde"}).selectOption("full");
   await page.getByRole("button",{name:"Lagre utkast på denne enheten"}).click();
   await page.getByRole("button",{name:"Lag og åpne 45s Short fra bildene"}).click();
+  await page.waitForFunction(()=>document.querySelector('select[aria-label="Videoformat"]')?.value==="portrait");
   assert.equal(await page.getByRole("combobox",{name:"Videoformat"}).inputValue(),"portrait");
   assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"45");
   const saved=page.getByLabel("Lagrede videoversjoner");
   await saved.getByRole("button",{name:"Hele sangen · 16:9"}).click();
+  await page.waitForFunction(()=>document.querySelector('select[aria-label="Videolengde"]')?.value==="full");
   assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"full");
   await saved.getByRole("button",{name:"45 sekunder · 9:16"}).click();
+  await page.waitForFunction(()=>document.querySelector('select[aria-label="Videolengde"]')?.value==="45");
   assert.equal(await page.getByRole("combobox",{name:"Videolengde"}).inputValue(),"45");
   await page.getByRole("spinbutton",{name:"Start i originalmusikken"}).fill("197");
   const button=page.getByRole("button",{name:"Produser privat video",exact:true});
