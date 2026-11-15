@@ -3,7 +3,7 @@ import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "luci
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
-import {resolveSceneTiming} from "./lib/jukebox-scene-timing";
+import {resolveSceneTimingWithDefaults} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {jukeboxDurationState} from "./lib/jukebox-duration";
 import {JUKEBOX_TEMPLATES,getJukeboxTemplate,sceneDefaults} from "./lib/jukebox-templates";
@@ -89,7 +89,7 @@ export default function AdminJukeboxStudio(){
   const hasManualCues=localClips.some(clip=>clip.cueStart!==undefined);
   // When all cues are explicit, the first image start defines the cabinet intro.
   // Legacy weight-based videos retain the old suggested intro duration.
-  const manualTiming=resolveSceneTiming(localClips,0,plannedDuration,outroTime);
+  const manualTiming=hasManualCues?resolveSceneTimingWithDefaults(localClips,introTime,plannedDuration,outroTime):null;
   const actualIntroTime=manualTiming?.starts[0]??introTime;
   const actualSceneStarts=manualTiming?.starts??weightedStarts;
   const actualSceneDurations=manualTiming?.durations??sceneDurations;
@@ -119,7 +119,7 @@ export default function AdminJukeboxStudio(){
       setDirectVideoError("Velg minst ett bilde til musikkvideoen.");return;
     }
     if(style==="hybrid"&&hasManualCues&&!manualTiming){
-      setDirectVideoError("Alle bildene må ha komplette og gyldige tidsmarkører.");return;
+      setDirectVideoError("Tidsmarkørene er i feil rekkefølge eller utenfor videoens varighet. Rett de markerte starttidene, eller tøm dem for automatisk fordeling.");return;
     }
     if(localClips.some(clip=>!clip.file)){
       setDirectVideoError("Et eller flere bilder mangler originalfil.");return;
@@ -557,7 +557,7 @@ export default function AdminJukeboxStudio(){
         {outroTime>0&&<div className="jukebox-timeline-endcap" style={{flexGrow:outroTime}} title={`Jukebox ${stamp(plannedDuration-outroTime)}–${stamp(plannedDuration)}`}>Jukebox</div>}
       </div>:<p>Spill av sangen for å hente varigheten. Klippplanen tilpasses automatisk.</p>}
       {plannedDuration>0&&<button type="button" className="jukebox-storyboard-download" onClick={downloadStoryboard}><Download size={16}/> Last ned klippplan (JSON)</button>}
-      {hasManualCues&&!manualTiming&&<p role="alert">Tidsmarkører er ufullstendige eller overlapper. Forhåndsvisningen bruker foreløpig automatisk fordeling. Angi en gyldig starttid for hver scene, etter sangstart og før avslutningen.</p>}
+      {hasManualCues&&!manualTiming&&<p role="alert">Tidsmarkørene overlapper eller ligger utenfor videoen. Rett markørene eller tøm dem for automatisk fordeling. Angi en gyldig starttid for hver scene, etter sangstart og før avslutningen.</p>}
       {manualTiming&&<p role="status">Eksakte tidsmarkører brukes i forhåndsvisningen og i eksportert klippplan.</p>}
       {plannedDuration>0&&<p>Intro: {stamp(actualIntroTime)} · Scenelengder følger valgene under bildene · {endWithLastScene?"Siste scene avslutter filmen":`Jukebox-avslutning: ${stamp(outroTime)}`}. {localClips.length?"De valgte bildene og videoene vises under avspilling og kan lagres som et lokalt utkast.":"Scenene er foreløpig plassholdere, ikke genererte videoer."}</p>}
     </div>}
