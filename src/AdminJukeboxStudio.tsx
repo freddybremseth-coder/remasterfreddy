@@ -3,7 +3,7 @@ import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "luci
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
 import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
-import {makeJukeboxShortDraft} from "./lib/jukebox-short-draft";
+import {makeJukeboxShortDraft,shouldPreserveExistingJukeboxDraft} from "./lib/jukebox-short-draft";
 import {resolveSceneTimingWithDefaults} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {jukeboxDurationState} from "./lib/jukebox-duration";
@@ -394,7 +394,7 @@ export default function AdminJukeboxStudio(){
       // Local storage is keyed by song ID, not by video format. Never let
       // importing a 45s Short silently overwrite a full-length project.
       const existing=await loadJukeboxDraft(draft.songId).catch(()=>null);
-      const preserveExisting=Boolean(existing&&(existing.format!==draft.format||existing.seconds!==draft.seconds));
+      const preserveExisting=shouldPreserveExistingJukeboxDraft(existing,draft);
       let saved=!preserveExisting;
       if(!preserveExisting){
         try{await saveJukeboxDraft(draft);}
