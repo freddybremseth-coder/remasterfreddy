@@ -1,9 +1,9 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Clapperboard,Download,Pause,Play,RefreshCw} from "lucide-react";
 import {loadSongs,loadJukeboxJobs,queueJukeboxVideo,loadPrivateJukeboxReadiness,loadJukeboxPrivateSceneStatus,type JukeboxPrivateSceneStatus,type PrivateJukeboxReadiness,type AdminSong,type JukeboxJob} from "./lib/admin-api";
-import {loadJukeboxDraft,saveJukeboxDraft,deleteJukeboxDraft,type JukeboxDraft} from "./lib/jukebox-drafts";
+import {loadJukeboxDraft,loadJukeboxDraftVariant,listJukeboxDraftVariants,saveJukeboxDraft,deleteJukeboxDraftVariant,type JukeboxDraft,type JukeboxDraftVariant} from "./lib/jukebox-drafts";
 import {exportPortableDraft,importPortableDraft} from "./lib/jukebox-portable";
-import {makeJukeboxShortDraft,shouldPreserveExistingJukeboxDraft} from "./lib/jukebox-short-draft";
+import {makeJukeboxShortDraft} from "./lib/jukebox-short-draft";
 import {resolveSceneTimingWithDefaults} from "./lib/jukebox-scene-timing";
 import {renderBrowserJukebox} from "./lib/jukebox-browser-render";
 import {jukeboxDurationState} from "./lib/jukebox-duration";
@@ -36,6 +36,7 @@ export default function AdminJukeboxStudio(){
   const [playhead,setPlayhead]=useState(0);
   const [localClips,setLocalClips]=useState<{name:string;url:string;kind:"image"|"video";file?:Blob;finale?:boolean;section?:string;weight?:number;cueStart?:number}[]>([]);
   const [draftBusy,setDraftBusy]=useState(false);
+  const [savedVariants,setSavedVariants]=useState<JukeboxDraftVariant[]>([]);
   const [draftLoading,setDraftLoading]=useState(false);
   const [draftNotice,setDraftNotice]=useState("");
   const [templateId,setTemplateId]=useState("");
@@ -292,6 +293,10 @@ export default function AdminJukeboxStudio(){
     reviewUrlRef.current="";setReviewUrl("");setReviewFile(null);
     setReviewDuration(0);setReviewHash("");setReviewError("");
   },[songId]);
+  async function refreshSavedVariants(id:string){
+    const variants=await listJukeboxDraftVariants(id);
+    if(id===songId)setSavedVariants(variants);
+  }
   function showDraft(draft:JukeboxDraft){
     for(const url of localClipUrls.current)URL.revokeObjectURL(url);
     const restored=draft.clips.map(clip=>({...clip,url:URL.createObjectURL(clip.file)}));
@@ -310,6 +315,8 @@ export default function AdminJukeboxStudio(){
     setLocalClips([]);
     setTemplateId("");
     setDraftNotice("");
+    setSavedVariants([]);
+    void refreshSavedVariants(songId).catch(()=>{});
     const imported=pendingPortableImport.current;
     if(imported?.songId===songId){
       pendingPortableImport.current=null;
@@ -334,7 +341,8 @@ export default function AdminJukeboxStudio(){
     try{
       const draft:JukeboxDraft={version:1,songId,format,seconds,audioStartSeconds,endWithLastScene,sceneCount:effectiveSceneCount,savedAt:Date.now(),clips:localClips.map(clip=>({name:clip.name,kind:clip.kind,file:clip.file!,finale:Boolean(clip.finale),section:clip.section||"Fri scene",weight:clip.weight||2,cueStart:clip.cueStart}))};
       await saveJukeboxDraft(draft);
-      setDraftNotice("Utkastet er lagret i denne nettleseren. Det er ikke lastet opp til kontoen og kan forsvinne om nettleserdata slettes.");
+      await refreshSavedVariants(songId);
+      setDraftNotice("Dette videoformatet er lagret separat på denne enheten. Andre lagrede versjoner av samme sang er beholdt. Ta også en privat sikkerhetskopi.");
     }catch{setDraftNotice("Lagringen mislyktes. Kontroller nettleserens lagringsplass og innstillinger.");}
     finally{setDraftBusy(false);}
   }
@@ -353,11 +361,12 @@ export default function AdminJukeboxStudio(){
     }catch(error){setDraftNotice(error instanceof Error?error.message:"Kunne ikke lage sikkerhetskopi.");}
     finally{setDraftBusy(false);}
   }
-  async function downloadShortProject(){
-    if(!songId||draftBusy||draftLoading)return;
+  async function createShortProject(){
+    if(!songId||draftBusy||draftLoading||!localClips.length)return;
     if(localClips.some(clip=>!clip.file)){
       setDraftNotice("Originalfilene mangler. Velg bildene på nytt.");return;
     }
+    if(sourceExcerptInvalid){setDraftNotice("Startpunktet ligger utenfor originallåten.");return;}
     setDraftBusy(true);
     try{
       const source:JukeboxDraft={
@@ -370,16 +379,26 @@ export default function AdminJukeboxStudio(){
         })),
       };
       const short=makeJukeboxShortDraft(source,seconds==="full"?0:audioStartSeconds);
-      const blob=await exportPortableDraft(short);
-      const url=URL.createObjectURL(blob);
-      const link=document.createElement("a");
-      link.href=url;link.download=`jukebox-${songId}-short-45s.json`;
-      document.body.appendChild(link);link.click();link.remove();
-      window.setTimeout(()=>URL.revokeObjectURL(url),1500);
-      setDraftNotice("Eget Shorts-prosjekt (45 s, 9:16) lastet ned med de samme bildene. Originalprosjektet er uendret. Åpne Shorts-filen via «Åpne prosjektfil» for å produsere den privat.");
+      // Both variants are stored independently; no JSON round-trip.
+      await saveJukeboxDraft(source);
+      await saveJukeboxDraft(short);
+      await refreshSavedVariants(songId);
+      showDraft(short);
+      setDraftNotice("Shorts-prosjektet (45 s, 9:16) er klart med de samme bildene. Fullvideoen er lagret separat. Kontroller startpunktet og trykk «Produser privat video». Ta gjerne en prosjektkopi.");
     }catch(error){
-      setDraftNotice(error instanceof Error?error.message:"Kunne ikke lage Shorts-prosjektfil.");
+      setDraftNotice(error instanceof Error?error.message:"Kunne ikke lagre Shorts-prosjektet. Bruk «Klargjør privat MP4 – last ned prosjekt» for sikkerhetskopi.");
     }finally{setDraftBusy(false);}
+  }
+  async function openSavedVariant(variant:JukeboxDraftVariant){
+    if(!songId||draftBusy||draftLoading)return;
+    setDraftBusy(true);
+    try{
+      const draft=await loadJukeboxDraftVariant(songId,variant.format,variant.seconds);
+      if(!draft)throw new Error("Fant ikke denne lokale videoversjonen.");
+      showDraft(draft);
+      setDraftNotice(`Lagret ${variant.seconds==="full"?"fullvideo":variant.seconds+"s Short"} åpnet. Bildene dine er klare for videre redigering.`);
+    }catch(error){setDraftNotice(error instanceof Error?error.message:"Kunne ikke åpne lagret prosjekt.");}
+    finally{setDraftBusy(false);}
   }
   async function importBackup(file:File|null){
     if(!file||draftBusy||draftLoading)return;
@@ -391,20 +410,12 @@ export default function AdminJukeboxStudio(){
       if(!songs.some(item=>item.id===draft.songId)){
         throw new Error("Sangen i prosjektfilen finnes ikke i musikkbiblioteket. Legg inn sangen først og prøv igjen.");
       }
-      // Local storage is keyed by song ID, not by video format. Never let
-      // importing a 45s Short silently overwrite a full-length project.
-      const existing=await loadJukeboxDraft(draft.songId).catch(()=>null);
-      const preserveExisting=shouldPreserveExistingJukeboxDraft(existing,draft);
-      let saved=!preserveExisting;
-      if(!preserveExisting){
-        try{await saveJukeboxDraft(draft);}
-        catch{saved=false;} // The decoded images are still usable in memory.
-      }
-      const notice=preserveExisting
-        ?"Shorts-prosjektet er åpnet uten å overskrive den lagrede fullversjonen. Du kan produsere det nå. Behold Shorts-JSON-filen for senere bruk; «Lagre utkast» vil erstatte lagret prosjekt for sangen."
-        :saved
-          ?"Prosjektet er åpnet med riktig sang og lagret lokalt. Du kan nå produsere videoen."
-          :"Prosjektet er åpnet og kan produseres nå, men ble ikke lagret permanent i nettleseren. Behold JSON-filen.";
+      let saved=true;
+      try{await saveJukeboxDraft(draft);await refreshSavedVariants(draft.songId);}
+      catch{saved=false;}
+      const notice=saved
+        ?"Prosjektet er åpnet og lagret i sin egen videoversjon. Andre videoformater for sangen er beholdt."
+        :"Prosjektet er åpnet, men lokal lagring mislyktes. Behold prosjektfilen som sikkerhetskopi.";
       if(draft.songId===songId){
         showDraft(draft);
         setDraftNotice(notice);
@@ -419,8 +430,11 @@ export default function AdminJukeboxStudio(){
   async function clearDraft(){
     if(!songId||draftBusy||draftLoading)return;
     setDraftBusy(true);
-    try{await deleteJukeboxDraft(songId);setDraftNotice("Det lagrede utkastet for denne sangen er slettet fra nettleseren.");}
-    catch{setDraftNotice("Kunne ikke slette det lokale utkastet.");}
+    try{
+      await deleteJukeboxDraftVariant(songId,format,seconds);
+      await refreshSavedVariants(songId);
+      setDraftNotice("Bare den valgte videoversjonen er slettet fra denne nettleseren. Andre formater er beholdt.");
+    }catch{setDraftNotice("Kunne ikke slette det lokale utkastet.");}
     finally{setDraftBusy(false);}
   }
   function downloadStoryboard(){
@@ -608,12 +622,21 @@ export default function AdminJukeboxStudio(){
       <div className="jukebox-actions">
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void saveDraft()}>Lagre utkast på denne enheten</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadBackup()}>Klargjør privat MP4 – last ned prosjekt</button>
-        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void downloadShortProject()}>Lag separat 45s Shorts-prosjekt</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading||!localClips.length||(format==="portrait"&&seconds==="45")} onClick={()=>void createShortProject()}>Lag og åpne 45s Short fra bildene</button>
         <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>portableInput.current?.click()}>Åpne prosjektfil</button>
 
-        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading} onClick={()=>void clearDraft()}>Slett lagret utkast</button>
+        <button type="button" className="admin-secondary" disabled={!songId||draftBusy||draftLoading||!savedVariants.some(v=>v.format===format&&v.seconds===seconds)} onClick={()=>void clearDraft()}>Slett denne lagrede versjonen</button>
       </div>
-      <p>Lagrede utkast hentes automatisk når du velger sangen igjen på denne enheten. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
+      {savedVariants.length>0&&<div className="jukebox-actions" aria-label="Lagrede videoversjoner">
+        <strong>Lagrede versjoner:</strong>
+        {savedVariants.map(variant=><button type="button" key={variant.format+":"+variant.seconds}
+          className="admin-secondary"
+          disabled={draftBusy||draftLoading||(variant.format===format&&variant.seconds===seconds)}
+          onClick={()=>void openSavedVariant(variant)}>
+          {variant.seconds==="full"?"Hele sangen":variant.seconds+" sekunder"} · {variant.format==="portrait"?"9:16":"16:9"}
+        </button>)}
+      </div>
+      <p>Fullversjon og Short lagres separat i denne nettleseren. Du kan åpne dem fra «Lagrede versjoner» over. Bildene sendes ikke til en server. Ved privat nettlesing, sletting av nettleserdata eller bruk av en annen enhet blir utkastet ikke tilgjengelig. Bruk prosjektfilen og «Åpne prosjektfil» for å flytte en privat sikkerhetskopi mellom enheter (maks. 40 MB medier).</p>
       <details className="jukebox-private-render-gate" aria-label="Avanserte serverinnstillinger"><summary>Avansert: serverkø og privat bildelagring (ikke nødvendig for lokal video)</summary>
         <h3>Lag privat MP4</h3>
         <p>Kontroller at Jukebox-serveren og den private renderarbeideren er klare. Statuskontrollen laster ikke opp bildene og starter ingen produksjon.</p>
