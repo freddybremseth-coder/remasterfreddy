@@ -5,6 +5,9 @@ on:
       - 'src/lib/jukebox-browser-render.ts'
       - 'src/lib/jukebox-browser-render.test.ts'
       - 'scripts/test-jukebox-browser-video-e2e.mjs'
+      - 'scripts/test-jukebox-admin-import-click-e2e.mjs'
+      - 'src/lib/jukebox-portable.ts'
+      - 'src/AdminJukeboxStudio.tsx'
       - '.github/workflows/jukebox-browser-video-e2e.yml'
   workflow_dispatch:
 permissions:
@@ -31,5 +34,7 @@ jobs:
           sudo apt-get install -y ffmpeg
       - name: Produce actual local video and decode both tracks
         run: node scripts/test-jukebox-browser-video-e2e.mjs
+      - name: Import six-scene project in admin UI and click actual export button
+        run: node scripts/test-jukebox-admin-import-click-e2e.mjs
       # Uses synthesized WAV + generated PNG, no production credentials
       # and no third-party media, service keys, YouTube or live job mutations.
