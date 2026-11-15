@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {resolveSceneTiming} from "./jukebox-scene-timing";
+import {resolveSceneTiming,resolveSceneTimingWithDefaults} from "./jukebox-scene-timing";
 
 describe("private Jukebox explicit section cues",()=>{
   it("calculates durations from strict manually chosen start times",()=>{
@@ -24,5 +24,27 @@ describe("private Jukebox explicit section cues",()=>{
     expect(resolveSceneTiming([{cueStart:3}],3,3,0)).toBeNull();
     expect(resolveSceneTiming([{cueStart:3}],3,45,-1)).toBeNull();
     expect(resolveSceneTiming([],3,45,0)).toBeNull();
+  });
+});
+
+describe("Jukebox incomplete image timestamps",()=>{
+  it("automatically distributes scenes when no timestamps were entered",()=>{
+    expect(resolveSceneTimingWithDefaults([{}, {}, {}],3,45,0)?.starts).toEqual([3,17,31]);
+  });
+  it("keeps explicit markers and interpolates missing ones without gaps",()=>{
+    const result=resolveSceneTimingWithDefaults(
+      [{cueStart:4},{weight:1},{cueStart:17},{weight:2},{cueStart:31}],3,45,0);
+    expect(result?.starts).toEqual([4,10.5,17,24,31]);
+    expect(result?.durations.reduce((sum,value)=>sum+value,0)).toBeCloseTo(41);
+  });
+  it("allows a missing first timestamp with a later explicit anchor",()=>{
+    expect(resolveSceneTimingWithDefaults([{}, {cueStart:12},{}],3,30,0)?.starts).toEqual([3,12,21]);
+  });
+  it("rejects repeated, reversed, out-of-range and invalid explicit anchors",()=>{
+    expect(resolveSceneTimingWithDefaults([{cueStart:5},{cueStart:5}],3,45,0)).toBeNull();
+    expect(resolveSceneTimingWithDefaults([{cueStart:20},{cueStart:10}],3,45,0)).toBeNull();
+    expect(resolveSceneTimingWithDefaults([{}, {cueStart:2}],3,45,0)).toBeNull();
+    expect(resolveSceneTimingWithDefaults([{}, {cueStart:45}],3,45,0)).toBeNull();
+    expect(resolveSceneTimingWithDefaults([{cueStart:Number.NaN}],3,45,0)).toBeNull();
   });
 });
