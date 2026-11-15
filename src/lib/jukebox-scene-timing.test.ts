@@ -33,7 +33,7 @@ describe("Jukebox incomplete image timestamps",()=>{
   });
   it("keeps explicit markers and interpolates missing ones without gaps",()=>{
     const result=resolveSceneTimingWithDefaults(
-      [{cueStart:4},{weight:1},{cueStart:17},{weight:2},{cueStart:31}],3,45,0);
+      [{cueStart:4,weight:1},{weight:1},{cueStart:17},{weight:2},{cueStart:31}],3,45,0);
     expect(result?.starts).toEqual([4,10.5,17,24,31]);
     expect(result?.durations.reduce((sum,value)=>sum+value,0)).toBeCloseTo(41);
   });
