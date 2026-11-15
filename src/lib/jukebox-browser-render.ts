@@ -216,8 +216,10 @@ export async function renderBrowserJukebox(
     const buffer=options.audioFile
       ?await options.audioFile.arrayBuffer()
       :await (async()=>{
-        const response=await fetch(options.audioUrl!,{mode:"cors",redirect:"error",cache:"no-store"});
-        if(!response.ok)throw new Error("Lydfilen kunne ikke hentes fra biblioteket.");
+        let response:Response;
+        try{response=await fetch(options.audioUrl!,{mode:"cors",redirect:"error",cache:"no-store"});}
+        catch{throw new Error("Nettleseren får ikke hentet originalmusikken fra biblioteket. Velg «Lokal MP3» fra datamaskinen din og prøv på nytt.");}
+        if(!response.ok)throw new Error("Musikkbiblioteket ga ikke tilgang til lydfilen. Velg «Lokal MP3» og prøv på nytt.");
         const size=Number(response.headers.get("content-length")||0);
         if(size>50*1024*1024)throw new Error("Musikkfilen er for stor (maks 50 MB).");
         return response.arrayBuffer();
