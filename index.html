@@ -57,7 +57,16 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial HTML remains useful to visitors and crawlers before JavaScript loads.
+           React replaces this fallback on mount; it does not add a second H1. -->
+      <main style="min-height:100vh;background:#061018;color:#f5f7fb;font-family:system-ui,sans-serif;padding:clamp(24px,6vw,72px)">
+        <h1>Re-Master Freddy</h1>
+        <p>Summer house, night-drive EDM and chill electronic beats.</p>
+        <p>Explore the music, releases and videos on the official YouTube channel.</p>
+        <p><a style="color:#9eead8" href="https://www.youtube.com/channel/UCPAj3RNC2S_Nv7QV4-oYoIw">Listen to Re-Master Freddy on YouTube</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
