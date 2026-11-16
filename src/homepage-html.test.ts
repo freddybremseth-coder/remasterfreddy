@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "vitest";
 
 test("public homepage ships an H1 in initial HTML without executing JavaScript", () => {
-  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const html = readFileSync("index.html", "utf8");
   const root = html.match(/<div id="root">([\s\S]*?)<\/div>/);
   expect(root).not.toBeNull();
   const rootMarkup = root![1];
