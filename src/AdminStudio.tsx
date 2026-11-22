@@ -2,6 +2,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
+import PipelineVideoDirection from "./PipelineVideoDirection";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
 import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, uploadSong, publishMissingArtShort } from "./lib/admin-api";
@@ -39,7 +40,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
-  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance">("");
+  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "ballad" | "pop" | "cinematic">("");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
@@ -111,6 +112,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       await startSongPipeline(song.id, pipelineOptions, (event) => {
         if (event.type !== "heartbeat") setPipelineEvent(event);
       });
+      // Direction belongs to one song; never reuse its story for the next one.
+      setPipelineOptions(current => ({ ...current, visualTheme: "", songLyrics: "" }));
       await refreshSongs();
     } catch (pipelineError) {
       const message = pipelineError instanceof Error ? pipelineError.message : "Pipelinen feilet.";
@@ -175,7 +178,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <option value="meditation">Meditation – Freddy Bremseth Art</option>
               <option value="relaxing">Relaxing – Freddy Bremseth Art</option>
               <option value="alternative">Alternative – Freddy Bremseth Art</option>
-              <option value="dance">Dance / EDM – vanlig musikkvideo</option>
+              <option value="dance">Dance / EDM</option>
+              <option value="rock">Rock / Power Rock</option>
+              <option value="ballad">Ballade / følelsesladet</option>
+              <option value="pop">Pop</option>
+              <option value="cinematic">Filmatisk / instrumental</option>
             </select>
           </label>
           <button className="admin-primary admin-upload-button" onClick={handleUpload} disabled={uploading || !mp3File || !mp3Title.trim()}>
@@ -185,6 +192,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         </div>
         {uploadMessage && <div className="admin-success"><CheckCircle2 size={17} />{uploadMessage}</div>}
       </div>
+
+      <PipelineVideoDirection value={pipelineOptions} onChange={setPipelineOptions} />
 
       <PipelineAssets
         value={pipelineOptions}
