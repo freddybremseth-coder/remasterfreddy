@@ -47,7 +47,10 @@ describe("song-led video pipeline payload", () => {
   it("omits optional story fields on a fully automatic video", async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
-      body: new ReadableStream({ start(controller) { controller.close(); } }),
+      body: new ReadableStream({ start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"status":"completed"}\n\n'));
+        controller.close();
+      } }),
     }));
     vi.stubGlobal("fetch", fetchMock);
     await startSongPipeline("track-2", { visualTheme: "  ", songLyrics: "" }, vi.fn());
