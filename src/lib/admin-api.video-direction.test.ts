@@ -14,7 +14,7 @@ describe("song-led video pipeline payload", () => {
       ok: true,
       body: new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: {"status":"completed"}\\n\\n'));
+          controller.enqueue(new TextEncoder().encode('data: {"status":"completed"}\n\n'));
           controller.close();
         },
       }),
@@ -51,7 +51,7 @@ describe("song-led video pipeline payload", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
     await startSongPipeline("track-2", { visualTheme: "  ", songLyrics: "" }, vi.fn());
-    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    const [, request] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const payload = JSON.parse(String(request.body));
     expect(payload).not.toHaveProperty("visualTheme");
     expect(payload).not.toHaveProperty("songLyrics");
