@@ -57,4 +57,36 @@ describe("song-led video pipeline payload", () => {
     expect(payload).not.toHaveProperty("songLyrics");
     expect(payload.recordId).toBe("track-2");
   });
+  it("keeps a failed video job from appearing successful", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: {"status":"failed","error":"Image generation failed"}\n\n'));
+          controller.close();
+        },
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(startSongPipeline("track-3", {
+      visualTheme: "Quiet mountain cabin",
+      songLyrics: "Winter light",
+    }, vi.fn())).rejects.toThrow("Image generation failed");
+  });
+
+  it("rejects an interrupted stream with no successful final status", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: {"status":"running"}\n\n'));
+          controller.close();
+        },
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(startSongPipeline("track-4", { visualTheme: "Cold forest" }, vi.fn()))
+      .rejects.toThrow("uten bekreftelse");
+  });
+
 });
