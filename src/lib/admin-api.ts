@@ -279,25 +279,38 @@ export async function startSongPipeline(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let finalStatus: "completed" | "failed" | null = null;
+  let finalError = "";
+
+  function handleMessage(message: string) {
+    const line = message.split("\n").find(item => item.startsWith("data: "));
+    if (!line) return;
+    try {
+      const event = JSON.parse(line.slice(6)) as { type?: string; status?: string; error?: string };
+      if (event.type === "heartbeat") return;
+      onEvent(event);
+      if (event.status === "completed") finalStatus = "completed";
+      if (event.status === "failed") {
+        finalStatus = "failed";
+        finalError = typeof event.error === "string" ? event.error : "";
+      }
+    } catch {
+      // Ignore malformed upstream chunks. The final-state check below fails safely.
+    }
+  }
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-
     const messages = buffer.split("\n\n");
     buffer = messages.pop() || "";
-
-    for (const message of messages) {
-      const line = message.split("\n").find((item) => item.startsWith("data: "));
-      if (!line) continue;
-      try {
-        onEvent(JSON.parse(line.slice(6)));
-      } catch {
-        // Ignore malformed heartbeat or upstream chunks.
-      }
-    }
+    for (const message of messages) handleMessage(message);
   }
+  // Read any trailing complete frame from the final chunk.
+  if (buffer.trim()) handleMessage(buffer);
+  if (finalStatus === "failed") throw new Error(finalError || "Videoproduksjonen feilet. Regien er beholdt for ny prøving.");
+  if (finalStatus !== "completed") throw new Error("Videoproduksjonen ble avsluttet uten bekreftelse. Regien er beholdt.");
 }
 
 export interface JukeboxJob {
