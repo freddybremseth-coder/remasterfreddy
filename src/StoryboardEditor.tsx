@@ -12,7 +12,7 @@ interface Props {
 export function isValidStoryboard(scenes: string[]): boolean {
   if (scenes.length !== 8) return false;
   const clean = scenes.map(scene => scene.trim().replace(/\s+/g, " "));
-  return clean.every(scene => scene.length >= 25 && scene.length <= 650) &&
+  return clean.every(scene => scene.length >= 25 && scene.length <= 1000) &&
     new Set(clean.map(scene => scene.toLocaleLowerCase())).size === 8;
 }
 
@@ -37,14 +37,14 @@ export default function StoryboardEditor({ songTitle, scenes, approved, onChange
               id={`storyboard-scene-${index}`}
               aria-label={`Scene ${index + 1}`}
               value={scene}
-              maxLength={650}
+              maxLength={1000}
               rows={4}
               onChange={event => onChangeScene(index, event.target.value)}
             />
           </li>
         ))}
       </ol>
-      {!valid && <p className="storyboard-editor-error" role="alert">Alle åtte scener må være ulike og ha 25–650 tegn.</p>}
+      {!valid && <p className="storyboard-editor-error" role="alert">Alle åtte scener må være ulike og ha 25–1000 tegn.</p>}
       <div className="storyboard-editor-actions">
         <button className="admin-primary" type="button" disabled={!valid || approved} onClick={onApprove}>
           {approved ? "Storyboard godkjent" : "Godkjenn 8 scener"}
