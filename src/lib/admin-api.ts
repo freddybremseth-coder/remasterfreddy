@@ -33,6 +33,10 @@ export interface AdminImage {
 }
 
 export interface PipelineOptions {
+  /** Optional creative direction for the next music video. */
+  visualTheme?: string;
+  /** Optional lyrics or story synopsis; used as creative context, not displayed. */
+  songLyrics?: string;
   customImageUrls?: string[];
   logoUrl?: string;
   customThumbnailUrl?: string;
@@ -166,7 +170,7 @@ export async function publishMissingArtShort(songId: string): Promise<{ status: 
   return data as { status: string; shortUrl: string | null };
 }
 
-export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" = ""): Promise<AdminSong> {
+export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "ballad" | "pop" | "cinematic" = ""): Promise<AdminSong> {
   if (!file || !title.trim()) throw new Error("Velg en MP3-fil og skriv inn tittel.");
   if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
 
@@ -254,6 +258,8 @@ export async function startSongPipeline(
     headers: { Accept: "text/event-stream" },
     body: JSON.stringify({
       recordId,
+      visualTheme: options.visualTheme?.trim() || undefined,
+      songLyrics: options.songLyrics?.trim() || undefined,
       customImageUrls: options.customImageUrls || [],
       logoUrl: options.logoUrl || undefined,
       customThumbnailUrl: options.customThumbnailUrl || undefined,
