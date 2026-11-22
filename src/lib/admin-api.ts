@@ -33,6 +33,12 @@ export interface AdminImage {
 }
 
 export interface PipelineOptions {
+  /** Optional creative direction for the next music video. */
+  visualTheme?: string;
+  /** Optional lyrics or story synopsis; used as creative context, not displayed. */
+  songLyrics?: string;
+  /** Eight text scenes approved for this song's render, not shared between songs. */
+  storyboardScenes?: string[];
   customImageUrls?: string[];
   logoUrl?: string;
   customThumbnailUrl?: string;
@@ -166,7 +172,7 @@ export async function publishMissingArtShort(songId: string): Promise<{ status: 
   return data as { status: string; shortUrl: string | null };
 }
 
-export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" = ""): Promise<AdminSong> {
+export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "ballad" | "pop" | "cinematic" = ""): Promise<AdminSong> {
   if (!file || !title.trim()) throw new Error("Velg en MP3-fil og skriv inn tittel.");
   if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
 
@@ -244,6 +250,34 @@ export async function loadChannelAnalytics(): Promise<ChannelAnalytics> {
   return data as ChannelAnalytics;
 }
 
+export interface StoryboardPreview {
+  mode: "free-text-outline";
+  title: string;
+  scenes: string[];
+  aiCalls: 0;
+  imagesGenerated: 0;
+}
+
+/** Text-only; never calls the video renderer or AI image provider. */
+export async function previewSongStoryboard(song: AdminSong, options: PipelineOptions): Promise<StoryboardPreview> {
+  const response = await adminFetch("/api/neural-beat-storyboard-preview", {
+    method: "POST",
+    body: JSON.stringify({
+      title: song.title,
+      genre: song.genre || undefined,
+      visualTheme: options.visualTheme?.trim() || undefined,
+      songLyrics: options.songLyrics?.trim() || undefined,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Kunne ikke hente storyboard-utkast.");
+  if (result.mode !== "free-text-outline" || !Array.isArray(result.scenes) ||
+      result.scenes.length !== 8 || !result.scenes.every((scene: unknown) => typeof scene === "string")) {
+    throw new Error("Ugyldig storyboard fra serveren.");
+  }
+  return result as StoryboardPreview;
+}
+
 export async function startSongPipeline(
   recordId: string,
   options: PipelineOptions,
@@ -254,6 +288,9 @@ export async function startSongPipeline(
     headers: { Accept: "text/event-stream" },
     body: JSON.stringify({
       recordId,
+      visualTheme: options.visualTheme?.trim() || undefined,
+      songLyrics: options.songLyrics?.trim() || undefined,
+      storyboardScenes: options.storyboardScenes || undefined,
       customImageUrls: options.customImageUrls || [],
       logoUrl: options.logoUrl || undefined,
       customThumbnailUrl: options.customThumbnailUrl || undefined,
@@ -273,25 +310,38 @@ export async function startSongPipeline(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let finalStatus: "completed" | "failed" | null = null;
+  let finalError = "";
+
+  function handleMessage(message: string) {
+    const line = message.split("\n").find(item => item.startsWith("data: "));
+    if (!line) return;
+    try {
+      const event = JSON.parse(line.slice(6)) as { type?: string; status?: string; error?: string };
+      if (event.type === "heartbeat") return;
+      onEvent(event);
+      if (event.status === "completed") finalStatus = "completed";
+      if (event.status === "failed") {
+        finalStatus = "failed";
+        finalError = typeof event.error === "string" ? event.error : "";
+      }
+    } catch {
+      // Ignore malformed upstream chunks. The final-state check below fails safely.
+    }
+  }
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-
     const messages = buffer.split("\n\n");
     buffer = messages.pop() || "";
-
-    for (const message of messages) {
-      const line = message.split("\n").find((item) => item.startsWith("data: "));
-      if (!line) continue;
-      try {
-        onEvent(JSON.parse(line.slice(6)));
-      } catch {
-        // Ignore malformed heartbeat or upstream chunks.
-      }
-    }
+    for (const message of messages) handleMessage(message);
   }
+  // Read any trailing complete frame from the final chunk.
+  if (buffer.trim()) handleMessage(buffer);
+  if (finalStatus === "failed") throw new Error(finalError || "Videoproduksjonen feilet. Regien er beholdt for ny prøving.");
+  if (finalStatus !== "completed") throw new Error("Videoproduksjonen ble avsluttet uten bekreftelse. Regien er beholdt.");
 }
 
 export interface JukeboxJob {

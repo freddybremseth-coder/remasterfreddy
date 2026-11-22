@@ -2,9 +2,11 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
+import PipelineVideoDirection from "./PipelineVideoDirection";
+import StoryboardEditor, { isValidStoryboard } from "./StoryboardEditor";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, uploadSong, publishMissingArtShort } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort } from "./lib/admin-api";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -21,6 +23,17 @@ interface AdminStudioProps {
   onOpenImageBank: (kind: ImageKind) => void;
 }
 
+interface EditedStoryboard {
+  songId: string;
+  sourceKey: string;
+  scenes: string[];
+  approved: boolean;
+}
+
+function storyboardSourceKey(song: AdminSong, options: PipelineOptions): string {
+  return JSON.stringify([song.id, song.title, song.genre || "", options.visualTheme?.trim() || "", options.songLyrics?.trim() || ""]);
+}
+
 export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: AdminStudioProps) {
   const [songs, setSongs] = useState<AdminSong[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +42,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [shortsProcessingId, setShortsProcessingId] = useState<string | null>(null);
   const [shortsMessage, setShortsMessage] = useState("");
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
+  const [preview, setPreview] = useState<EditedStoryboard | null>(null);
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
@@ -39,7 +54,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
-  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance">("");
+  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "ballad" | "pop" | "cinematic">("");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
@@ -98,6 +113,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   }
 
   async function runPipeline(song: AdminSong) {
+    // Never spend on rendering before the author has approved this song's plan.
+    if (!preview || preview.songId !== song.id ||
+        preview.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
+        !preview.approved || !isValidStoryboard(preview.scenes)) {
+      setError("Se gjennom og godkjenn storyboardet for denne sangen før du lager video.");
+      return;
+    }
     if (!youtubeHealth?.connected) {
       setError("Videopipelinen kan ikke startes før Re-Master Freddy er koblet til riktig YouTube-kanal.");
       return;
@@ -108,9 +130,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
 
     try {
-      await startSongPipeline(song.id, pipelineOptions, (event) => {
+      await startSongPipeline(song.id, { ...pipelineOptions, storyboardScenes: preview.scenes }, (event) => {
         if (event.type !== "heartbeat") setPipelineEvent(event);
       });
+      // Direction belongs to one song; never reuse its story for the next one.
+      setPipelineOptions(current => ({ ...current, visualTheme: "", songLyrics: "" }));
+      setPreview(null);
       await refreshSongs();
     } catch (pipelineError) {
       const message = pipelineError instanceof Error ? pipelineError.message : "Pipelinen feilet.";
@@ -118,6 +143,20 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError(message);
     } finally {
       setProcessingId(null);
+    }
+  }
+
+  async function showStoryboard(song: AdminSong) {
+    const sourceKey = storyboardSourceKey(song, pipelineOptions);
+    setPreviewLoadingId(song.id);
+    setError("");
+    try {
+      const result = await previewSongStoryboard(song, pipelineOptions);
+      setPreview({ songId: song.id, sourceKey, scenes: result.scenes, approved: false });
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "Kunne ikke lage storyboard-utkast.");
+    } finally {
+      setPreviewLoadingId(null);
     }
   }
 
@@ -175,7 +214,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <option value="meditation">Meditation – Freddy Bremseth Art</option>
               <option value="relaxing">Relaxing – Freddy Bremseth Art</option>
               <option value="alternative">Alternative – Freddy Bremseth Art</option>
-              <option value="dance">Dance / EDM – vanlig musikkvideo</option>
+              <option value="dance">Dance / EDM</option>
+              <option value="rock">Rock / Power Rock</option>
+              <option value="ballad">Ballade / følelsesladet</option>
+              <option value="pop">Pop</option>
+              <option value="cinematic">Filmatisk / instrumental</option>
             </select>
           </label>
           <button className="admin-primary admin-upload-button" onClick={handleUpload} disabled={uploading || !mp3File || !mp3Title.trim()}>
@@ -185,6 +228,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         </div>
         {uploadMessage && <div className="admin-success"><CheckCircle2 size={17} />{uploadMessage}</div>}
       </div>
+
+      <PipelineVideoDirection value={pipelineOptions} onChange={setPipelineOptions} />
 
       <PipelineAssets
         value={pipelineOptions}
@@ -248,11 +293,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         ) : (
           songs.map((song) => {
             const canProcess = Boolean(song.audioUrl && !song.youtubeUrl);
-            const disabledReason = !youtubeHealth?.connected
-              ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
-              : !canProcess
-                ? "Sangen mangler lyd eller er allerede publisert."
-                : undefined;
+            const matchingPreview = preview?.songId === song.id &&
+              preview.sourceKey === storyboardSourceKey(song, pipelineOptions) ? preview : null;
+            const approved = Boolean(matchingPreview?.approved && isValidStoryboard(matchingPreview.scenes));
+            const disabledReason = !canProcess
+              ? "Sangen mangler lyd eller er allerede publisert."
+              : !approved
+                ? "Se og godkjenn storyboard først (gratis)."
+                : !youtubeHealth?.connected
+                  ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
+                  : undefined;
 
             return (
               <article className="admin-song-row" key={song.id}>
@@ -292,15 +342,43 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     <span className="admin-missing">Mangler lyd</span>
                   )}
                 </div>
-                <button
-                  className="admin-primary admin-run-button"
-                  disabled={!canProcess || processingId !== null || !youtubeHealth?.connected}
-                  onClick={() => runPipeline(song)}
-                  title={disabledReason}
-                >
-                  {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
-                  Lag video
-                </button>
+                <div className="admin-song-actions">
+                  {canProcess && (
+                    <button
+                      className="admin-secondary"
+                      type="button"
+                      disabled={processingId !== null || previewLoadingId !== null}
+                      onClick={() => showStoryboard(song)}
+                      title="Kostnadsfri forhåndsvisning av åtte tekstscener"
+                    >
+                      {previewLoadingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Music2 size={16} />}
+                      {matchingPreview ? "Oppdater storyboard" : "Se storyboard"}
+                    </button>
+                  )}
+                  <button
+                    className="admin-primary admin-run-button"
+                    disabled={!canProcess || !approved || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
+                    onClick={() => runPipeline(song)}
+                    title={disabledReason}
+                  >
+                    {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
+                    Lag video
+                  </button>
+                </div>
+                {matchingPreview && (
+                  <StoryboardEditor
+                    songTitle={song.title}
+                    scenes={matchingPreview.scenes}
+                    approved={matchingPreview.approved}
+                    onChangeScene={(index, text) => setPreview(current => current?.songId === song.id
+                      ? { ...current, approved: false, scenes: current.scenes.map((scene, i) => i === index ? text : scene) }
+                      : current)}
+                    onApprove={() => setPreview(current => current?.songId === song.id &&
+                      current.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+                      isValidStoryboard(current.scenes) ? { ...current, approved: true } : current)}
+                    onDiscard={() => setPreview(current => current?.songId === song.id ? null : current)}
+                  />
+                )}
               </article>
             );
           })

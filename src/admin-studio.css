@@ -161,6 +161,14 @@
   background: rgba(245, 158, 11, 0.12);
 }
 
+.admin-song-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .admin-run-button {
   margin-top: 0;
   min-height: 38px;
@@ -186,7 +194,7 @@
   }
 
   .admin-song-state,
-  .admin-run-button {
+  .admin-song-actions {
     grid-column: 2;
     justify-self: start;
   }
@@ -207,7 +215,7 @@
 
   .admin-song-icon,
   .admin-song-state,
-  .admin-run-button {
+  .admin-song-actions {
     grid-column: 1;
   }
 }
