@@ -37,6 +37,8 @@ export interface PipelineOptions {
   visualTheme?: string;
   /** Optional lyrics or story synopsis; used as creative context, not displayed. */
   songLyrics?: string;
+  /** Eight text scenes approved for this song's render, not shared between songs. */
+  storyboardScenes?: string[];
   customImageUrls?: string[];
   logoUrl?: string;
   customThumbnailUrl?: string;
@@ -248,6 +250,34 @@ export async function loadChannelAnalytics(): Promise<ChannelAnalytics> {
   return data as ChannelAnalytics;
 }
 
+export interface StoryboardPreview {
+  mode: "free-text-outline";
+  title: string;
+  scenes: string[];
+  aiCalls: 0;
+  imagesGenerated: 0;
+}
+
+/** Text-only; never calls the video renderer or AI image provider. */
+export async function previewSongStoryboard(song: AdminSong, options: PipelineOptions): Promise<StoryboardPreview> {
+  const response = await adminFetch("/api/neural-beat-storyboard-preview", {
+    method: "POST",
+    body: JSON.stringify({
+      title: song.title,
+      genre: song.genre || undefined,
+      visualTheme: options.visualTheme?.trim() || undefined,
+      songLyrics: options.songLyrics?.trim() || undefined,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "Kunne ikke hente storyboard-utkast.");
+  if (result.mode !== "free-text-outline" || !Array.isArray(result.scenes) ||
+      result.scenes.length !== 8 || !result.scenes.every((scene: unknown) => typeof scene === "string")) {
+    throw new Error("Ugyldig storyboard fra serveren.");
+  }
+  return result as StoryboardPreview;
+}
+
 export async function startSongPipeline(
   recordId: string,
   options: PipelineOptions,
@@ -260,6 +290,7 @@ export async function startSongPipeline(
       recordId,
       visualTheme: options.visualTheme?.trim() || undefined,
       songLyrics: options.songLyrics?.trim() || undefined,
+      storyboardScenes: options.storyboardScenes || undefined,
       customImageUrls: options.customImageUrls || [],
       logoUrl: options.logoUrl || undefined,
       customThumbnailUrl: options.customThumbnailUrl || undefined,
