@@ -72,10 +72,12 @@ export function inspectRenderReadiness(input: RenderReadinessInput): ReadinessCh
     {
       key: "images",
       title: "Bildefordeling",
-      ok: !(input.timing && input.extraImageCount > 0),
-      message: input.timing && input.extraImageCount > 0
-        ? "Fjern ekstrabilder når du bruker nøyaktige sceneskift. Ett bilde må tilsvare én scene."
-        : "Bildevalgene er kompatible med valgt tidsplan. AI-bildene er ennå ikke generert.",
+      ok: input.extraImageCount > 0 && (!input.timing || input.extraImageCount === 8),
+      message: input.extraImageCount === 0
+        ? "Ingen bilder valgt. Velg faktiske bilder fra bildebanken før produksjon – abstrakte sirkler blir ikke brukt som automatisk reserve."
+        : input.timing && input.extraImageCount !== 8
+          ? "Ved egne scenestarter må du velge nøyaktig åtte bilder – ett per scene."
+          : `${input.extraImageCount} bilder valgt for videoen. Kontroller bildene i produksjonsbekreftelsen.`,
     },
     {
       key: "youtube",

@@ -14,7 +14,7 @@ const valid: RenderReadinessInput = {
   scenes,
   youtubeConnected: true,
   timing: { durationSeconds: 180, startsSeconds: [0, 21, 42, 65, 89, 111, 137, 158] },
-  extraImageCount: 0,
+  extraImageCount: 8,
   currentlyProcessing: false,
 };
 

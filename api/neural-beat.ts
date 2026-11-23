@@ -18,6 +18,27 @@ export default async function handler(request: any, response: any) {
     return;
   }
 
+  // Fail closed before invoking the paid upstream renderer. The upstream
+  // "original" image mode can otherwise silently choose abstract circles.
+  if (method === "POST") {
+    const body = request.body;
+    const scenes = body?.storyboardScenes;
+    const images = body?.customImageUrls;
+    const validStoryboard = Array.isArray(scenes) && scenes.length === 8 &&
+      scenes.every((scene: unknown) => typeof scene === "string" && scene.trim().length >= 25 && scene.trim().length <= 1000) &&
+      new Set(scenes.map((scene: string) => scene.trim().toLocaleLowerCase())).size === 8;
+    const validImages = Array.isArray(images) && images.length > 0 && images.length <= 40 &&
+      images.every((url: unknown) => typeof url === "string" && /^https:\/\/[^\s]+$/i.test(url) && url.length <= 2048);
+    if (!validStoryboard || !validImages) {
+      response.status(422).json({
+        error: !validStoryboard
+          ? "Videoproduksjon krever åtte godkjente storyboard-scener."
+          : "Ingen gyldige videobilder ble sendt med sangen. Velg faktiske bilder i bildebanken. Videomotoren får ikke bruke abstrakte sirkler som automatisk erstatning.",
+      });
+      return;
+    }
+  }
+
   const headers: Record<string, string> = {
     Accept: method === "POST" ? "text/event-stream, application/json" : "application/json",
     "Content-Type": "application/json",
