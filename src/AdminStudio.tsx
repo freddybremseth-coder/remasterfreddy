@@ -4,6 +4,7 @@ import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
 import PipelineVideoDirection from "./PipelineVideoDirection";
 import StoryboardEditor, { applyContinuityNote, isValidStoryboard } from "./StoryboardEditor";
+import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
 import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort } from "./lib/admin-api";
@@ -431,6 +432,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                       if (!current || current.songId !== song.id ||
                           current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
                       const updated = applyContinuityNote(current.scenes, note);
+                      return updated ? { ...current, scenes: updated, approved: false } : current;
+                    })}
+                    onApplyMusicSections={(sections) => setPreview(current => {
+                      if (!current || current.songId !== song.id ||
+                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
+                      const updated = applyMusicSectionCues(current.scenes, sections);
                       return updated ? { ...current, scenes: updated, approved: false } : current;
                     })}
                     onApprove={() => setPreview(current => current?.songId === song.id &&
