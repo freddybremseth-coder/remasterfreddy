@@ -75,6 +75,19 @@ describe("cost-free scene preview and approved storyboard transport", () => {
     });
   });
 
+  it("starts the simple no-Gemini video path without any storyboard payload", async () => {
+    const fetchMock = vi.fn(async () => sseSuccess());
+    vi.stubGlobal("fetch", fetchMock);
+    await startSongPipeline("two-roads", { customImageUrls: [], autoSchedule: false }, vi.fn());
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(url).toBe("/api/neural-beat");
+    expect(body.recordId).toBe("two-roads");
+    expect(body.imageMode).toBe("original");
+    expect(body.storyboardScenes).toBeUndefined();
+    expect(body.sceneTiming).toBeUndefined();
+  });
+
   it("forwards the exact approved scene texts only when rendering is requested", async () => {
     const fetchMock = vi.fn(async () => sseSuccess());
     vi.stubGlobal("fetch", fetchMock);

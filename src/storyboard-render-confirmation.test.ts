@@ -1,35 +1,42 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-describe("two-stage confirmation before paid video rendering", () => {
+describe("storyboard optional and explicit confirmation for both video modes", () => {
   const source = readFileSync("src/AdminStudio.tsx", "utf8");
 
-  it("opens a confirmation instead of calling the expensive pipeline on the first click", () => {
+  it("allows simple video without a storyboard and offers optional detailed editing", () => {
+    expect(source).toContain('function requestRender(song: AdminSong, mode: "simple" | "storyboard" = "simple")');
     expect(source).toContain("onClick={() => requestRender(song)}");
-    expect(source).toContain("setPendingRender({");
-    expect(source).toContain("songId: song.id,");
-    expect(source).toContain("scenesKey: JSON.stringify(preview.scenes),");
-    expect(source).toContain("timingKey: JSON.stringify(preview.timing ?? null),");
-    expect(source).toContain("Bekreft videoproduksjon");
-    expect(source).toContain("Start bildegenerering og video");
-    expect(source).toContain("Avbryt – ingen kostnader");
+    expect(source).toContain('onClick={() => requestRender(song, "storyboard")}');
+    expect(source).toContain("Lag med storyboard");
+    expect(source).toContain('pendingRender.mode === "simple"');
+    expect(source).toContain('pendingRender.mode === "storyboard"');
   });
 
-  it("validates unchanged song, plan, YouTube connection and synchronous single-flight lock", () => {
-    expect(source).toContain("if (renderLock.current) return;");
+  it("always opens an explicit confirmation, even when no storyboard is used", () => {
+    expect(source).toContain("setPendingRender({");
+    expect(source).toContain("optionsKey: JSON.stringify(pipelineOptions)");
+    expect(source).toContain("Bekreft videoproduksjon");
+    expect(source).toContain("Avbryt – ingen kostnader");
+    expect(source).toContain("Start video uten Gemini-bilder");
+    expect(source).toContain("onClick={() => { if (song && valid) void runPipeline(song); }}");
+  });
+
+  it("enforces song, YouTube and unchanged options before starting a render", () => {
+    expect(source).toContain("if (renderLock.current || !pendingRender");
     expect(source).toContain("renderLock.current = true;");
     expect(source).toContain("renderLock.current = false;");
-    expect(source).toContain("pendingRender.scenesKey !== JSON.stringify(preview.scenes)");
-    expect(source).toContain("pendingRender.timingKey !== JSON.stringify(preview.timing ?? null)");
+    expect(source).toContain("pendingRender.optionsKey !== JSON.stringify(pipelineOptions)");
+    expect(source).toContain("JSON.stringify(pipelineOptions) === pendingRender.optionsKey");
     expect(source).toContain("isValidSceneTiming(preview.timing)");
-    expect(source).toContain("storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey");
-    expect(source).toContain("youtubeHealth?.connected && song.audioUrl && !song.youtubeUrl");
+    expect(source).toContain("song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected");
     expect(source).toContain("setPendingRender(null);");
   });
 
-  it("keeps explicit publishing and potential paid costs visible to the author", () => {
-    expect(source).toContain("betalte AI-bilder");
-    expect(source).toContain("YouTube i henhold til publiseringsvalgene dine");
-    expect(source).toContain("onClick={() => setPendingRender(null)}");
+  it("the video uses original visuals without Gemini but discloses other services", () => {
+    expect(source).toContain('imageMode: "original"');
+    expect(source).toContain("Gemini brukes ikke til bilder.");
+    expect(source).toContain("kan bruke andre AI-tjenester");
+    expect(source).toContain("YouTube-publisering");
   });
 });
