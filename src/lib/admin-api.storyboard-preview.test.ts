@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 
 vi.mock("./supabase", () => ({
   getAdminSession: vi.fn(async () => ({ accessToken: "test-session" })),
@@ -26,6 +27,17 @@ function sseSuccess() {
 
 describe("cost-free scene preview and approved storyboard transport", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it("protects storyboard proxy from login HTML, redirects and non-storyboard 200 responses", () => {
+    const proxy = readFileSync("api/neural-beat-storyboard-preview.ts", "utf8");
+    expect(proxy).toContain('redirect: "manual"');
+    expect(proxy).toContain('contentType.includes("application/json")');
+    expect(proxy).toContain('upstream.status >= 300');
+    expect(proxy).toContain('storyboard.mode !== "free-text-outline"');
+    expect(proxy).toContain("storyboard.scenes.length === 8");
+    expect(proxy).toContain("response.status(502)");
+    expect(proxy).toContain("await requireAdmin(request, response)");
+  });
 
   it("calls the text preview endpoint without starting a render", async () => {
     const fetchMock = vi.fn(async () =>

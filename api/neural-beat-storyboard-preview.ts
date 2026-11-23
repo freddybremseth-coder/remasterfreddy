@@ -30,10 +30,39 @@ export default async function handler(request: any, response: any) {
       headers,
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(15000),
+      redirect: "manual",
     });
-    const payload = await upstream.json().catch(() => ({ error: "Ugyldig svar fra preview-tjenesten." }));
     response.setHeader("Cache-Control", "no-store");
-    response.status(upstream.status).json(payload);
+    const contentType = upstream.headers.get("content-type") || "";
+    // A login redirect or 200 HTML page is never a successful storyboard.
+    if (upstream.status >= 300 && upstream.status < 400 || !contentType.includes("application/json")) {
+      response.status(502).json({
+        error: "Storyboard-tjenesten svarte med innlogging eller feil innhold i stedet for scener. Kontroller RealtyFlow-tilkoblingen.",
+      });
+      return;
+    }
+    const payload: unknown = await upstream.json().catch(() => null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      response.status(502).json({ error: "Storyboard-tjenesten sendte ikke gyldig JSON. Prøv igjen." });
+      return;
+    }
+    if (!upstream.ok) {
+      const error = (payload as Record<string, unknown>).error;
+      response.status(upstream.status).json({
+        error: typeof error === "string" ? error : "Storyboardsvar ble avvist av RealtyFlow.",
+      });
+      return;
+    }
+    const storyboard = payload as Record<string, unknown>;
+    const validScenes = Array.isArray(storyboard.scenes) && storyboard.scenes.length === 8 &&
+      storyboard.scenes.every(scene => typeof scene === "string" &&
+        scene.trim().length >= 25 && scene.trim().length <= 1000) &&
+      new Set(storyboard.scenes.map((scene: string) => scene.trim().toLocaleLowerCase())).size === 8;
+    if (storyboard.mode !== "free-text-outline" || !validScenes) {
+      response.status(502).json({ error: "Storyboard-tjenesten returnerte ikke åtte gyldige scener. Prøv igjen eller kontroller RealtyFlow." });
+      return;
+    }
+    response.status(200).json(storyboard);
   } catch {
     response.status(503).json({ error: "Forhåndsvisningen er midlertidig utilgjengelig." });
   }
