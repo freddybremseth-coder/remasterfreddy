@@ -1,5 +1,6 @@
 import { useState } from "react";
 import LocalAudioSceneTiming from "./LocalAudioSceneTiming";
+import type { StoryboardSceneTiming } from "./lib/admin-api";
 import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
 import "./storyboard-editor.css";
 
@@ -15,6 +16,9 @@ interface Props {
   onChangeScene: (index: number, text: string) => void;
   onApplyContinuity: (note: string) => void;
   onApplyMusicSections: (sections: MusicSection[]) => void;
+  sceneTiming?: StoryboardSceneTiming;
+  onApplyTiming: (timing: StoryboardSceneTiming) => void;
+  onClearTiming: () => void;
   onApprove: () => void;
   onDiscard: () => void;
 }
@@ -43,7 +47,8 @@ export function applyContinuityNote(scenes: string[], rawNote: string): string[]
 
 /** Text-only continuity review: no generated images, no AI credits and no paid rendering. */
 export default function StoryboardEditor({
-  songTitle, scenes, approved, onChangeScene, onApplyContinuity, onApplyMusicSections, onApprove, onDiscard,
+  songTitle, scenes, approved, onChangeScene, onApplyContinuity, onApplyMusicSections,
+  sceneTiming, onApplyTiming, onClearTiming, onApprove, onDiscard,
 }: Props) {
   const [continuity, setContinuity] = useState("");
   const [musicSections, setMusicSections] = useState<MusicSection[]>(() => readMusicSectionCues(scenes));
@@ -130,7 +135,7 @@ export default function StoryboardEditor({
         {musicResult === null && <p role="alert">Musikkplanen får ikke plass i scenetekstene. Forkort en scene før du legger den til.</p>}
       </div>
 
-      <LocalAudioSceneTiming />
+      <LocalAudioSceneTiming approvedTiming={sceneTiming} onApplyTiming={onApplyTiming} onClearTiming={onClearTiming} />
 
       <div className="storyboard-review-header">
         <strong>Se rekkefølgen</strong>
@@ -178,7 +183,9 @@ export default function StoryboardEditor({
         </button>
         <button className="admin-secondary" type="button" onClick={onDiscard}>Lukk utkastet</button>
       </div>
-      {approved && <p className="storyboard-editor-confirmation">Storyboard godkjent. Et eget bekreftelsesvindu vises før eventuell betalt produksjon.</p>}
+      {approved && <p className="storyboard-editor-confirmation">
+        Storyboard godkjent{sceneTiming ? " med musikkstyrte sceneskift" : ""}. Et eget bekreftelsesvindu vises før eventuell betalt produksjon.
+      </p>}
     </section>
   );
 }
