@@ -14,10 +14,10 @@ vi.mock("./lib/local-audio-scene-cues", async (original) => {
 
 import LocalAudioSceneTiming, { formatSceneTime } from "./LocalAudioSceneTiming";
 
-function mount(approvedTiming?: { durationSeconds: number; startsSeconds: number[] }) {
+function mount(approvedTiming?: { durationSeconds: number; startsSeconds: number[] }, scenes?: string[]) {
   const onApplyTiming = vi.fn();
   const onClearTiming = vi.fn();
-  render(<LocalAudioSceneTiming approvedTiming={approvedTiming}
+  render(<LocalAudioSceneTiming scenes={scenes} approvedTiming={approvedTiming}
     onApplyTiming={onApplyTiming} onClearTiming={onClearTiming} />);
   return { onApplyTiming, onClearTiming };
 }
@@ -82,6 +82,30 @@ describe("cost-free local audio timing used by FFmpeg only after approval", () =
       durationSeconds: 180,
       startsSeconds: [0, 20, 49.2, 67, 91, 111, 134, 158],
     });
+  });
+
+  it("plays the eight scene cards locally and changes the active visual at scene boundaries", async () => {
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:local-scene-preview"),
+      revokeObjectURL: vi.fn(),
+    });
+    const scenes = Array.from({ length: 8 }, (_, i) =>
+      `Distinct original scene number ${i + 1} with warm cinematic light and the same character.`);
+    const { onApplyTiming } = mount(undefined, scenes);
+    fireEvent.change(screen.getByLabelText(/Velg lydfil for lokal analyse/), {
+      target: { files: [new File(["mp3"], "song.mp3", { type: "audio/mpeg" })] },
+    });
+    await waitFor(() => expect(screen.getByLabelText("Gratis visuell gjennomspilling")).toBeTruthy());
+    expect(screen.getByText(scenes[0])).toBeTruthy();
+    const audio = document.getElementById("storyboard-local-audio") as HTMLAudioElement;
+    Object.defineProperty(audio, "currentTime", { configurable: true, writable: true, value: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "Forhåndsvis scene 4" }));
+    expect(audio.currentTime).toBe(67);
+    expect(screen.getByText(scenes[3])).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Forhåndsvis scene 4" }).getAttribute("aria-pressed")).toBe("true");
+    expect(onApplyTiming).not.toHaveBeenCalled();
+    expect(screen.getByText(/illustrert tekstvisning, ikke bilder fra en AI-modell/)).toBeTruthy();
   });
 
   it("formats elapsed times", () => {
