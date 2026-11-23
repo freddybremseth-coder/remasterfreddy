@@ -53,6 +53,15 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Ingen videobilder er valgt.");
   });
 
+  it("blocks render until every selected image actually loads in the preview", () => {
+    expect(source).toContain('const [verifiedImages, setVerifiedImages]');
+    expect(source).toContain('confirmedImages.every(url => verifiedImages[url] === true)');
+    expect(source).toContain('selectedOptions.customImageUrls.every(url => verifiedImages[url] === true)');
+    expect(source).toContain('onLoad={() => setVerifiedImages');
+    expect(source).toContain('onError={() => setVerifiedImages');
+    expect(source).toContain('Venter på bildekontroll.');
+  });
+
   it("maintains separate per-song image selections in the current browser", () => {
     expect(source).toContain('remaster-song-images-v1');
     expect(source).toContain('songImages[activeSongId] || []');
