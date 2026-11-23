@@ -10,7 +10,7 @@ describe("author-controlled music structure without audio or AI calls", () => {
     expect(result).not.toBeNull();
     expect(result?.[0]).toContain("Music cue: Intro");
     expect(result?.[2]).toContain("Music cue: Pre-chorus");
-    expect(result?.[3]).toContain("Music cue: Refreng");
+    expect(result?.[3]).toContain("Music cue: Chorus");
     expect(result?.[6]).toContain("Music cue: Instrumental");
     expect(readMusicSectionCues(result!)).toEqual(DEFAULT_MUSIC_SECTIONS);
   });
@@ -20,7 +20,7 @@ describe("author-controlled music structure without audio or AI calls", () => {
     const sections = DEFAULT_MUSIC_SECTIONS.map((s, i) => i === 3 ? "instrumental" as const : s);
     const revised = applyMusicSectionCues(first, sections)!;
     expect(revised[3]).toContain("Music cue: Instrumental");
-    expect(revised[3]).not.toContain("Music cue: Refreng");
+    expect(revised[3]).not.toContain("Music cue: Chorus");
     expect((revised[3].match(/Music cue:/g) || [])).toHaveLength(1);
     expect(applyMusicSectionCues(revised, sections)).toEqual(revised);
     expect(revised[3]).toContain("One cohesive film scene 4");
