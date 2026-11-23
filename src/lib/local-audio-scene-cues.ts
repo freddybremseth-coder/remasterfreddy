@@ -1,3 +1,16 @@
+import type { StoryboardSceneTiming } from "./admin-api";
+
+/** Mirror the backend's fail-closed timing contract before author approval. */
+export function isValidSceneTiming(value: StoryboardSceneTiming | null | undefined): value is StoryboardSceneTiming {
+  if (!value) return false;
+  const { durationSeconds: duration, startsSeconds: starts } = value;
+  return Number.isFinite(duration) && duration >= 8 && duration <= 7200 &&
+    Array.isArray(starts) && starts.length === 8 && starts[0] === 0 &&
+    starts.every((start, i) => Number.isFinite(start) && start >= 0 &&
+      start < duration && (i === 0 || start - starts[i - 1] >= 1)) &&
+    duration - starts[7] >= 1;
+}
+
 /** Local-only approximate scene changes based on changes in windowed RMS energy.
  * This is NOT a beat/chorus detector and never claims precise music structure.
  */

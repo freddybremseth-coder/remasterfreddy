@@ -7,7 +7,8 @@ import StoryboardEditor, { applyContinuityNote, isValidStoryboard } from "./Stor
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort, type StoryboardSceneTiming } from "./lib/admin-api";
+import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -29,6 +30,7 @@ interface EditedStoryboard {
   sourceKey: string;
   scenes: string[];
   approved: boolean;
+  timing?: StoryboardSceneTiming;
 }
 
 function storyboardSourceKey(song: AdminSong, options: PipelineOptions): string {
@@ -45,7 +47,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
   const [preview, setPreview] = useState<EditedStoryboard | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
-  const [pendingRender, setPendingRender] = useState<{ songId: string; sourceKey: string; scenesKey: string } | null>(null);
+  const [pendingRender, setPendingRender] = useState<{ songId: string; sourceKey: string; scenesKey: string; timingKey: string } | null>(null);
   const renderLock = useRef(false);
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
@@ -121,7 +123,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     // Never spend on rendering before the author has approved this song's plan.
     if (!preview || preview.songId !== song.id ||
         preview.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
-        !preview.approved || !isValidStoryboard(preview.scenes)) {
+        !preview.approved || !isValidStoryboard(preview.scenes) ||
+        (preview.timing !== undefined && !isValidSceneTiming(preview.timing))) {
       setError("Se gjennom og godkjenn storyboardet for denne sangen før du lager video.");
       return;
     }
@@ -131,8 +134,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
     if (!pendingRender || pendingRender.songId !== song.id ||
         pendingRender.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
-        pendingRender.scenesKey !== JSON.stringify(preview.scenes)) {
+        pendingRender.scenesKey !== JSON.stringify(preview.scenes) ||
+        pendingRender.timingKey !== JSON.stringify(preview.timing ?? null)) {
       setError("Bekreft kostnader og publisering for akkurat denne sangen før produksjonen starter.");
+      return;
+    }
+
+    if (preview.timing && pipelineOptions.customImageUrls?.length) {
+      setError("Fjern ekstrabilder før du bruker musikkstyrte sceneskift. Én scene må tilsvare ett bilde.");
       return;
     }
 
@@ -143,7 +152,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
 
     try {
-      await startSongPipeline(song.id, { ...pipelineOptions, storyboardScenes: preview.scenes }, (event) => {
+      await startSongPipeline(song.id, {
+        ...pipelineOptions,
+        storyboardScenes: preview.scenes,
+        sceneTiming: preview.timing,
+      }, (event) => {
         if (event.type !== "heartbeat") setPipelineEvent(event);
       });
       // Direction belongs to one song; never reuse its story for the next one.
@@ -165,11 +178,21 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     if (!song.audioUrl || song.youtubeUrl) return;
     const sourceKey = storyboardSourceKey(song, pipelineOptions);
     if (!preview || preview.songId !== song.id || preview.sourceKey !== sourceKey ||
-        !preview.approved || !isValidStoryboard(preview.scenes) || !youtubeHealth?.connected) {
+        !preview.approved || !isValidStoryboard(preview.scenes) || !youtubeHealth?.connected ||
+        (preview.timing !== undefined && !isValidSceneTiming(preview.timing))) {
       setError("Godkjenn storyboard og kontroller YouTube-tilkoblingen før du lager video.");
       return;
     }
-    setPendingRender({ songId: song.id, sourceKey, scenesKey: JSON.stringify(preview.scenes) });
+    if (preview.timing && pipelineOptions.customImageUrls?.length) {
+      setError("Fjern ekstrabilder før du bruker musikkstyrte sceneskift. Én scene må tilsvare ett bilde.");
+      return;
+    }
+    setPendingRender({
+      songId: song.id,
+      sourceKey,
+      scenesKey: JSON.stringify(preview.scenes),
+      timingKey: JSON.stringify(preview.timing ?? null),
+    });
   }
 
   async function showStoryboard(song: AdminSong) {
@@ -318,6 +341,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           preview.sourceKey === pendingRender.sourceKey &&
           storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
           JSON.stringify(preview.scenes) === pendingRender.scenesKey &&
+          JSON.stringify(preview.timing ?? null) === pendingRender.timingKey &&
+          (preview.timing === undefined || isValidSceneTiming(preview.timing)) &&
+          (!preview.timing || !pipelineOptions.customImageUrls?.length) &&
           preview.approved && isValidStoryboard(preview.scenes) &&
           youtubeHealth?.connected && song.audioUrl && !song.youtubeUrl);
         return (
@@ -327,6 +353,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <p><strong>{song?.title || "Ukjent sang"}</strong></p>
               <p>Dette er ikke en gratis forhåndsvisning. Når du fortsetter, kan systemet generere betalte AI-bilder, lage video og sende den til YouTube i henhold til publiseringsvalgene dine.</p>
               <p>Kontroller sang, åtte scener og tidspunkt før du fortsetter.</p>
+              {preview?.timing && <p>Musikkstyrte sceneskift er aktivert og følger de åtte godkjente tidsmarkørene. Serveren sjekker lydlengden før betalte AI-kall.</p>}
               {!valid && <p role="alert">Storyboard eller publiseringsgrunnlag har endret seg. Lukk og godkjenn på nytt.</p>}
               <div className="admin-render-confirmation-actions">
                 <button type="button" className="admin-secondary" onClick={() => setPendingRender(null)}>Avbryt – ingen kostnader</button>
@@ -425,6 +452,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     songTitle={song.title}
                     scenes={matchingPreview.scenes}
                     approved={matchingPreview.approved}
+                    sceneTiming={matchingPreview.timing}
+                    onApplyTiming={(timing) => setPreview(current => current?.songId === song.id &&
+                      current.sourceKey === storyboardSourceKey(song, pipelineOptions)
+                      ? { ...current, timing, approved: false } : current)}
+                    onClearTiming={() => setPreview(current => current?.songId === song.id &&
+                      current.timing !== undefined
+                      ? { ...current, timing: undefined, approved: false } : current)}
                     onChangeScene={(index, text) => setPreview(current => current?.songId === song.id
                       ? { ...current, approved: false, scenes: current.scenes.map((scene, i) => i === index ? text : scene) }
                       : current)}

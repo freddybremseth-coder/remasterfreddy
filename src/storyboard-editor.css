@@ -116,3 +116,7 @@
 .storyboard-audio-timeline input { box-sizing: border-box; width: 100%; min-height: 36px; border: 1px solid #667085; background: #152236; color: #f1f5f9; border-radius: 7px; padding: 6px; }
 .storyboard-audio-timeline small { color: #bfdbfe; }
 @media (max-width: 750px) { .storyboard-audio-timeline { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+.storyboard-audio-timing-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+.storyboard-audio-timing-actions button { min-height: 44px; }
+.storyboard-audio-timing-actions span[role="alert"] { color: #fbbf84; }

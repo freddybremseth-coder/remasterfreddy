@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { recommendSceneStarts } from "./local-audio-scene-cues";
+import { recommendSceneStarts, isValidSceneTiming } from "./local-audio-scene-cues";
 
 describe("local audio scene start suggestions", () => {
+  it("accepts a complete approved timeline, rejects edits with colliding scenes or different duration", () => {
+    const valid = { durationSeconds: 180, startsSeconds: [0, 20, 45, 67, 91, 111, 134, 158] };
+    expect(isValidSceneTiming(valid)).toBe(true);
+    expect(isValidSceneTiming({ ...valid, startsSeconds: [0, 20, 45, 67, 91, 111, 134, 134.5] })).toBe(false);
+    expect(isValidSceneTiming({ ...valid, startsSeconds: valid.startsSeconds.slice(0, 7) })).toBe(false);
+    expect(isValidSceneTiming({ ...valid, startsSeconds: [0, 20, 45, 67, 91, 111, 134, 179.5] })).toBe(false);
+    expect(isValidSceneTiming(undefined)).toBe(false);
+  });
+
+
   it("returns eight chronological suggestions beginning at zero", () => {
     const frames = Array.from({ length: 480 }, (_, i) =>
       i < 100 ? 0.1 : i < 160 ? 0.6 : i < 270 ? 0.25 : i < 350 ? 0.85 : 0.3);
