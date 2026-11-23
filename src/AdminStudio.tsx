@@ -4,6 +4,8 @@ import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
 import PipelineVideoDirection from "./PipelineVideoDirection";
 import StoryboardEditor, { applyContinuityNote, isValidStoryboard } from "./StoryboardEditor";
+import RenderReadinessPanel from "./RenderReadinessPanel";
+import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
@@ -185,6 +187,24 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
     if (preview.timing && pipelineOptions.customImageUrls?.length) {
       setError("Fjern ekstrabilder før du bruker musikkstyrte sceneskift. Én scene må tilsvare ett bilde.");
+      return;
+    }
+    const readiness = inspectRenderReadiness({
+      songId: song.id,
+      hasAudio: Boolean(song.audioUrl),
+      alreadyPublished: Boolean(song.youtubeUrl),
+      previewSongId: preview.songId,
+      sourceMatches: preview.sourceKey === sourceKey,
+      approved: preview.approved,
+      scenes: preview.scenes,
+      youtubeConnected: Boolean(youtubeHealth?.connected),
+      timing: preview.timing,
+      extraImageCount: pipelineOptions.customImageUrls?.length ?? 0,
+      currentlyProcessing: Boolean(processingId || renderLock.current),
+    });
+    const blocking = readiness.find(check => !check.ok);
+    if (blocking) {
+      setError(`Før video: ${blocking.title}. ${blocking.message}`);
       return;
     }
     setPendingRender({
@@ -447,6 +467,21 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     Lag video
                   </button>
                 </div>
+                {matchingPreview && (
+                  <RenderReadinessPanel
+                    songId={song.id}
+                    hasAudio={Boolean(song.audioUrl)}
+                    alreadyPublished={Boolean(song.youtubeUrl)}
+                    previewSongId={matchingPreview.songId}
+                    sourceMatches={matchingPreview.sourceKey === storyboardSourceKey(song, pipelineOptions)}
+                    approved={matchingPreview.approved}
+                    scenes={matchingPreview.scenes}
+                    youtubeConnected={Boolean(youtubeHealth?.connected)}
+                    timing={matchingPreview.timing}
+                    extraImageCount={pipelineOptions.customImageUrls?.length ?? 0}
+                    currentlyProcessing={Boolean(processingId)}
+                  />
+                )}
                 {matchingPreview && (
                   <StoryboardEditor
                     songTitle={song.title}
