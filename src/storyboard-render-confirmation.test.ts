@@ -18,7 +18,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain('function requestRender(song: AdminSong)');
     expect(source).toContain("onClick={() => requestRender(song)}");
     expect(source).toContain('if (!approvedStory) {');
-    expect(source).toContain('!approved || processingId !== null');
+    expect(source).toContain('!approved || !songImageCount || processingId !== null');
     expect(source).toContain('mode: "storyboard"');
     expect(source).not.toContain('requestRender(song, "storyboard")');
     expect(source).not.toContain('Enkel video uten storyboard');
@@ -26,7 +26,7 @@ describe("storyboard required and explicit confirmation before video", () => {
 
   it("always opens an explicit confirmation for the approved storyboard", () => {
     expect(source).toContain("setPendingRender({");
-    expect(source).toContain("optionsKey: JSON.stringify(pipelineOptions)");
+    expect(source).toContain("optionsKey: JSON.stringify(selectedOptions)");
     expect(source).toContain("Bekreft videoproduksjon");
     expect(source).toContain("Avbryt – ingen kostnader");
     expect(source).toContain("Start video uten Gemini-bilder");
@@ -38,8 +38,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("if (renderLock.current || !pendingRender");
     expect(source).toContain("renderLock.current = true;");
     expect(source).toContain("renderLock.current = false;");
-    expect(source).toContain("pendingRender.optionsKey !== JSON.stringify(pipelineOptions)");
-    expect(source).toContain("JSON.stringify(pipelineOptions) === pendingRender.optionsKey");
+    expect(source).toContain("pendingRender.optionsKey !== JSON.stringify(selectedOptions)");
+    expect(source).toContain("JSON.stringify(confirmedOptions) === pendingRender.optionsKey");
     expect(source).toContain("isValidSceneTiming(preview.timing)");
     expect(source).toContain("song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected");
     expect(source).toContain("setPendingRender(null);");
@@ -47,10 +47,19 @@ describe("storyboard required and explicit confirmation before video", () => {
 
   it("blocks rendering without selected images and previews the exact selections", () => {
     expect(source).toContain("Velg minst ett bilde");
-    expect(source).toContain('pipelineOptions.customImageUrls?.length');
+    expect(source).toContain('selectedOptions.customImageUrls?.length');
     expect(source).toContain('Bilder valgt til denne videoen');
     expect(source).toContain('Valgt videobilde');
     expect(source).toContain("Ingen videobilder er valgt.");
+  });
+
+  it("maintains separate per-song image selections in the current browser", () => {
+    expect(source).toContain('remaster-song-images-v1');
+    expect(source).toContain('songImages[activeSongId] || []');
+    expect(source).toContain('songImages[song.id] || []');
+    expect(source).toContain('Videobilder for sang');
+    expect(source).toContain('setActiveSongId(event.target.value)');
+    expect(source).toContain('customImageUrls: songImages[song.id] || []');
   });
 
   it("the video uses original visuals without Gemini but discloses other services", () => {
