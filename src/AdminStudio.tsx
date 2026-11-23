@@ -58,6 +58,25 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     // Publiser på beste tidspunkt som standard — kan slås av per kjøring.
     autoSchedule: true,
   });
+  // Browser-only association; backend song-level persistence is still required.
+  const [activeSongId, setActiveSongId] = useState("");
+  const [songImages, setSongImages] = useState<Record<string, string[]>>(() => {
+    try {
+      const data: unknown = JSON.parse(window.localStorage.getItem("remaster-song-images-v1") || "{}");
+      if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+      return Object.fromEntries(Object.entries(data).filter(([id, urls]) =>
+        id && Array.isArray(urls) && urls.every(u => typeof u === "string" && u.startsWith("https://"))
+      )) as Record<string, string[]>;
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem("remaster-song-images-v1", JSON.stringify(songImages)); } catch {}
+  }, [songImages]);
+  const scopedOptions = { ...pipelineOptions, customImageUrls: songImages[activeSongId] || [] };
+  function updateScopedOptions(next: PipelineOptions) {
+    setPipelineOptions(current => ({ ...current, ...next, customImageUrls: [] }));
+    if (activeSongId) setSongImages(current => ({ ...current, [activeSongId]: next.customImageUrls || [] }));
+  }
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
@@ -81,6 +100,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     refreshSongs();
   }, []);
 
+  useEffect(() => {
+    if (!activeSongId && songs.length) setActiveSongId((songs.find(song => song.audioUrl && !song.youtubeUrl) || songs[0]).id);
+  }, [songs, activeSongId]);
   const readyCount = useMemo(
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
     [songs],
@@ -105,7 +127,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
     setUploadMessage("");
     try {
-      await uploadSong(mp3File, mp3Title, mp3Artist, mp3Genre);
+      const uploaded = await uploadSong(mp3File, mp3Title, mp3Artist, mp3Genre);
+      if (uploaded?.id) setActiveSongId(uploaded.id);
       setUploadMessage("Sangen er lastet opp og lagt i publiseringskøen.");
       setMp3File(null);
       setMp3Title("");
@@ -122,11 +145,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   async function runPipeline(song: AdminSong) {
     // Keep the two-stage author confirmation for ALL video modes.
     if (renderLock.current || !pendingRender || pendingRender.songId !== song.id) return;
+    if (activeSongId !== song.id) { setPendingRender(null); setError("Velg riktig sang i bildevelgeren først."); return; }
+    const selectedOptions = { ...pipelineOptions, customImageUrls: songImages[song.id] || [] };
     const approvedStory = preview && preview.songId === song.id &&
       preview.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
       preview.approved && isValidStoryboard(preview.scenes) &&
       (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
-    if (pendingRender.optionsKey !== JSON.stringify(pipelineOptions) ||
+    if (pendingRender.optionsKey !== JSON.stringify(selectedOptions) ||
         pendingRender.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
         (!approvedStory ||
           pendingRender.scenesKey !== JSON.stringify(approvedStory.scenes) ||
@@ -135,7 +160,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setPendingRender(null);
       return;
     }
-    if (!(pipelineOptions.customImageUrls?.length)) {
+    if (!(selectedOptions.customImageUrls?.length)) {
       setError("Ingen videobilder er valgt. Velg de faktiske bildene fra bildebanken før produksjon. Systemet lager ikke fargede sirkler som erstatning.");
       return;
     }
@@ -143,7 +168,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Sangen må ha lyd, ikke være publisert, og YouTube må være tilkoblet.");
       return;
     }
-    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length !== 8) {
+    if (approvedStory?.timing && selectedOptions.customImageUrls?.length !== 8) {
       setError("Ved egne scenetidspunkter må du velge nøyaktig åtte bilder – ett per storyboard-scene.");
       return;
     }
@@ -157,7 +182,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     try {
       const selectedStory = approvedStory;
       await startSongPipeline(song.id, {
-        ...pipelineOptions,
+        ...selectedOptions,
         imageMode: "original",
         storyboardScenes: selectedStory?.scenes,
         sceneTiming: selectedStory?.timing,
@@ -182,6 +207,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
 
   function requestRender(song: AdminSong) {
     if (renderLock.current || processingId || previewLoadingId) return;
+    if (activeSongId !== song.id) { setActiveSongId(song.id); setError("Kontroller bildevalgene for denne sangen før video."); return; }
+    const selectedOptions = { ...pipelineOptions, customImageUrls: songImages[song.id] || [] };
     if (!song.audioUrl || song.youtubeUrl) {
       setError("Sangen mangler lyd eller har allerede en YouTube-video.");
       return;
@@ -190,7 +217,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Koble Re-Master Freddy til YouTube-kanalen før videoproduksjon.");
       return;
     }
-    if (!(pipelineOptions.customImageUrls?.length)) {
+    if (!(selectedOptions.customImageUrls?.length)) {
       setError("Velg minst ett bilde i «Visuelle valg» før du starter. Uten valgte bilder kan videoen bli abstrakte sirkler.");
       return;
     }
@@ -202,7 +229,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Lag og godkjenn storyboardet med åtte scener før du starter videoen.");
       return;
     }
-    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length !== 8) {
+    if (approvedStory?.timing && selectedOptions.customImageUrls?.length !== 8) {
       setError("Ved egne scenetidspunkter må du velge nøyaktig åtte bilder – ett per storyboard-scene.");
       return;
     }
@@ -211,7 +238,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       songId: song.id,
       mode: "storyboard",
       sourceKey,
-      optionsKey: JSON.stringify(pipelineOptions),
+      optionsKey: JSON.stringify(selectedOptions),
       scenesKey: JSON.stringify(approvedStory.scenes),
       timingKey: JSON.stringify(approvedStory.timing ?? null),
     });
@@ -303,9 +330,18 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
 
       <PipelineVideoDirection value={pipelineOptions} onChange={setPipelineOptions} />
 
+      <div className="pipeline-asset-field">
+        <label htmlFor="remaster-song-images"><strong>Videobilder for sang</strong></label>
+        <select id="remaster-song-images" value={activeSongId}
+          onChange={event => { setActiveSongId(event.target.value); setPendingRender(null); setPreview(null); }}>
+          <option value="">Velg sang</option>
+          {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
+        </select>
+        <small>Bilder knyttes til denne sangen og lagres foreløpig kun i denne nettleseren.</small>
+      </div>
       <PipelineAssets
-        value={pipelineOptions}
-        onChange={setPipelineOptions}
+        value={scopedOptions}
+        onChange={updateScopedOptions}
         refreshToken={assetRefreshToken}
         onOpenImageBank={onOpenImageBank}
       />
@@ -363,13 +399,15 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           preview.sourceKey === pendingRender.sourceKey &&
           preview.approved && isValidStoryboard(preview.scenes) &&
           (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
+        const confirmedImages = song ? songImages[song.id] || [] : [];
+        const confirmedOptions = { ...pipelineOptions, customImageUrls: confirmedImages };
         const valid = Boolean(song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected &&
           storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
-          JSON.stringify(pipelineOptions) === pendingRender.optionsKey &&
-          Boolean(pipelineOptions.customImageUrls?.length && approvedStory &&
+          JSON.stringify(confirmedOptions) === pendingRender.optionsKey &&
+          Boolean(confirmedImages.length && approvedStory &&
             JSON.stringify(approvedStory.scenes) === pendingRender.scenesKey &&
             JSON.stringify(approvedStory.timing ?? null) === pendingRender.timingKey &&
-            (!approvedStory.timing || pipelineOptions.customImageUrls?.length === 8)));
+            (!approvedStory.timing || confirmedImages.length === 8)));
         return (
           <div className="admin-render-confirmation" role="dialog" aria-modal="true" aria-labelledby="render-confirm-title">
             <div className="admin-render-confirmation-panel">
@@ -377,9 +415,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <p><strong>{song?.title || "Ukjent sang"}</strong></p>
               <p><strong>Video med godkjent storyboard</strong></p>
               <p>Videoen skal bruke bildene du har valgt fra bildebanken. Ingen abstrakte sirkler er godkjent som erstatning. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Videomotorens støtte for dette må fortsatt verifiseres.</p>
-              <p><strong>{pipelineOptions.customImageUrls?.length || 0} valgte videobilder</strong> – sjekk at dette er bildene du ønsker før produksjon.</p>
+              <p><strong>{confirmedImages.length} valgte videobilder</strong> – sjekk at dette er bildene du ønsker før produksjon.</p>
               <div className="pipeline-slide-grid" aria-label="Bilder valgt til denne videoen">
-                {(pipelineOptions.customImageUrls || []).map((url, index) => <div key={`${url}-${index}`}><img src={url} alt={`Valgt videobilde ${index + 1}`} loading="lazy" /><span>Bilde {index + 1}</span></div>)}
+                {confirmedImages.map((url, index) => <div key={`${url}-${index}`}><img src={url} alt={`Valgt videobilde ${index + 1}`} loading="lazy" /><span>Bilde {index + 1}</span></div>)}
               </div>
               {approvedStory?.timing && <p>Scenestartene er knyttet til godkjent tidsplan.</p>}
               {!valid && <p role="alert">Valgene har endret seg. Avbryt og kontroller på nytt.</p>}
@@ -406,11 +444,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             const matchingPreview = preview?.songId === song.id &&
               preview.sourceKey === storyboardSourceKey(song, pipelineOptions) ? preview : null;
             const approved = Boolean(matchingPreview?.approved && isValidStoryboard(matchingPreview.scenes));
+            const songImageCount = (songImages[song.id] || []).length;
             const disabledReason = !canProcess
               ? "Sangen mangler lyd eller er allerede publisert."
               : !youtubeHealth?.connected
                 ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
-                : !pipelineOptions.customImageUrls?.length ? "Velg videobilder fra bildebanken først."
+                : !songImageCount ? "Velg videobilder fra bildebanken først."
                 : approved ? "Lag video med godkjent storyboard og valgte bilder." : "Lag og godkjenn de åtte scenene først.";
 
             return (
@@ -466,7 +505,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   )}
                   <button
                     className="admin-primary admin-run-button"
-                    disabled={!canProcess || !approved || !(pipelineOptions.customImageUrls?.length) || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
+                    disabled={!canProcess || !approved || !songImageCount || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
                     onClick={() => requestRender(song)}
                     title={disabledReason}
                   >
@@ -502,7 +541,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     scenes={matchingPreview.scenes}
                     youtubeConnected={Boolean(youtubeHealth?.connected)}
                     timing={matchingPreview.timing}
-                    extraImageCount={pipelineOptions.customImageUrls?.length ?? 0}
+                    extraImageCount={songImageCount}
                     currentlyProcessing={Boolean(processingId)}
                   />
                 )}
