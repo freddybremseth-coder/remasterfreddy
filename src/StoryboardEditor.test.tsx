@@ -8,12 +8,14 @@ const scenes = Array.from({ length: 8 }, (_, i) =>
 function mount(approved = false, overrides: Record<string, unknown> = {}) {
   const onChangeScene = vi.fn();
   const onApplyContinuity = vi.fn();
+  const onApplyMusicSections = vi.fn();
   const onApprove = vi.fn();
   const onDiscard = vi.fn();
   render(<StoryboardEditor songTitle="Still I Rise" scenes={scenes}
     approved={approved} onChangeScene={onChangeScene} onApplyContinuity={onApplyContinuity}
+    onApplyMusicSections={onApplyMusicSections}
     onApprove={onApprove} onDiscard={onDiscard} {...overrides} />);
-  return { onChangeScene, onApplyContinuity, onApprove, onDiscard };
+  return { onChangeScene, onApplyContinuity, onApplyMusicSections, onApprove, onDiscard };
 }
 
 describe("author-approved storyboard", () => {
@@ -58,6 +60,16 @@ describe("author-approved storyboard", () => {
     expect(applyContinuityNote(scenes, "short")).toBeNull();
   });
 
+  it("edits musical section cues without creating a render or approving the story", () => {
+    const { onApplyMusicSections, onApprove } = mount();
+    expect(screen.getAllByRole("combobox")).toHaveLength(8);
+    fireEvent.change(screen.getByLabelText("Musikkdel scene 5"), { target: { value: "instrumental" } });
+    fireEvent.click(screen.getByRole("button", { name: "Legg musikkplanen til scenene" }));
+    expect(onApplyMusicSections).toHaveBeenCalledTimes(1);
+    expect(onApplyMusicSections.mock.calls[0][0][4]).toBe("instrumental");
+    expect(onApprove).not.toHaveBeenCalled();
+  });
+
   it("rejects incomplete and duplicate scenes", () => {
     expect(isValidStoryboard(scenes)).toBe(true);
     expect(isValidStoryboard(scenes.slice(0, 7))).toBe(false);
@@ -73,6 +85,8 @@ describe("author-approved storyboard", () => {
       target: { value: "Same older farmer in beige jacket and olive grove in Biar" },
     });
     expect((screen.getByRole("button", { name: "Legg til i alle 8 scener" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Musikkdel scene 1") as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Legg musikkplanen til scenene" }) as HTMLButtonElement).disabled).toBe(true);
     expect(onApprove).not.toHaveBeenCalled();
   });
 });
