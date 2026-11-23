@@ -25,6 +25,9 @@
     },
     "api/neural-beat-reels.ts": {
       "maxDuration": 300
+    },
+    "api/neural-beat-visual-preflight.ts": {
+      "maxDuration": 90
     }
   }
 }
