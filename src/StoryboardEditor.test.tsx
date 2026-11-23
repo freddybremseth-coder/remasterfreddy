@@ -9,13 +9,16 @@ function mount(approved = false, overrides: Record<string, unknown> = {}) {
   const onChangeScene = vi.fn();
   const onApplyContinuity = vi.fn();
   const onApplyMusicSections = vi.fn();
+  const onApplyTiming = vi.fn();
+  const onClearTiming = vi.fn();
   const onApprove = vi.fn();
   const onDiscard = vi.fn();
   render(<StoryboardEditor songTitle="Still I Rise" scenes={scenes}
     approved={approved} onChangeScene={onChangeScene} onApplyContinuity={onApplyContinuity}
     onApplyMusicSections={onApplyMusicSections}
+    onApplyTiming={onApplyTiming} onClearTiming={onClearTiming}
     onApprove={onApprove} onDiscard={onDiscard} {...overrides} />);
-  return { onChangeScene, onApplyContinuity, onApplyMusicSections, onApprove, onDiscard };
+  return { onChangeScene, onApplyContinuity, onApplyMusicSections, onApplyTiming, onClearTiming, onApprove, onDiscard };
 }
 
 describe("author-approved storyboard", () => {
