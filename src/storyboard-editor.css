@@ -40,3 +40,57 @@
 .storyboard-editor-error { color: #fbbf84; }
 .storyboard-editor-confirmation { color: #96e2c4; font-weight: 600; }
 @media (max-width: 700px) { .storyboard-scene-grid { grid-template-columns: 1fr; } }
+
+.storyboard-continuity {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, .52);
+  border: 1px solid rgba(148, 163, 184, .25);
+}
+.storyboard-continuity label { display: block; }
+.storyboard-continuity p { margin: 8px 0; color: #cbd5e1; line-height: 1.5; }
+.storyboard-continuity textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid #667085;
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: #152236;
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+.storyboard-continuity-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.storyboard-continuity-actions span { color: #fbbf84; }
+.storyboard-review-header { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+.storyboard-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.storyboard-timeline-item {
+  text-align: left;
+  min-width: 0;
+  min-height: 115px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  background: rgba(15, 23, 42, .74);
+  color: #e2e8f0;
+}
+.storyboard-timeline-item.is-selected { border-color: #91c5ff; box-shadow: 0 0 0 1px #91c5ff inset; }
+.storyboard-timeline-item span { font-size: 12px; color: #bfdbfe; }
+.storyboard-timeline-item strong { font-size: 13px; }
+.storyboard-timeline-item small { color: #cbd5e1; overflow-wrap: anywhere; line-height: 1.35; }
+.storyboard-scene-grid-single { grid-template-columns: minmax(0, 1fr); }
+.storyboard-scene-grid-single li { max-width: 950px; }
+.storyboard-scene-grid li > small { display: block; text-align: right; margin-top: 5px; color: #94a3b8; }
+@media (max-width: 820px) { .storyboard-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 440px) { .storyboard-timeline { grid-template-columns: 1fr; } }
