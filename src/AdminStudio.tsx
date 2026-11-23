@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, Refresh
 import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
 import PipelineVideoDirection from "./PipelineVideoDirection";
-import StoryboardEditor, { isValidStoryboard } from "./StoryboardEditor";
+import StoryboardEditor, { applyContinuityNote, isValidStoryboard } from "./StoryboardEditor";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
 import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort } from "./lib/admin-api";
@@ -427,6 +427,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     onChangeScene={(index, text) => setPreview(current => current?.songId === song.id
                       ? { ...current, approved: false, scenes: current.scenes.map((scene, i) => i === index ? text : scene) }
                       : current)}
+                    onApplyContinuity={(note) => setPreview(current => {
+                      if (!current || current.songId !== song.id ||
+                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
+                      const updated = applyContinuityNote(current.scenes, note);
+                      return updated ? { ...current, scenes: updated, approved: false } : current;
+                    })}
                     onApprove={() => setPreview(current => current?.songId === song.id &&
                       current.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
                       isValidStoryboard(current.scenes) ? { ...current, approved: true } : current)}
