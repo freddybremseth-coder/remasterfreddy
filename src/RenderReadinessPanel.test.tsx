@@ -14,8 +14,9 @@ describe("no-cost render readiness interface", () => {
       currentlyProcessing={false}
     />);
     expect(screen.getByText("Gratis kontroll før videoproduksjon")).toBeTruthy();
-    expect(screen.getByText("5 av 7 kontroller bestått")).toBeTruthy();
+    expect(screen.getByText("4 av 7 kontroller bestått")).toBeTruthy();
     expect(screen.getByText(/Gjennomgå og godkjenn storyboardet/)).toBeTruthy();
+    expect(screen.getByText(/Ingen bilder valgt/)).toBeTruthy();
     expect(screen.getByText(/YouTube-tilkoblingen er ikke bekreftet/)).toBeTruthy();
     expect(screen.getByText(/Den starter ikke AI-bilder/)).toBeTruthy();
   });
@@ -24,7 +25,7 @@ describe("no-cost render readiness interface", () => {
     render(<RenderReadinessPanel
       songId="song-1" hasAudio={true} alreadyPublished={false}
       previewSongId="song-1" sourceMatches={true} approved={true}
-      scenes={scenes} youtubeConnected={true} extraImageCount={0}
+      scenes={scenes} youtubeConnected={true} extraImageCount={8}
       currentlyProcessing={false}
     />);
     expect(screen.getByText("Alle lokale kontroller bestått")).toBeTruthy();
