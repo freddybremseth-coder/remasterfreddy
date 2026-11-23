@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, publishMissingArtShort, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, publishMissingArtShort, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -59,9 +59,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     // Publiser på beste tidspunkt som standard — kan slås av per kjøring.
     autoSchedule: true,
   });
-  // Browser-only association; backend song-level persistence is still required.
+  // Local selections are an offline draft; confirmed selections are stored on the song record.
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
+  const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
+  const [savingImages, setSavingImages] = useState(false);
+  const [imageSaveMessage, setImageSaveMessage] = useState("");
   const [songImages, setSongImages] = useState<Record<string, string[]>>(() => {
     try {
       const data: unknown = JSON.parse(window.localStorage.getItem("remaster-song-images-v1") || "{}");
@@ -78,6 +81,26 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   function updateScopedOptions(next: PipelineOptions) {
     setPipelineOptions(current => ({ ...current, ...next, customImageUrls: [] }));
     if (activeSongId) setSongImages(current => ({ ...current, [activeSongId]: next.customImageUrls || [] }));
+    setImageSaveMessage("");
+    setPendingRender(null);
+  }
+
+  async function saveImageSelection() {
+    const songId = activeSongId;
+    if (!songId || songId === NEW_SONG_DRAFT || savingImages) return;
+    const snapshot = [...(songImages[songId] || [])];
+    setSavingImages(true);
+    setImageSaveMessage("");
+    setError("");
+    try {
+      await saveSongVideoImages(songId, snapshot);
+      setSavedSongImages(current => ({ ...current, [songId]: JSON.stringify(snapshot) }));
+      setImageSaveMessage("Bildene er lagret på sangen og kan hentes fra andre enheter.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bildene ble ikke lagret.");
+    } finally {
+      setSavingImages(false);
+    }
   }
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
@@ -90,7 +113,20 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setLoading(true);
     setError("");
     try {
-      setSongs(await loadSongs());
+      const fetched = await loadSongs();
+      setSongs(fetched);
+      // Server-confirmed selections override stale browser drafts.
+      const saved = fetched.filter(song => Array.isArray(song.metadata?.remasterVideoImageUrls));
+      setSongImages(current => {
+        const next = { ...current };
+        for (const song of saved) next[song.id] = [...(song.metadata?.remasterVideoImageUrls || [])];
+        return next;
+      });
+      setSavedSongImages(current => {
+        const next = { ...current };
+        for (const song of saved) next[song.id] = JSON.stringify(song.metadata?.remasterVideoImageUrls || []);
+        return next;
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Kunne ikke hente sangene.");
     } finally {
@@ -130,16 +166,30 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
     setUploadMessage("");
     try {
+      const draftImages = [...(songImages[NEW_SONG_DRAFT] || [])];
       const uploaded = await uploadSong(mp3File, mp3Title, mp3Artist, mp3Genre);
+      let imagesSaved = false;
       if (uploaded?.id) {
         setSongImages(current => {
-          const draft = current[NEW_SONG_DRAFT] || [];
           const { [NEW_SONG_DRAFT]: _draft, ...rest } = current;
-          return { ...rest, [uploaded.id]: draft };
+          return { ...rest, [uploaded.id]: draftImages };
         });
         setActiveSongId(uploaded.id);
+        if (draftImages.length) {
+          try {
+            await saveSongVideoImages(uploaded.id, draftImages);
+            setSavedSongImages(current => ({ ...current, [uploaded.id]: JSON.stringify(draftImages) }));
+            imagesSaved = true;
+          } catch (saveErr) {
+            setError("MP3 er registrert, men videobildene ble ikke lagret på serveren: " +
+              (saveErr instanceof Error ? saveErr.message : "Ukjent feil") +
+              ". Velg sangen og trykk «Lagre bildevalg» for å prøve igjen.");
+          }
+        }
       }
-      setUploadMessage("Sangen er lastet opp og lagt i publiseringskøen.");
+      setUploadMessage(draftImages.length && !imagesSaved
+        ? "Sangen er lastet opp. Bildevalgene må lagres før video kan startes."
+        : "Sangen er lastet opp og bildevalgene er knyttet til riktig sang.");
       setMp3File(null);
       setMp3Title("");
       setMp3Artist("Re-Master Freddy");
@@ -156,6 +206,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     // Keep the two-stage author confirmation for ALL video modes.
     if (renderLock.current || !pendingRender || pendingRender.songId !== song.id) return;
     if (activeSongId !== song.id) { setPendingRender(null); setError("Velg riktig sang i bildevelgeren først."); return; }
+    if (savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])) {
+      setError("Bildevalgene er ikke bekreftet lagret på sangen. Trykk «Lagre bildevalg» først.");
+      setPendingRender(null);
+      return;
+    }
     const selectedOptions = { ...pipelineOptions, customImageUrls: songImages[song.id] || [] };
     const approvedStory = preview && preview.songId === song.id &&
       preview.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
@@ -223,6 +278,10 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     if (renderLock.current || processingId || previewLoadingId) return;
     if (activeSongId !== song.id) { setActiveSongId(song.id); setError("Kontroller bildevalgene for denne sangen før video."); return; }
     const selectedOptions = { ...pipelineOptions, customImageUrls: songImages[song.id] || [] };
+    if (savedSongImages[song.id] !== JSON.stringify(selectedOptions.customImageUrls)) {
+      setError("Lagre bildene på sangen før du åpner videoproduksjonen.");
+      return;
+    }
     if (!song.audioUrl || song.youtubeUrl) {
       setError("Sangen mangler lyd eller har allerede en YouTube-video.");
       return;
@@ -352,7 +411,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
         </select>
-        <small>Ved ny MP3: velg bildene her først. Når sangen er lastet opp, knyttes bildene automatisk til den nye sangen. Lagres foreløpig kun i denne nettleseren.</small>
+        <small>Ved ny MP3: velg bildene før opplasting. Bildevalgene lagres på sangen i RealtyFlow etter opplasting. For eksisterende sanger: velg bilder og trykk «Lagre bildevalg».</small>
       </div>
       <PipelineAssets
         value={scopedOptions}
@@ -360,6 +419,19 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         refreshToken={assetRefreshToken}
         onOpenImageBank={onOpenImageBank}
       />
+      {activeSongId && activeSongId !== NEW_SONG_DRAFT && (
+        <div className="pipeline-asset-field">
+          <button type="button" className="admin-secondary"
+            disabled={savingImages || Boolean(processingId) || Boolean(songs.find(song => song.id === activeSongId)?.youtubeUrl)}
+            onClick={() => { void saveImageSelection(); }}>
+            {savingImages ? "Lagrer bilder …" : "Lagre bildevalg for denne sangen"}
+          </button>
+          <p role="status">{savedSongImages[activeSongId] === JSON.stringify(songImages[activeSongId] || [])
+            ? "Bildevalgene er lagret på sangen."
+            : "Bildevalgene er ikke lagret på serveren ennå."}</p>
+          {imageSaveMessage && <p role="status">{imageSaveMessage}</p>}
+        </div>
+      )}
       <PipelinePublishSettings value={pipelineOptions} onChange={setPipelineOptions} />
 
       <div className="admin-studio-header">
@@ -416,7 +488,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
         const confirmedImages = song ? songImages[song.id] || [] : [];
         const confirmedOptions = { ...pipelineOptions, customImageUrls: confirmedImages };
-        const imageCheckPassed = confirmedImages.length > 0 &&
+        const imageCheckPassed = savedSongImages[pendingRender.songId] === JSON.stringify(confirmedImages) && confirmedImages.length > 0 &&
           confirmedImages.every(url => verifiedImages[url] === true);
         const valid = Boolean(song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected &&
           storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
