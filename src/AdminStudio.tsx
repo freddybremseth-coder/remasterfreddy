@@ -49,7 +49,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
   const [preview, setPreview] = useState<EditedStoryboard | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
-  const [pendingRender, setPendingRender] = useState<{ songId: string; mode: "simple" | "storyboard"; sourceKey: string; optionsKey: string; scenesKey: string; timingKey: string } | null>(null);
+  const [pendingRender, setPendingRender] = useState<{ songId: string; mode: "storyboard"; sourceKey: string; optionsKey: string; scenesKey: string; timingKey: string } | null>(null);
   const renderLock = useRef(false);
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
@@ -128,9 +128,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
     if (pendingRender.optionsKey !== JSON.stringify(pipelineOptions) ||
         pendingRender.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
-        (pendingRender.mode === "storyboard" && (!approvedStory ||
+        (!approvedStory ||
           pendingRender.scenesKey !== JSON.stringify(approvedStory.scenes) ||
-          pendingRender.timingKey !== JSON.stringify(approvedStory.timing ?? null)))) {
+          pendingRender.timingKey !== JSON.stringify(approvedStory.timing ?? null))) {
       setError("Produksjonsvalgene eller storyboardet har endret seg. Bekreft videoproduksjonen på nytt.");
       setPendingRender(null);
       return;
@@ -139,7 +139,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Sangen må ha lyd, ikke være publisert, og YouTube må være tilkoblet.");
       return;
     }
-    if (pendingRender.mode === "storyboard" && approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
+    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
       setError("Fjern ekstrabilder når du bruker egne tidsmarkører med storyboard.");
       return;
     }
@@ -151,7 +151,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setError("");
 
     try {
-      const selectedStory = pendingRender.mode === "storyboard" ? approvedStory : null;
+      const selectedStory = approvedStory;
       await startSongPipeline(song.id, {
         ...pipelineOptions,
         imageMode: "original",
@@ -164,7 +164,10 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setPreview(null);
       await refreshSongs();
     } catch (pipelineError) {
-      const message = pipelineError instanceof Error ? pipelineError.message : "Pipelinen feilet.";
+      const rawMessage = pipelineError instanceof Error ? pipelineError.message : "Pipelinen feilet.";
+      const message = /ingen AI-bilder eller valgte bilder|no (ai |selected )?images (are )?available/i.test(rawMessage)
+        ? "Steg 5 stoppet: Videomotoren fant ingen bilder. Storyboardet er godkjent, men ingen bilder ble generert eller overført fra bildebanken. Kontroller bildegenerering og koblingen mellom RealtyFlow og Re-Master før ny produksjon. " + rawMessage
+        : rawMessage;
       setPipelineEvent({ status: "failed", error: message });
       setError(message);
     } finally {
@@ -173,7 +176,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
   }
 
-  function requestRender(song: AdminSong, mode: "simple" | "storyboard" = "simple") {
+  function requestRender(song: AdminSong) {
     if (renderLock.current || processingId || previewLoadingId) return;
     if (!song.audioUrl || song.youtubeUrl) {
       setError("Sangen mangler lyd eller har allerede en YouTube-video.");
@@ -187,22 +190,22 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     const approvedStory = preview?.songId === song.id && preview.sourceKey === sourceKey &&
       preview.approved && isValidStoryboard(preview.scenes) &&
       (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
-    if (mode === "storyboard" && !approvedStory) {
-      setError("Godkjenn storyboardet for denne sangen, eller velg enkel video uten storyboard.");
+    if (!approvedStory) {
+      setError("Lag og godkjenn storyboardet med åtte scener før du starter videoen.");
       return;
     }
-    if (mode === "storyboard" && approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
+    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
       setError("Fjern ekstrabilder før du bruker egne scenetider med storyboard.");
       return;
     }
     // Capture the entire selection to reject changes between confirmation and submit.
     setPendingRender({
       songId: song.id,
-      mode,
+      mode: "storyboard",
       sourceKey,
       optionsKey: JSON.stringify(pipelineOptions),
-      scenesKey: JSON.stringify(mode === "storyboard" ? approvedStory?.scenes ?? null : null),
-      timingKey: JSON.stringify(mode === "storyboard" ? approvedStory?.timing ?? null : null),
+      scenesKey: JSON.stringify(approvedStory.scenes),
+      timingKey: JSON.stringify(approvedStory.timing ?? null),
     });
   }
 
@@ -355,18 +358,18 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         const valid = Boolean(song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected &&
           storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
           JSON.stringify(pipelineOptions) === pendingRender.optionsKey &&
-          (pendingRender.mode === "simple" || Boolean(approvedStory &&
+          Boolean(approvedStory &&
             JSON.stringify(approvedStory.scenes) === pendingRender.scenesKey &&
             JSON.stringify(approvedStory.timing ?? null) === pendingRender.timingKey &&
-            (!approvedStory.timing || !pipelineOptions.customImageUrls?.length))));
+            (!approvedStory.timing || !pipelineOptions.customImageUrls?.length)));
         return (
           <div className="admin-render-confirmation" role="dialog" aria-modal="true" aria-labelledby="render-confirm-title">
             <div className="admin-render-confirmation-panel">
               <h3 id="render-confirm-title">Bekreft videoproduksjon</h3>
               <p><strong>{song?.title || "Ukjent sang"}</strong></p>
-              <p><strong>{pendingRender.mode === "simple" ? "Enkel video uten storyboard" : "Video med godkjent storyboard"}</strong></p>
+              <p><strong>Video med godkjent storyboard</strong></p>
               <p>Videoen bruker egne valgte bilder eller originale abstrakte bakgrunner laget lokalt. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Hvis du fortsetter, starter videoproduksjon og eventuell YouTube-publisering etter valgene dine.</p>
-              {pendingRender.mode === "storyboard" && approvedStory?.timing && <p>Scenestartene er knyttet til godkjent tidsplan.</p>}
+              {approvedStory?.timing && <p>Scenestartene er knyttet til godkjent tidsplan.</p>}
               {!valid && <p role="alert">Valgene har endret seg. Avbryt og kontroller på nytt.</p>}
               <div className="admin-render-confirmation-actions">
                 <button type="button" className="admin-secondary" onClick={() => setPendingRender(null)}>Avbryt – ingen kostnader</button>
@@ -395,7 +398,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               ? "Sangen mangler lyd eller er allerede publisert."
               : !youtubeHealth?.connected
                 ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
-                : "Lag en enkel video uten storyboard og Gemini-bilder.";
+                : approved ? "Lag video med godkjent storyboard." : "Lag og godkjenn de åtte scenene først.";
 
             return (
               <article className="admin-song-row" key={song.id}>
@@ -450,7 +453,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   )}
                   <button
                     className="admin-primary admin-run-button"
-                    disabled={!canProcess || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
+                    disabled={!canProcess || !approved || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
                     onClick={() => requestRender(song)}
                     title={disabledReason}
                   >
@@ -473,13 +476,6 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     >
                       OpenArt-bilder
                     </a>
-                  )}
-                  {canProcess && approved && (
-                    <button type="button" className="admin-secondary"
-                      disabled={processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
-                      onClick={() => requestRender(song, "storyboard")}>
-                      Lag med storyboard
-                    </button>
                   )}
                 </div>
                 {matchingPreview && (
