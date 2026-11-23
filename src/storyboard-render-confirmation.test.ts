@@ -74,9 +74,18 @@ describe("storyboard required and explicit confirmation before video", () => {
   it("moves image choices from MP3 upload draft to the new song record", () => {
     expect(source).toContain('const NEW_SONG_DRAFT = "__new_song__"');
     expect(source).toContain('setActiveSongId(NEW_SONG_DRAFT)');
-    expect(source).toContain('const draft = current[NEW_SONG_DRAFT] || []');
-    expect(source).toContain('[uploaded.id]: draft');
+    expect(source).toContain('const draftImages = [...(songImages[NEW_SONG_DRAFT] || [])]');
+    expect(source).toContain('[uploaded.id]: draftImages');
+    expect(source).toContain('await saveSongVideoImages(uploaded.id, draftImages)');
     expect(source).toContain('Ny sang – bilder før MP3-opplasting');
+  });
+
+  it("loads server-confirmed per-song images and blocks unsaved selections", () => {
+    expect(source).toContain("setSavedSongImages");
+    expect(source).toContain("song.metadata?.remasterVideoImageUrls");
+    expect(source).toContain("await saveSongVideoImages(songId, snapshot)");
+    expect(source).toContain("savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])");
+    expect(source).toContain("Lagre bildevalg for denne sangen");
   });
 
   it("the video uses original visuals without Gemini but discloses other services", () => {

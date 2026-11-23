@@ -63,7 +63,7 @@ describe("PipelineAssets", () => {
     const link = screen.getByRole("link", { name: "Åpne OpenArt bildestudio" });
     expect(link).toHaveAttribute("href", "https://realtyflow.chatgenius.pro/image-studio?source=remaster&provider=openart");
     expect(link).toHaveAttribute("target", "_blank");
-    expect(screen.getByText(/Video fungerer også uten OpenArt og uten storyboard/)).toBeInTheDocument();
+    expect(screen.getByText(/Video krever et godkjent storyboard og valgte bilder/)).toBeInTheDocument();
     expect(screen.getByText(/kan ikke håndheve en kontoomfattende beløpsgrense/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Oppdater" })).toBeInTheDocument();
   });
@@ -124,6 +124,20 @@ describe("PipelineAssets", () => {
 
     expect(logoPreview).toHaveAttribute("src", "https://cdn.example.com/logo-preview.png");
     expect(thumbnailPreview).toHaveAttribute("src", "https://cdn.example.com/thumb-preview.jpg");
+  });
+
+  it("never accepts a ninth video image", async () => {
+    loadImageBankMock.mockResolvedValue([
+      ...Array.from({ length: 8 }, (_, i) => image({
+        id: `selected-${i}`, name: `Bilde ${i}`, url: `https://cdn.example.com/${i}.jpg`,
+      })),
+      image({ id: "ninth", name: "Bilde ni", url: "https://cdn.example.com/ninth.jpg" }),
+    ]);
+    const selected = Array.from({ length: 8 }, (_, i) => `https://cdn.example.com/${i}.jpg`);
+    const { onChange } = renderAssets({ customImageUrls: selected });
+    fireEvent.click(await screen.findByRole("button", { name: /Bilde ni/ }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Maks åtte bilder");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("refetches assets when the refresh token changes", async () => {

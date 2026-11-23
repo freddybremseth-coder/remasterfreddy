@@ -68,10 +68,18 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
   const selectedLogo = logos.find((item) => item.url === value.logoUrl);
   const selectedThumbnail = thumbnails.find((item) => item.url === value.customThumbnailUrl);
 
+  const [imageLimitMessage, setImageLimitMessage] = useState("");
   function toggleSlide(url: string) {
     const next = new Set(selectedImages);
-    if (next.has(url)) next.delete(url);
-    else next.add(url);
+    if (next.has(url)) {
+      next.delete(url);
+    } else if (next.size >= 8) {
+      setImageLimitMessage("Maks åtte bilder kan velges per video. Fjern et bilde før du velger et nytt.");
+      return;
+    } else {
+      next.add(url);
+    }
+    setImageLimitMessage("");
     onChange({ ...value, customImageUrls: Array.from(next) });
   }
 
@@ -91,7 +99,7 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
       <section className="pipeline-openart-option" aria-label="Valgfrie OpenArt-bilder">
         <div>
           <strong>Vil du bruke filmatiske AI-bilder?</strong>
-          <p>OpenArt er valgfritt. Lag ett og ett bilde i RealtyFlow Bilde Studio med eget samtykke til kredittbruk, og send godkjente bilder direkte til Re-Master-bildebanken. Video fungerer også uten OpenArt og uten storyboard.</p>
+          <p>OpenArt er valgfritt. Lag ett og ett bilde i RealtyFlow Bilde Studio med eget samtykke til kredittbruk, og send godkjente bilder direkte til Re-Master-bildebanken. Video krever et godkjent storyboard og valgte bilder, men OpenArt er valgfritt.</p>
           <p>OpenArt-kreditter og eurokostnad må kontrolleres hos leverandøren. Målbudsjettet er 10 € per måned; dette skjermbildet kan ikke håndheve en kontoomfattende beløpsgrense.</p>
         </div>
         <a className="admin-secondary" target="_blank" rel="noopener noreferrer"
@@ -151,6 +159,8 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
         </div>
       </div>
 
+      <p role="status">{selectedImages.size} av maks 8 videobilder valgt. Bildene brukes i valgt rekkefølge.</p>
+      {imageLimitMessage && <p role="alert">{imageLimitMessage}</p>}
       <div className="pipeline-slide-grid">
         {slides.length === 0 ? (
           <EmptyAssetState
