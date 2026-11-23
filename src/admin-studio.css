@@ -219,3 +219,47 @@
     grid-column: 1;
   }
 }
+
+/* Final explicit confirmation; the underlying storyboard remains visible for review. */
+.admin-render-confirmation {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.85);
+}
+
+.admin-render-confirmation-panel {
+  width: min(100%, 560px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 16px;
+  padding: clamp(18px, 4vw, 28px);
+  background: #111827;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.42);
+  color: #f1f5f9;
+}
+
+.admin-render-confirmation-panel h3 {
+  margin: 0 0 16px;
+  font-size: 21px;
+}
+
+.admin-render-confirmation-panel p {
+  line-height: 1.55;
+}
+
+.admin-render-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-render-confirmation-actions button {
+  min-height: 44px;
+}
