@@ -13,6 +13,8 @@ export interface AdminSong {
     shortsUrl?: string | null;
     shortsStatus?: string;
     shortsError?: string | null;
+    /** Ordered video images stored on the song record in RealtyFlow. */
+    remasterVideoImageUrls?: string[];
   };
 }
 
@@ -233,6 +235,22 @@ export async function uploadImageAsset(file: File, kind: ImageKind): Promise<Adm
   const saved = await saveResponse.json().catch(() => ({}));
   if (!saveResponse.ok || !saved.image) throw new Error(saved.error || "Bildet kunne ikke lagres i bildebanken.");
   return saved.image as AdminImage;
+}
+
+/** Save the ordered image selection to the song record on the server. */
+export async function saveSongVideoImages(recordId: string, imageUrls: string[]): Promise<string[]> {
+  const response = await adminFetch("/api/neural-beat-song-images", {
+    method: "PUT",
+    body: JSON.stringify({ recordId, imageUrls }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.saved !== true || !Array.isArray(result.imageUrls)) {
+    throw new Error(result.error || "Kunne ikke lagre videobildene på sangen.");
+  }
+  if (JSON.stringify(result.imageUrls) !== JSON.stringify(imageUrls)) {
+    throw new Error("Serveren bekreftet et annet bildeutvalg enn det du valgte.");
+  }
+  return result.imageUrls as string[];
 }
 
 export async function loadImageBank(kind?: ImageKind): Promise<AdminImage[]> {
