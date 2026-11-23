@@ -51,6 +51,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
   const [pendingRender, setPendingRender] = useState<{ songId: string; mode: "storyboard"; sourceKey: string; optionsKey: string; scenesKey: string; timingKey: string } | null>(null);
   const renderLock = useRef(false);
+  const [verifiedImages, setVerifiedImages] = useState<Record<string, boolean>>({});
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
@@ -162,6 +163,10 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
     if (!(selectedOptions.customImageUrls?.length)) {
       setError("Ingen videobilder er valgt. Velg de faktiske bildene fra bildebanken før produksjon. Systemet lager ikke fargede sirkler som erstatning.");
+      return;
+    }
+    if (!selectedOptions.customImageUrls.every(url => verifiedImages[url] === true)) {
+      setError("Ett eller flere valgte bilder er ikke bekreftet lastet inn. Kontroller forhåndsvisningen og prøv igjen.");
       return;
     }
     if (!song.audioUrl || song.youtubeUrl || !youtubeHealth?.connected) {
@@ -401,10 +406,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           (preview.timing === undefined || isValidSceneTiming(preview.timing)) ? preview : null;
         const confirmedImages = song ? songImages[song.id] || [] : [];
         const confirmedOptions = { ...pipelineOptions, customImageUrls: confirmedImages };
+        const imageCheckPassed = confirmedImages.length > 0 &&
+          confirmedImages.every(url => verifiedImages[url] === true);
         const valid = Boolean(song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected &&
           storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
           JSON.stringify(confirmedOptions) === pendingRender.optionsKey &&
-          Boolean(confirmedImages.length && approvedStory &&
+          Boolean(imageCheckPassed && approvedStory &&
             JSON.stringify(approvedStory.scenes) === pendingRender.scenesKey &&
             JSON.stringify(approvedStory.timing ?? null) === pendingRender.timingKey &&
             (!approvedStory.timing || confirmedImages.length === 8)));
@@ -416,8 +423,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <p><strong>Video med godkjent storyboard</strong></p>
               <p>Videoen skal bruke bildene du har valgt fra bildebanken. Ingen abstrakte sirkler er godkjent som erstatning. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Videomotorens støtte for dette må fortsatt verifiseres.</p>
               <p><strong>{confirmedImages.length} valgte videobilder</strong> – sjekk at dette er bildene du ønsker før produksjon.</p>
+              <p role="status">{imageCheckPassed
+                ? "Alle valgte bilder er lastet i forhåndsvisningen. RealtyFlow må fortsatt bekrefte at videoen bruker dem."
+                : "Venter på bildekontroll. Videoen kan ikke startes før alle bildene kan vises."}</p>
               <div className="pipeline-slide-grid" aria-label="Bilder valgt til denne videoen">
-                {confirmedImages.map((url, index) => <div key={`${url}-${index}`}><img src={url} alt={`Valgt videobilde ${index + 1}`} loading="lazy" /><span>Bilde {index + 1}</span></div>)}
+                {confirmedImages.map((url, index) => <div key={`${url}-${index}`}><img src={url} alt={`Valgt videobilde ${index + 1}`} loading="eager"
+                    onLoad={() => setVerifiedImages(current => current[url] === true ? current : { ...current, [url]: true })}
+                    onError={() => setVerifiedImages(current => current[url] === false ? current : { ...current, [url]: false })} /><span>Bilde {index + 1}</span></div>)}
               </div>
               {approvedStory?.timing && <p>Scenestartene er knyttet til godkjent tidsplan.</p>}
               {!valid && <p role="alert">Valgene har endret seg. Avbryt og kontroller på nytt.</p>}
