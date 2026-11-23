@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { analyzeLocalAudioFile, isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import type { StoryboardSceneTiming } from "./lib/admin-api";
+import { previewSceneColors, sceneIndexAtTime } from "./lib/storyboard-live-preview";
 
 export function formatSceneTime(time: number): string {
   if (!Number.isFinite(time) || time < 0) return "–";
@@ -9,12 +10,13 @@ export function formatSceneTime(time: number): string {
 }
 
 interface Props {
+  scenes?: string[];
   approvedTiming?: StoryboardSceneTiming;
   onApplyTiming: (timing: StoryboardSceneTiming) => void;
   onClearTiming: () => void;
 }
 
-export default function LocalAudioSceneTiming({ approvedTiming, onApplyTiming, onClearTiming }: Props) {
+export default function LocalAudioSceneTiming({ scenes = [], approvedTiming, onApplyTiming, onClearTiming }: Props) {
   const [fileName, setFileName] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [playhead, setPlayhead] = useState(0);
@@ -28,6 +30,7 @@ export default function LocalAudioSceneTiming({ approvedTiming, onApplyTiming, o
   const [note, setNote] = useState("");
   const candidate = duration === null ? null : { durationSeconds: duration, startsSeconds: starts };
   const validCandidate = isValidSceneTiming(candidate);
+  const activeScene = sceneIndexAtTime(starts, playhead);
   const isCurrentPlan = Boolean(approvedTiming && validCandidate &&
     JSON.stringify(approvedTiming) === JSON.stringify(candidate));
 
@@ -125,6 +128,34 @@ export default function LocalAudioSceneTiming({ approvedTiming, onApplyTiming, o
                   style={{ left: `${playhead / duration * 100}%` }} />
               </div>
               <p>Avspillingen bruker kun den valgte lydfilen i nettleseren. Hopp til en scene med markørene, eller bruk avspillingsposisjonen som ny scenestart.</p>
+              {scenes.length === 8 && starts.length === 8 && (
+                <section className="storyboard-live-preview" aria-label="Gratis visuell gjennomspilling">
+                  <div className="storyboard-live-preview-heading">
+                    <strong>Visuell gjennomspilling – uten AI-bilder</strong>
+                    <span>Scene {activeScene + 1} av 8 · {formatSceneTime(starts[activeScene])}–{formatSceneTime(starts[activeScene + 1] ?? duration)}</span>
+                  </div>
+                  <div className="storyboard-live-preview-screen" style={{
+                    background: `linear-gradient(135deg, ${previewSceneColors[activeScene][0]}, ${previewSceneColors[activeScene][1]})`,
+                  }}>
+                    <span className="storyboard-live-preview-counter">SCENE {activeScene + 1} / 8</span>
+                    <p>{scenes[activeScene]}</p>
+                    <span className="storyboard-live-preview-time">{formatSceneTime(playhead)} / {formatSceneTime(duration)}</span>
+                  </div>
+                  <div className="storyboard-live-preview-thumbs" aria-label="Hopp mellom storyboard-scener">
+                    {starts.map((start, index) => (
+                      <button key={index} type="button"
+                        aria-label={`Forhåndsvis scene ${index + 1}`}
+                        aria-pressed={activeScene === index}
+                        className={activeScene === index ? "is-active" : ""}
+                        onClick={() => seek(start)}>
+                        <span>Scene {index + 1}</span>
+                        <small>{formatSceneTime(start)}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <p>Dette er en illustrert tekstvisning, ikke bilder fra en AI-modell eller en ferdig video. Den viser rekkefølge og scenetid mens musikken spilles. Eventuelle endringer av tidsmarkører må fortsatt brukes og godkjennes før rendering.</p>
+                </section>
+              )}
             </>
           )}
         </div>

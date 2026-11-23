@@ -135,7 +135,7 @@ export default function StoryboardEditor({
         {musicResult === null && <p role="alert">Musikkplanen får ikke plass i scenetekstene. Forkort en scene før du legger den til.</p>}
       </div>
 
-      <LocalAudioSceneTiming approvedTiming={sceneTiming} onApplyTiming={onApplyTiming} onClearTiming={onClearTiming} />
+      <LocalAudioSceneTiming scenes={scenes} approvedTiming={sceneTiming} onApplyTiming={onApplyTiming} onClearTiming={onClearTiming} />
 
       <div className="storyboard-review-header">
         <strong>Se rekkefølgen</strong>
