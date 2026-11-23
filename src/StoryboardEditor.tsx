@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
 import "./storyboard-editor.css";
 
 const sceneStages = [
@@ -12,6 +13,7 @@ interface Props {
   approved: boolean;
   onChangeScene: (index: number, text: string) => void;
   onApplyContinuity: (note: string) => void;
+  onApplyMusicSections: (sections: MusicSection[]) => void;
   onApprove: () => void;
   onDiscard: () => void;
 }
@@ -40,9 +42,10 @@ export function applyContinuityNote(scenes: string[], rawNote: string): string[]
 
 /** Text-only continuity review: no generated images, no AI credits and no paid rendering. */
 export default function StoryboardEditor({
-  songTitle, scenes, approved, onChangeScene, onApplyContinuity, onApprove, onDiscard,
+  songTitle, scenes, approved, onChangeScene, onApplyContinuity, onApplyMusicSections, onApprove, onDiscard,
 }: Props) {
   const [continuity, setContinuity] = useState("");
+  const [musicSections, setMusicSections] = useState<MusicSection[]>(() => readMusicSectionCues(scenes));
   const [selected, setSelected] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
@@ -50,6 +53,14 @@ export default function StoryboardEditor({
   const continuityResult = applyContinuityNote(scenes, continuity);
   const hasChanges = continuityResult !== null && continuityResult.some((scene, i) => scene !== scenes[i]);
   const canApply = !approved && hasChanges;
+  const musicResult = applyMusicSectionCues(scenes, musicSections);
+  const canApplyMusic = !approved && musicResult !== null && musicResult.some((scene, i) => scene !== scenes[i]);
+
+  function applyMusicPlan() {
+    if (!canApplyMusic) return;
+    onApplyMusicSections(musicSections);
+    setReviewMessage("Musikkdelene er lagt til i alle åtte sceneinstruksjonene. Kontroller teksten før godkjenning.");
+  }
 
   function applyNote() {
     if (!canApply) return;
@@ -90,6 +101,34 @@ export default function StoryboardEditor({
         {reviewMessage && <p role="status">{reviewMessage}</p>}
       </div>
 
+      <div className="storyboard-music-plan">
+        <strong>Musikkplan – intro, vers og refreng</strong>
+        <p>Velg hvilken del av sangen hver scene skal illustrere. Dette er manuell kreativ regi, ikke automatisk lydanalyse eller nøyaktige tidsmarkører. Bildene fordeles fortsatt av eksisterende videopipeline.</p>
+        <div className="storyboard-music-grid">
+          {musicSections.map((section, index) => (
+            <label key={index}>
+              <span>Scene {index + 1}</span>
+              <select
+                aria-label={`Musikkdel scene ${index + 1}`}
+                value={section}
+                disabled={approved}
+                onChange={event => {
+                  const value = event.target.value as MusicSection;
+                  setMusicSections(current => current.map((item, i) => i === index ? value : item));
+                  setReviewMessage("");
+                }}
+              >
+                {MUSIC_SECTIONS.map(item => <option value={item} key={item}>{musicSectionLabels[item]}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+        <button type="button" className="admin-secondary" disabled={!canApplyMusic} onClick={applyMusicPlan}>
+          Legg musikkplanen til scenene
+        </button>
+        {musicResult === null && <p role="alert">Musikkplanen får ikke plass i scenetekstene. Forkort en scene før du legger den til.</p>}
+      </div>
+
       <div className="storyboard-review-header">
         <strong>Se rekkefølgen</strong>
         <button type="button" className="admin-secondary" onClick={() => setShowAll(current => !current)}>
@@ -106,7 +145,7 @@ export default function StoryboardEditor({
             onClick={() => { setSelected(index); setShowAll(false); }}
           >
             <span>Scene {index + 1}</span>
-            <strong>{sceneStages[index]}</strong>
+            <strong>{sceneStages[index]} · {musicSectionLabels[musicSections[index]]}</strong>
             <small>{scene.trim().slice(0, 100)}{scene.trim().length > 100 ? "…" : ""}</small>
           </button>
         ))}
