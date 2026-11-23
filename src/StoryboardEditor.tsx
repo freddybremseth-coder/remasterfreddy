@@ -106,8 +106,8 @@ export default function StoryboardEditor({
         <p>Velg hvilken del av sangen hver scene skal illustrere. Dette er manuell kreativ regi, ikke automatisk lydanalyse eller nøyaktige tidsmarkører. Bildene fordeles fortsatt av eksisterende videopipeline.</p>
         <div className="storyboard-music-grid">
           {musicSections.map((section, index) => (
-            <label key={index}>
-              <span>Scene {index + 1}</span>
+            <div key={index}>
+              <span>Musikkdel {index + 1}</span>
               <select
                 aria-label={`Musikkdel scene ${index + 1}`}
                 value={section}
@@ -120,7 +120,7 @@ export default function StoryboardEditor({
               >
                 {MUSIC_SECTIONS.map(item => <option value={item} key={item}>{musicSectionLabels[item]}</option>)}
               </select>
-            </label>
+            </div>
           ))}
         </div>
         <button type="button" className="admin-secondary" disabled={!canApplyMusic} onClick={applyMusicPlan}>
