@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("./lib/local-audio-scene-cues", async (original) => {
@@ -23,6 +23,7 @@ function mount(approvedTiming?: { durationSeconds: number; startsSeconds: number
 }
 
 describe("cost-free local audio timing used by FFmpeg only after approval", () => {
+  afterEach(() => vi.unstubAllGlobals());
   it("requires an explicit local file and accurately describes rendering support", () => {
     mount();
     expect(screen.getByText(/Gratis forslag til sceneskift fra lydfil/)).toBeTruthy();
@@ -35,6 +36,11 @@ describe("cost-free local audio timing used by FFmpeg only after approval", () =
   it("keeps a local soundtrack private until the author explicitly applies valid starts", async () => {
     const onFetch = vi.fn();
     vi.stubGlobal("fetch", onFetch);
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:local-playback"),
+      revokeObjectURL: vi.fn(),
+    });
     const { onApplyTiming, onClearTiming } = mount();
     const input = screen.getByLabelText(/Velg lydfil for lokal analyse/);
     fireEvent.change(input, { target: { files: [new File(["mp3"], "song.mp3", { type: "audio/mpeg" })] } });
@@ -48,7 +54,34 @@ describe("cost-free local audio timing used by FFmpeg only after approval", () =
       startsSeconds: [0, 20, 45, 67, 91, 111, 134, 158],
     });
     expect(onFetch).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+  });
+
+  it("seeks between playback markers and assigns the current playhead to a scene only after user action", async () => {
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:local-playback"),
+      revokeObjectURL: vi.fn(),
+    });
+    const { onApplyTiming, onClearTiming } = mount();
+    fireEvent.change(screen.getByLabelText(/Velg lydfil for lokal analyse/), {
+      target: { files: [new File(["mp3"], "song.mp3", { type: "audio/mpeg" })] },
+    });
+    await waitFor(() => expect(screen.getByLabelText("Avspillingsposisjon: 0:00 / 3:00")).toBeTruthy());
+    const audio = document.getElementById("storyboard-local-audio") as HTMLAudioElement;
+    Object.defineProperty(audio, "currentTime", { configurable: true, writable: true, value: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "Hopp til scene 3" }));
+    expect(audio.currentTime).toBe(45);
+    fireEvent.change(screen.getByLabelText("Avspillingsposisjon: 0:45 / 3:00"), { target: { value: "49.2" } });
+    expect(audio.currentTime).toBe(49.2);
+    fireEvent.click(screen.getByRole("button", { name: "Sett start for scene 3 ved avspillingsposisjonen" }));
+    expect((screen.getByLabelText("Starttid scene 3") as HTMLInputElement).value).toBe("49.2");
+    expect(onApplyTiming).not.toHaveBeenCalled();
+    expect(onClearTiming).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Bruk tidspunktene i videoen" }));
+    expect(onApplyTiming).toHaveBeenCalledWith({
+      durationSeconds: 180,
+      startsSeconds: [0, 20, 49.2, 67, 91, 111, 134, 158],
+    });
   });
 
   it("formats elapsed times", () => {
