@@ -6,7 +6,10 @@ describe("two-stage confirmation before paid video rendering", () => {
 
   it("opens a confirmation instead of calling the expensive pipeline on the first click", () => {
     expect(source).toContain("onClick={() => requestRender(song)}");
-    expect(source).toContain("setPendingRender({ songId: song.id, sourceKey, scenesKey: JSON.stringify(preview.scenes) })");
+    expect(source).toContain("setPendingRender({");
+    expect(source).toContain("songId: song.id,");
+    expect(source).toContain("scenesKey: JSON.stringify(preview.scenes),");
+    expect(source).toContain("timingKey: JSON.stringify(preview.timing ?? null),");
     expect(source).toContain("Bekreft videoproduksjon");
     expect(source).toContain("Start bildegenerering og video");
     expect(source).toContain("Avbryt – ingen kostnader");
@@ -17,6 +20,8 @@ describe("two-stage confirmation before paid video rendering", () => {
     expect(source).toContain("renderLock.current = true;");
     expect(source).toContain("renderLock.current = false;");
     expect(source).toContain("pendingRender.scenesKey !== JSON.stringify(preview.scenes)");
+    expect(source).toContain("pendingRender.timingKey !== JSON.stringify(preview.timing ?? null)");
+    expect(source).toContain("isValidSceneTiming(preview.timing)");
     expect(source).toContain("storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey");
     expect(source).toContain("youtubeHealth?.connected && song.audioUrl && !song.youtubeUrl");
     expect(source).toContain("setPendingRender(null);");
