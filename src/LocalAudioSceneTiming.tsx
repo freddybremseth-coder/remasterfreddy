@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { analyzeLocalAudioFile } from "./lib/local-audio-scene-cues";
+import { analyzeLocalAudioFile, isValidSceneTiming } from "./lib/local-audio-scene-cues";
+import type { StoryboardSceneTiming } from "./lib/admin-api";
 
 export function formatSceneTime(time: number): string {
   if (!Number.isFinite(time) || time < 0) return "–";
@@ -7,15 +8,27 @@ export function formatSceneTime(time: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
-export default function LocalAudioSceneTiming() {
+interface Props {
+  approvedTiming?: StoryboardSceneTiming;
+  onApplyTiming: (timing: StoryboardSceneTiming) => void;
+  onClearTiming: () => void;
+}
+
+export default function LocalAudioSceneTiming({ approvedTiming, onApplyTiming, onClearTiming }: Props) {
   const [fileName, setFileName] = useState("");
   const [duration, setDuration] = useState<number | null>(null);
   const [starts, setStarts] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const candidate = duration === null ? null : { durationSeconds: duration, startsSeconds: starts };
+  const validCandidate = isValidSceneTiming(candidate);
+  const isCurrentPlan = Boolean(approvedTiming && validCandidate &&
+    JSON.stringify(approvedTiming) === JSON.stringify(candidate));
 
   async function selectAudio(file: File | undefined) {
+    // A newly selected file must invalidate approval of the old soundtrack.
+    onClearTiming();
     setFileName(file?.name || "");
     setDuration(null);
     setStarts([]);
@@ -39,18 +52,20 @@ export default function LocalAudioSceneTiming() {
     if (!Number.isFinite(seconds) || !duration || index === 0) return;
     const next = starts.slice();
     next[index] = Math.round(seconds * 10) / 10;
-    if (next[index] <= next[index - 1] || next[index] >= (next[index + 1] ?? duration)) {
-      setNote("Tidspunktet må være senere enn forrige og tidligere enn neste scene.");
+    if (next[index] - next[index - 1] < 1 ||
+        (next[index + 1] ?? duration) - next[index] < 1) {
+      setNote("Scenene må ha minst ett sekund mellom hvert skift.");
       return;
     }
+    onClearTiming();
     setStarts(next);
-    setNote("Endret i lokal forhåndsvisning. Tidsmarkørene er ennå ikke koblet til videorendereren.");
+    setNote("Tidspunktene er endret. Bruk planen og godkjenn storyboardet på nytt.");
   }
 
   return (
     <div className="storyboard-audio-timing">
       <strong>Gratis forslag til sceneskift fra lydfil</strong>
-      <p>Velg sangens MP3 eller annen lydfil på datamaskinen. Nettleseren analyserer lokale endringer i lydstyrke og foreslår åtte tidspunkter. Filen lastes ikke opp av denne funksjonen. Dette identifiserer ikke sikkert vers eller refreng.</p>
+      <p>Velg nøyaktig samme sanginnspilling som allerede ligger i køen. Nettleseren foreslår åtte sceneskift basert på lokal lydenergi. Filen lastes ikke opp av denne funksjonen. Dette identifiserer ikke sikkert vers eller refreng.</p>
       <label className="storyboard-audio-picker">
         <span>Velg lydfil for lokal analyse</span>
         <input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" disabled={busy}
@@ -74,7 +89,19 @@ export default function LocalAudioSceneTiming() {
               </label>
             ))}
           </div>
-          <p>Dette er en kontrollvisning. Dagens videopipeline bruker fortsatt egen scenefordeling; tidspunktene sendes ikke til renderer eller YouTube.</p>
+          <div className="storyboard-audio-timing-actions">
+            <button className="admin-secondary" type="button"
+              disabled={!validCandidate || isCurrentPlan}
+              onClick={() => {
+                if (!isValidSceneTiming(candidate)) return;
+                onApplyTiming({ durationSeconds: candidate.durationSeconds, startsSeconds: [...candidate.startsSeconds] });
+                setNote("Tidsplanen er lagt til storyboardet. Godkjenn alle scenene på nytt før video.");
+              }}>
+              {isCurrentPlan ? "Tidspunkter lagt til" : "Bruk tidspunktene i videoen"}
+            </button>
+            {!validCandidate && <span role="alert">Alle åtte scenene må ha minst ett sekund mellom starttidene og slutten av sangen.</span>}
+          </div>
+          <p>Etter godkjenning bruker videorendereren disse starttidene med cirka 0,25 sekunders tidsoppløsning. Systemet kontrollerer sanglengden på serveren før betalt produksjon, men dette er ikke automatisk takt- eller refrenganalyse.</p>
         </>
       )}
       {note && <p role="status">{note}</p>}
