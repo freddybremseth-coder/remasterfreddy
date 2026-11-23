@@ -1,4 +1,5 @@
 import { useState } from "react";
+import LocalAudioSceneTiming from "./LocalAudioSceneTiming";
 import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
 import "./storyboard-editor.css";
 
@@ -128,6 +129,8 @@ export default function StoryboardEditor({
         </button>
         {musicResult === null && <p role="alert">Musikkplanen får ikke plass i scenetekstene. Forkort en scene før du legger den til.</p>}
       </div>
+
+      <LocalAudioSceneTiming />
 
       <div className="storyboard-review-header">
         <strong>Se rekkefølgen</strong>

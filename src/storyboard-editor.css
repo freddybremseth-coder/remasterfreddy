@@ -104,3 +104,15 @@
 .storyboard-music-grid select:focus-visible { outline: 2px solid #6caef8; outline-offset: 2px; }
 .storyboard-music-plan [role="alert"] { color: #fbbf84; }
 @media (max-width: 750px) { .storyboard-music-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.storyboard-audio-timing { margin-top: 16px; padding: 14px; border-radius: 12px; border: 1px solid rgba(144,170,210,.36); background: rgba(15,23,42,.48); }
+.storyboard-audio-timing p { line-height: 1.5; color: #cbd5e1; margin: 9px 0; }
+.storyboard-audio-timing [role="alert"] { color: #fbbf84; }
+.storyboard-audio-picker { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; font-weight: 600; }
+.storyboard-audio-picker input { max-width: 100%; }
+.storyboard-audio-timeline { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 12px 0; }
+.storyboard-audio-timeline label { display: flex; flex-direction: column; min-width: 0; gap: 5px; padding: 10px; border: 1px solid rgba(148,163,184,.24); border-radius: 9px; }
+.storyboard-audio-timeline label span { font-size: 12px; }
+.storyboard-audio-timeline input { box-sizing: border-box; width: 100%; min-height: 36px; border: 1px solid #667085; background: #152236; color: #f1f5f9; border-radius: 7px; padding: 6px; }
+.storyboard-audio-timeline small { color: #bfdbfe; }
+@media (max-width: 750px) { .storyboard-audio-timeline { grid-template-columns: repeat(2,minmax(0,1fr)); } }
