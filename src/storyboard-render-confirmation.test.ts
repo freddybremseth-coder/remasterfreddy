@@ -45,6 +45,14 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("setPendingRender(null);");
   });
 
+  it("blocks rendering without selected images and previews the exact selections", () => {
+    expect(source).toContain("Velg minst ett bilde");
+    expect(source).toContain('pipelineOptions.customImageUrls?.length');
+    expect(source).toContain('Bilder valgt til denne videoen');
+    expect(source).toContain('Valgt videobilde');
+    expect(source).toContain("Ingen videobilder er valgt.");
+  });
+
   it("the video uses original visuals without Gemini but discloses other services", () => {
     expect(source).toContain('imageMode: "original"');
     expect(source).toContain("Gemini brukes ikke til bilder.");
