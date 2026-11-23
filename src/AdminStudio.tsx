@@ -60,6 +60,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     autoSchedule: true,
   });
   // Browser-only association; backend song-level persistence is still required.
+  const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [songImages, setSongImages] = useState<Record<string, string[]>>(() => {
     try {
@@ -102,7 +103,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   }, []);
 
   useEffect(() => {
-    if (!activeSongId && songs.length) setActiveSongId((songs.find(song => song.audioUrl && !song.youtubeUrl) || songs[0]).id);
+    if (!activeSongId && songs.length && !mp3File) setActiveSongId((songs.find(song => song.audioUrl && !song.youtubeUrl) || songs[0]).id);
   }, [songs, activeSongId]);
   const readyCount = useMemo(
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
@@ -114,6 +115,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setMp3File(file);
     setUploadMessage("");
     if (file) {
+      setActiveSongId(NEW_SONG_DRAFT);
       setMp3Title(file.name.replace(/\.mp3$/i, "").replace(/[-_]+/g, " ").trim());
     }
   }
@@ -129,7 +131,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setUploadMessage("");
     try {
       const uploaded = await uploadSong(mp3File, mp3Title, mp3Artist, mp3Genre);
-      if (uploaded?.id) setActiveSongId(uploaded.id);
+      if (uploaded?.id) {
+        setSongImages(current => {
+          const draft = current[NEW_SONG_DRAFT] || [];
+          const { [NEW_SONG_DRAFT]: _draft, ...rest } = current;
+          return { ...rest, [uploaded.id]: draft };
+        });
+        setActiveSongId(uploaded.id);
+      }
       setUploadMessage("Sangen er lastet opp og lagt i publiseringskøen.");
       setMp3File(null);
       setMp3Title("");
@@ -340,9 +349,10 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         <select id="remaster-song-images" value={activeSongId}
           onChange={event => { setActiveSongId(event.target.value); setPendingRender(null); setPreview(null); }}>
           <option value="">Velg sang</option>
+          <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
         </select>
-        <small>Bilder knyttes til denne sangen og lagres foreløpig kun i denne nettleseren.</small>
+        <small>Ved ny MP3: velg bildene her først. Når sangen er lastet opp, knyttes bildene automatisk til den nye sangen. Lagres foreløpig kun i denne nettleseren.</small>
       </div>
       <PipelineAssets
         value={scopedOptions}

@@ -71,6 +71,14 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain('customImageUrls: songImages[song.id] || []');
   });
 
+  it("moves image choices from MP3 upload draft to the new song record", () => {
+    expect(source).toContain('const NEW_SONG_DRAFT = "__new_song__"');
+    expect(source).toContain('setActiveSongId(NEW_SONG_DRAFT)');
+    expect(source).toContain('const draft = current[NEW_SONG_DRAFT] || []');
+    expect(source).toContain('[uploaded.id]: draft');
+    expect(source).toContain('Ny sang – bilder før MP3-opplasting');
+  });
+
   it("the video uses original visuals without Gemini but discloses other services", () => {
     expect(source).toContain('imageMode: "original"');
     expect(source).toContain("Gemini brukes ikke til bilder.");
