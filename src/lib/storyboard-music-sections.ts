@@ -38,7 +38,7 @@ export function applyMusicSectionCues(scenes: readonly string[], sections: reado
   const updated = scenes.map((scene, index) => {
     const base = scene.replace(cuePattern, "").trim();
     const section = sections[index];
-    const label = section === "prechorus" ? "Pre-chorus" : musicSectionLabels[section];
+    const label = section === "prechorus" ? "Pre-chorus" : section.charAt(0).toUpperCase() + section.slice(1);
     return `${base} [Music cue: ${label} — ${visualDirections[section]}]`;
   });
   const clean = updated.map(scene => scene.trim().replace(/\s+/g, " "));
@@ -51,7 +51,7 @@ export function readMusicSectionCues(scenes: readonly string[]): MusicSection[] 
     const matches = [...scene.matchAll(/\[Music cue: (Intro|Verse|Pre-chorus|Chorus|Instrumental|Bridge|Outro) — /g)];
     const name = matches[matches.length - 1]?.[1];
     return MUSIC_SECTIONS.find(section =>
-      (section === "prechorus" ? "Pre-chorus" : musicSectionLabels[section]) === name,
+      (section === "prechorus" ? "Pre-chorus" : section.charAt(0).toUpperCase() + section.slice(1)) === name,
     ) ?? DEFAULT_MUSIC_SECTIONS[index] ?? "verse";
   });
 }
