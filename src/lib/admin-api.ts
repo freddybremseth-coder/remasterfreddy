@@ -237,6 +237,33 @@ export async function uploadImageAsset(file: File, kind: ImageKind): Promise<Adm
   return saved.image as AdminImage;
 }
 
+/** Result of a server-side visual check. No video/AI/YouTube is involved. */
+export interface VisualPreflightResult {
+  ready: true;
+  recordId: string;
+  checkedImages: Array<{ imageNumber: number; format: "jpeg" | "png" | "webp"; sizeBytes: number }>;
+  sceneMap: Array<{ sceneNumber: number; imageNumber: number; story?: string; startsAtSeconds?: number }>;
+  message: string;
+}
+
+export async function checkSongVideoImages(
+  recordId: string,
+  storyboardScenes?: string[],
+  sceneTiming?: StoryboardSceneTiming,
+): Promise<VisualPreflightResult> {
+  const response = await adminFetch("/api/neural-beat-visual-preflight", {
+    method: "POST",
+    body: JSON.stringify({ recordId, storyboardScenes, sceneTiming }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ready !== true || result.recordId !== recordId ||
+      !Array.isArray(result.checkedImages) || !Array.isArray(result.sceneMap) ||
+      result.sceneMap.length !== 8) {
+    throw new Error(result.error || "Serveren kunne ikke bekrefte videobildene.");
+  }
+  return result as VisualPreflightResult;
+}
+
 /** Save the ordered image selection to the song record on the server. */
 export async function saveSongVideoImages(recordId: string, imageUrls: string[]): Promise<string[]> {
   const response = await adminFetch("/api/neural-beat-song-images", {
