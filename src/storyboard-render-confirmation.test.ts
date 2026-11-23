@@ -29,7 +29,7 @@ describe("storyboard optional and explicit confirmation for both video modes", (
     expect(source).toContain("pendingRender.optionsKey !== JSON.stringify(pipelineOptions)");
     expect(source).toContain("JSON.stringify(pipelineOptions) === pendingRender.optionsKey");
     expect(source).toContain("isValidSceneTiming(preview.timing)");
-    expect(source).toContain("song.audioUrl && !song.youtubeUrl && youtubeHealth?.connected");
+    expect(source).toContain("song?.audioUrl && !song.youtubeUrl && youtubeHealth?.connected");
     expect(source).toContain("setPendingRender(null);");
   });
 
