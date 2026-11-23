@@ -57,6 +57,17 @@ describe("PipelineAssets", () => {
     expect(onOpenImageBank).toHaveBeenNthCalledWith(3, "image");
   });
 
+  it("offers OpenArt only as a deliberate external image-bank workflow", async () => {
+    loadImageBankMock.mockResolvedValue([]);
+    renderAssets();
+    const link = screen.getByRole("link", { name: "Åpne OpenArt bildestudio" });
+    expect(link).toHaveAttribute("href", "https://realtyflow.chatgenius.pro/image-studio?source=remaster&provider=openart");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByText(/Video fungerer også uten OpenArt og uten storyboard/)).toBeInTheDocument();
+    expect(screen.getByText(/kan ikke håndheve en kontoomfattende beløpsgrense/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Oppdater" })).toBeInTheDocument();
+  });
+
   it("filters image, logo, and thumbnail assets into the correct controls", async () => {
     loadImageBankMock.mockResolvedValue([
       image({ id: "slide-1", kind: "image", name: "Slide A", url: "https://cdn.example.com/slide-a.jpg" }),

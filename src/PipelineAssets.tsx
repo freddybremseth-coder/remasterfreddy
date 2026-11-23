@@ -88,6 +88,19 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
         </button>
       </div>
 
+      <section className="pipeline-openart-option" aria-label="Valgfrie OpenArt-bilder">
+        <div>
+          <strong>Vil du bruke filmatiske AI-bilder?</strong>
+          <p>OpenArt er valgfritt. Lag ett og ett bilde i RealtyFlow Bilde Studio med eget samtykke til kredittbruk, og send godkjente bilder direkte til Re-Master-bildebanken. Video fungerer også uten OpenArt og uten storyboard.</p>
+          <p>OpenArt-kreditter og eurokostnad må kontrolleres hos leverandøren. Målbudsjettet er 10 € per måned; dette skjermbildet kan ikke håndheve en kontoomfattende beløpsgrense.</p>
+        </div>
+        <a className="admin-secondary" target="_blank" rel="noopener noreferrer"
+          href="https://realtyflow.chatgenius.pro/image-studio?source=remaster&provider=openart">
+          Åpne OpenArt bildestudio
+        </a>
+        <small>Etter at bildene er sendt til Re-Master: Klikk «Oppdater» over og velg de nye bildene nedenfor.</small>
+      </section>
+
       <div className="pipeline-asset-counts" aria-label="Tilgjengelige visuelle ressurser">
         <span><Images size={14} /> {slides.length} slideshow-bilder</span>
         <span><Image size={14} /> {logos.length} logoer</span>

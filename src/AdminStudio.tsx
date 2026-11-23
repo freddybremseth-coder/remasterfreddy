@@ -457,6 +457,23 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
                     Lag video
                   </button>
+                  {canProcess && (
+                    <a
+                      className="admin-secondary"
+                      href={`https://realtyflow.chatgenius.pro/image-studio?${new URLSearchParams({
+                        source: "remaster",
+                        provider: "openart",
+                        song: song.title,
+                        genre: song.genre || "",
+                        theme: pipelineOptions.visualTheme?.trim() || "",
+                      }).toString()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Forbered frivillige OpenArt-bilder for akkurat denne sangen. Bruker ingen kreditter før du bekrefter i bildestudioet."
+                    >
+                      OpenArt-bilder
+                    </a>
+                  )}
                   {canProcess && approved && (
                     <button type="button" className="admin-secondary"
                       disabled={processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}

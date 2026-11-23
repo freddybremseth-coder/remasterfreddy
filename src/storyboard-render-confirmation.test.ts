@@ -4,6 +4,16 @@ import { readFileSync } from "node:fs";
 describe("storyboard optional and explicit confirmation for both video modes", () => {
   const source = readFileSync("src/AdminStudio.tsx", "utf8");
 
+  it("passes a distinct song title, genre and art direction to optional OpenArt only on click", () => {
+    expect(source).toContain('provider: "openart"');
+    expect(source).toContain('song: song.title');
+    expect(source).toContain('genre: song.genre || ""');
+    expect(source).toContain('theme: pipelineOptions.visualTheme?.trim() || ""');
+    expect(source).toContain('OpenArt-bilder');
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
+  });
+
   it("allows simple video without a storyboard and offers optional detailed editing", () => {
     expect(source).toContain('function requestRender(song: AdminSong, mode: "simple" | "storyboard" = "simple")');
     expect(source).toContain("onClick={() => requestRender(song)}");
