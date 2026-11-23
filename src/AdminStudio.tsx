@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Music2, Play, RefreshCw, Upload, Youtube } from "lucide-react";
 import LibraryCleanup from "./LibraryCleanup";
 import PipelineAssets from "./PipelineAssets";
@@ -44,6 +44,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [pipelineEvent, setPipelineEvent] = useState<PipelineEvent | null>(null);
   const [preview, setPreview] = useState<EditedStoryboard | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
+  const [pendingRender, setPendingRender] = useState<{ songId: string; sourceKey: string; scenesKey: string } | null>(null);
+  const renderLock = useRef(false);
   const [youtubeHealth, setYouTubeHealth] = useState<YouTubeHealth | null>(null);
   const [pipelineOptions, setPipelineOptions] = useState<PipelineOptions>({
     customImageUrls: [],
@@ -113,6 +115,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   }
 
   async function runPipeline(song: AdminSong) {
+    // A synchronous lock stops two concurrent POSTs before React state has updated.
+    if (renderLock.current) return;
     // Never spend on rendering before the author has approved this song's plan.
     if (!preview || preview.songId !== song.id ||
         preview.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
@@ -124,7 +128,15 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Videopipelinen kan ikke startes før Re-Master Freddy er koblet til riktig YouTube-kanal.");
       return;
     }
+    if (!pendingRender || pendingRender.songId !== song.id ||
+        pendingRender.sourceKey !== storyboardSourceKey(song, pipelineOptions) ||
+        pendingRender.scenesKey !== JSON.stringify(preview.scenes)) {
+      setError("Bekreft kostnader og publisering for akkurat denne sangen før produksjonen starter.");
+      return;
+    }
 
+    renderLock.current = true;
+    setPendingRender(null);
     setProcessingId(song.id);
     setPipelineEvent({ status: "running", steps: [] });
     setError("");
@@ -142,12 +154,26 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setPipelineEvent({ status: "failed", error: message });
       setError(message);
     } finally {
+      renderLock.current = false;
       setProcessingId(null);
     }
   }
 
+  function requestRender(song: AdminSong) {
+    if (renderLock.current || processingId || previewLoadingId) return;
+    if (!song.audioUrl || song.youtubeUrl) return;
+    const sourceKey = storyboardSourceKey(song, pipelineOptions);
+    if (!preview || preview.songId !== song.id || preview.sourceKey !== sourceKey ||
+        !preview.approved || !isValidStoryboard(preview.scenes) || !youtubeHealth?.connected) {
+      setError("Godkjenn storyboard og kontroller YouTube-tilkoblingen før du lager video.");
+      return;
+    }
+    setPendingRender({ songId: song.id, sourceKey, scenesKey: JSON.stringify(preview.scenes) });
+  }
+
   async function showStoryboard(song: AdminSong) {
     const sourceKey = storyboardSourceKey(song, pipelineOptions);
+    setPendingRender(null);
     setPreviewLoadingId(song.id);
     setError("");
     try {
@@ -285,6 +311,34 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         </div>
       )}
 
+      {pendingRender && (() => {
+        const song = songs.find(item => item.id === pendingRender.songId);
+        const valid = Boolean(song && preview?.songId === song.id &&
+          preview.sourceKey === pendingRender.sourceKey &&
+          storyboardSourceKey(song, pipelineOptions) === pendingRender.sourceKey &&
+          JSON.stringify(preview.scenes) === pendingRender.scenesKey &&
+          preview.approved && isValidStoryboard(preview.scenes) &&
+          youtubeHealth?.connected && song.audioUrl && !song.youtubeUrl);
+        return (
+          <div className="admin-render-confirmation" role="dialog" aria-modal="true" aria-labelledby="render-confirm-title">
+            <div className="admin-render-confirmation-panel">
+              <h3 id="render-confirm-title">Bekreft videoproduksjon</h3>
+              <p><strong>{song?.title || "Ukjent sang"}</strong></p>
+              <p>Dette er ikke en gratis forhåndsvisning. Når du fortsetter, kan systemet generere betalte AI-bilder, lage video og sende den til YouTube i henhold til publiseringsvalgene dine.</p>
+              <p>Kontroller sang, åtte scener og tidspunkt før du fortsetter.</p>
+              {!valid && <p role="alert">Storyboard eller publiseringsgrunnlag har endret seg. Lukk og godkjenn på nytt.</p>}
+              <div className="admin-render-confirmation-actions">
+                <button type="button" className="admin-secondary" onClick={() => setPendingRender(null)}>Avbryt – ingen kostnader</button>
+                <button type="button" className="admin-primary" disabled={!valid || processingId !== null}
+                  onClick={() => { if (song && valid) void runPipeline(song); }}>
+                  Start bildegenerering og video
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="admin-song-list">
         {loading && songs.length === 0 ? (
           <div className="admin-empty"><Loader2 className="admin-spinner" size={24} /> Henter sanger …</div>
@@ -358,7 +412,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   <button
                     className="admin-primary admin-run-button"
                     disabled={!canProcess || !approved || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
-                    onClick={() => runPipeline(song)}
+                    onClick={() => requestRender(song)}
                     title={disabledReason}
                   >
                     {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
