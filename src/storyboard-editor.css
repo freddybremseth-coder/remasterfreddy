@@ -151,3 +151,17 @@
 .storyboard-readiness-list li strong { display: block; font-size: 13px; }
 .storyboard-readiness-list li p { margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: #cbd5e1; }
 @media(max-width:680px) { .storyboard-readiness-list { grid-template-columns: minmax(0,1fr); } }
+
+.storyboard-live-preview { margin-top: 18px; padding: 12px; border: 1px solid rgba(125,211,252,.35); border-radius: 12px; background: rgba(2,6,23,.36); }
+.storyboard-live-preview-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.storyboard-live-preview-heading > span { font-size: 13px; color: #bae6fd; }
+.storyboard-live-preview-screen { box-sizing: border-box; width: 100%; aspect-ratio: 16 / 9; min-height: 240px; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; padding: clamp(14px, 4vw, 40px); color: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; box-shadow: 0 16px 36px rgba(0,0,0,.22) inset; overflow-wrap: anywhere; }
+.storyboard-live-preview-screen > p { margin: auto 0; font-size: clamp(14px,2vw,21px); line-height: 1.5; font-weight: 550; max-width: 75ch; text-shadow: 0 1px 4px rgba(0,0,0,.45); max-height: 70%; overflow-y: auto; }
+.storyboard-live-preview-counter, .storyboard-live-preview-time { font-size: 12px; letter-spacing: .06em; color: #dbeafe; }
+.storyboard-live-preview-time { align-self: flex-end; }
+.storyboard-live-preview-thumbs { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 5px; margin: 9px 0 12px; }
+.storyboard-live-preview-thumbs button { display: flex; flex-direction: column; gap: 3px; align-items: center; cursor: pointer; min-height: 54px; min-width: 0; padding: 8px 3px; border: 1px solid rgba(148,163,184,.4); border-radius: 7px; background: #1f3349; color: #cbd5e1; }
+.storyboard-live-preview-thumbs button.is-active { border-color: #7dd3fc; background: #214b65; color: white; box-shadow: 0 0 0 1px #7dd3fc inset; }
+.storyboard-live-preview-thumbs button span { font-size: 11px; font-weight: 600; }
+.storyboard-live-preview-thumbs button small { font-size: 10px; }
+@media(max-width:650px) { .storyboard-live-preview-thumbs { grid-template-columns: repeat(4,minmax(0,1fr)); } .storyboard-live-preview-screen { min-height: 260px; } }
