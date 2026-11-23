@@ -421,7 +421,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <h3 id="render-confirm-title">Bekreft videoproduksjon</h3>
               <p><strong>{song?.title || "Ukjent sang"}</strong></p>
               <p><strong>Video med godkjent storyboard</strong></p>
-              <p>Videoen skal bruke bildene du har valgt fra bildebanken. Ingen abstrakte sirkler er godkjent som erstatning. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Videomotorens støtte for dette må fortsatt verifiseres.</p>
+              <p>Videoen skal bruke bildene du har valgt fra bildebanken. Ingen abstrakte sirkler er godkjent som erstatning. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Videomotorens støtte for dette må fortsatt verifiseres. Hvis du fortsetter, starter videoproduksjon og eventuell YouTube-publisering etter valgene dine.</p>
               <p><strong>{confirmedImages.length} valgte videobilder</strong> – sjekk at dette er bildene du ønsker før produksjon.</p>
               <p role="status">{imageCheckPassed
                 ? "Alle valgte bilder er lastet i forhåndsvisningen. RealtyFlow må fortsatt bekrefte at videoen bruker dem."
