@@ -18,7 +18,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain('function requestRender(song: AdminSong)');
     expect(source).toContain("onClick={() => requestRender(song)}");
     expect(source).toContain('if (!approvedStory) {');
-    expect(source).toContain('!approved || !songImageCount || processingId !== null');
+    expect(source).toContain('!approved || !songImageCount ||');
+    expect(source).toContain('!serverChecked || processingId !== null');
     expect(source).toContain('mode: "storyboard"');
     expect(source).not.toContain('requestRender(song, "storyboard")');
     expect(source).not.toContain('Enkel video uten storyboard');
@@ -86,6 +87,20 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("await saveSongVideoImages(songId, snapshot)");
     expect(source).toContain("savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])");
     expect(source).toContain("Lagre bildevalg for denne sangen");
+  });
+
+  it("offers a server-side visual check without AI and blocks video until it succeeds", () => {
+    const client = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-visual-preflight.ts", "utf8");
+    expect(source).toContain("async function inspectImageSelection()");
+    expect(source).toContain("await checkSongVideoImages(songId)");
+    expect(source).toContain("Kontroller videobilder – uten AI eller YouTube");
+    expect(source).toContain("visualCheck.imagesKey !== JSON.stringify(selectedOptions.customImageUrls)");
+    expect(source).toContain("Bildeplan for åtte scener");
+    expect(source).toContain("Dette er en kontroll av bildefiler og scenevalg, ikke en ferdig MP4-video.");
+    expect(client).toContain("/api/neural-beat-visual-preflight");
+    expect(proxy).toContain("/api/neural-beat/visual-preflight");
+    expect(proxy).not.toContain("uploadVideo(");
   });
 
   it("the video uses original visuals without Gemini but discloses other services", () => {
