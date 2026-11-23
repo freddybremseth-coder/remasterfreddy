@@ -32,6 +32,11 @@ export interface AdminImage {
   created_at?: string;
 }
 
+export interface StoryboardSceneTiming {
+  durationSeconds: number;
+  startsSeconds: number[];
+}
+
 export interface PipelineOptions {
   /** Optional creative direction for the next music video. */
   visualTheme?: string;
@@ -39,6 +44,8 @@ export interface PipelineOptions {
   songLyrics?: string;
   /** Eight text scenes approved for this song's render, not shared between songs. */
   storyboardScenes?: string[];
+  /** Music-bound visual cuts, approved with eight storyboard scenes. */
+  sceneTiming?: StoryboardSceneTiming;
   customImageUrls?: string[];
   logoUrl?: string;
   customThumbnailUrl?: string;
@@ -291,6 +298,7 @@ export async function startSongPipeline(
       visualTheme: options.visualTheme?.trim() || undefined,
       songLyrics: options.songLyrics?.trim() || undefined,
       storyboardScenes: options.storyboardScenes || undefined,
+      sceneTiming: options.sceneTiming || undefined,
       customImageUrls: options.customImageUrls || [],
       logoUrl: options.logoUrl || undefined,
       customThumbnailUrl: options.customThumbnailUrl || undefined,
