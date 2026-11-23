@@ -153,7 +153,7 @@ export default function LocalAudioSceneTiming({ scenes = [], approvedTiming, onA
                       </button>
                     ))}
                   </div>
-                  <p>Dette er en **illustrert tekstvisning**, ikke bilder fra en AI-modell eller en ferdig video. Den viser rekkefølge og scenetid mens musikken spilles. Eventuelle endringer av tidsmarkører må fortsatt brukes og godkjennes før rendering.</p>
+                  <p>Dette er en illustrert tekstvisning, ikke bilder fra en AI-modell eller en ferdig video. Den viser rekkefølge og scenetid mens musikken spilles. Eventuelle endringer av tidsmarkører må fortsatt brukes og godkjennes før rendering.</p>
                 </section>
               )}
             </>
