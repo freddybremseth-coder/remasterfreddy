@@ -143,8 +143,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Sangen må ha lyd, ikke være publisert, og YouTube må være tilkoblet.");
       return;
     }
-    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
-      setError("Fjern ekstrabilder når du bruker egne tidsmarkører med storyboard.");
+    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length !== 8) {
+      setError("Ved egne scenetidspunkter må du velge nøyaktig åtte bilder – ett per storyboard-scene.");
       return;
     }
 
@@ -202,8 +202,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError("Lag og godkjenn storyboardet med åtte scener før du starter videoen.");
       return;
     }
-    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length) {
-      setError("Fjern ekstrabilder før du bruker egne scenetider med storyboard.");
+    if (approvedStory?.timing && pipelineOptions.customImageUrls?.length !== 8) {
+      setError("Ved egne scenetidspunkter må du velge nøyaktig åtte bilder – ett per storyboard-scene.");
       return;
     }
     // Capture the entire selection to reject changes between confirmation and submit.
@@ -369,7 +369,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           Boolean(pipelineOptions.customImageUrls?.length && approvedStory &&
             JSON.stringify(approvedStory.scenes) === pendingRender.scenesKey &&
             JSON.stringify(approvedStory.timing ?? null) === pendingRender.timingKey &&
-            (!approvedStory.timing || !pipelineOptions.customImageUrls?.length)));
+            (!approvedStory.timing || pipelineOptions.customImageUrls?.length === 8)));
         return (
           <div className="admin-render-confirmation" role="dialog" aria-modal="true" aria-labelledby="render-confirm-title">
             <div className="admin-render-confirmation-panel">
