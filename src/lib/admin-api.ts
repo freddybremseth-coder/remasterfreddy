@@ -38,6 +38,8 @@ export interface StoryboardSceneTiming {
 }
 
 export interface PipelineOptions {
+  /** Zero-Gemini image path: user's own images or original locally generated backgrounds. */
+  imageMode?: 'original';
   /** Optional creative direction for the next music video. */
   visualTheme?: string;
   /** Optional lyrics or story synopsis; used as creative context, not displayed. */
@@ -295,6 +297,7 @@ export async function startSongPipeline(
     headers: { Accept: "text/event-stream" },
     body: JSON.stringify({
       recordId,
+      imageMode: 'original',
       visualTheme: options.visualTheme?.trim() || undefined,
       songLyrics: options.songLyrics?.trim() || undefined,
       storyboardScenes: options.storyboardScenes || undefined,
