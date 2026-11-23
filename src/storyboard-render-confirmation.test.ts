@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-describe("storyboard optional and explicit confirmation for both video modes", () => {
+describe("storyboard required and explicit confirmation before video", () => {
   const source = readFileSync("src/AdminStudio.tsx", "utf8");
 
   it("passes a distinct song title, genre and art direction to optional OpenArt only on click", () => {
@@ -14,21 +14,23 @@ describe("storyboard optional and explicit confirmation for both video modes", (
     expect(source).toContain('rel="noopener noreferrer"');
   });
 
-  it("allows simple video without a storyboard and offers optional detailed editing", () => {
-    expect(source).toContain('function requestRender(song: AdminSong, mode: "simple" | "storyboard" = "simple")');
+  it("requires approved storyboard for every full video", () => {
+    expect(source).toContain('function requestRender(song: AdminSong)');
     expect(source).toContain("onClick={() => requestRender(song)}");
-    expect(source).toContain('onClick={() => requestRender(song, "storyboard")}');
-    expect(source).toContain("Lag med storyboard");
-    expect(source).toContain('pendingRender.mode === "simple"');
-    expect(source).toContain('pendingRender.mode === "storyboard"');
+    expect(source).toContain('if (!approvedStory) {');
+    expect(source).toContain('!approved || processingId !== null');
+    expect(source).toContain('mode: "storyboard"');
+    expect(source).not.toContain('requestRender(song, "storyboard")');
+    expect(source).not.toContain('Enkel video uten storyboard');
   });
 
-  it("always opens an explicit confirmation, even when no storyboard is used", () => {
+  it("always opens an explicit confirmation for the approved storyboard", () => {
     expect(source).toContain("setPendingRender({");
     expect(source).toContain("optionsKey: JSON.stringify(pipelineOptions)");
     expect(source).toContain("Bekreft videoproduksjon");
     expect(source).toContain("Avbryt – ingen kostnader");
     expect(source).toContain("Start video uten Gemini-bilder");
+    expect(source).toContain("Video med godkjent storyboard");
     expect(source).toContain("onClick={() => { if (song && valid) void runPipeline(song); }}");
   });
 
@@ -48,5 +50,6 @@ describe("storyboard optional and explicit confirmation for both video modes", (
     expect(source).toContain("Gemini brukes ikke til bilder.");
     expect(source).toContain("kan bruke andre AI-tjenester");
     expect(source).toContain("YouTube-publisering");
+    expect(source).toContain("Steg 5 stoppet: Videomotoren fant ingen bilder.");
   });
 });
