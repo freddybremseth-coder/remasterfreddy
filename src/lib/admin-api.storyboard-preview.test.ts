@@ -46,6 +46,23 @@ describe("cost-free scene preview and approved storyboard transport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("passes approved scene start times through the paid render request, not the free preview", async () => {
+    const mock = vi.fn(async () => sseSuccess());
+    vi.stubGlobal("fetch", mock);
+    await startSongPipeline("song-1", {
+      storyboardScenes: approved,
+      sceneTiming: { durationSeconds: 180, startsSeconds: [0, 20, 45, 67, 91, 111, 134, 158] },
+    }, vi.fn());
+    const [url, options] = mock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/neural-beat");
+    const body = JSON.parse(String(options.body));
+    expect(body.storyboardScenes).toEqual(approved);
+    expect(body.sceneTiming).toEqual({
+      durationSeconds: 180,
+      startsSeconds: [0, 20, 45, 67, 91, 111, 134, 158],
+    });
+  });
+
   it("forwards the exact approved scene texts only when rendering is requested", async () => {
     const fetchMock = vi.fn(async () => sseSuccess());
     vi.stubGlobal("fetch", fetchMock);
