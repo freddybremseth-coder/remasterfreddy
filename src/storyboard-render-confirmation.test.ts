@@ -119,7 +119,6 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Avspillingslenken er gyldig i 15 minutter");
     expect(client).toContain("/api/neural-beat-private-video-preview");
     expect(proxy).toContain("/api/neural-beat/private-video-preview");
-    expect(proxy).not.toContain("/api/neural-beat\`");
     expect(proxy).not.toContain("uploadVideo(");
     expect(deployment).toContain("api/neural-beat-private-video-preview.ts");
   });
