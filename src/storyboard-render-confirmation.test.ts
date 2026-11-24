@@ -105,6 +105,24 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(proxy).not.toContain("uploadVideo(");
   });
 
+  it("supports explicit 16-second private MP4 preview without YouTube publication", () => {
+    const client = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-private-video-preview.ts", "utf8");
+    const deployment = readFileSync("vercel.json", "utf8");
+    expect(source).toContain("async function buildPrivateMp4(song: AdminSong)");
+    expect(source).toContain("Lag privat MP4-test (16 sek)");
+    expect(source).toContain("generatePrivateMp4Teaser(song.id, preview.scenes)");
+    expect(source).toContain("savedSongImages[song.id] !== imageKey");
+    expect(source).toContain("selected.length !== 8");
+    expect(source).toContain("visualCheck?.songId !== song.id");
+    expect(source).toContain("<video controls playsInline preload");
+    expect(source).toContain("Avspillingslenken er gyldig i 15 minutter");
+    expect(client).toContain("/api/neural-beat-private-video-preview");
+    expect(proxy).toContain("/api/neural-beat/private-video-preview");
+    expect(proxy).not.toContain("uploadVideo(");
+    expect(deployment).toContain("api/neural-beat-private-video-preview.ts");
+  });
+
   it("the video uses original visuals without Gemini but discloses other services", () => {
     expect(source).toContain('imageMode: "original"');
     expect(source).toContain("Gemini brukes ikke til bilder.");

@@ -263,3 +263,21 @@
 .admin-render-confirmation-actions button {
   min-height: 44px;
 }
+
+/* Short, owner-only MP4 sample independent from publishing. */
+.admin-private-mp4-preview {
+  display:grid;
+  gap:10px;
+  margin:12px 0;
+  padding:14px;
+  border:1px solid rgba(103,232,249,.30);
+  border-radius:13px;
+  background:rgba(8,24,43,.70);
+}
+.admin-private-mp4-preview>strong{color:#e2e8f0}
+.admin-private-mp4-preview p,.admin-private-mp4-preview small{font-size:12px;line-height:1.55;color:#cbd5e1;margin:0}
+.admin-private-mp4-preview>button{justify-self:start;min-height:44px}
+.admin-private-mp4-result{display:grid;gap:12px}
+.admin-private-mp4-result video{display:block;width:100%;max-width:750px;max-height:440px;aspect-ratio:16/9;border-radius:10px;background:#020617}
+.admin-private-mp4-result a{display:inline-flex;align-items:center;gap:7px;color:#67e8f9;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:620px){.admin-private-mp4-preview>button{justify-self:stretch}.admin-private-mp4-result video{max-height:none}}

@@ -240,6 +240,34 @@ export async function uploadImageAsset(file: File, kind: ImageKind): Promise<Adm
   return saved.image as AdminImage;
 }
 
+/** Only a 16-second, signed-link MP4; never any YouTube publishing. */
+export interface PrivateMp4Teaser {
+  success: true;
+  recordId: string;
+  signedUrl: string;
+  durationSeconds: number;
+  sceneCount: number;
+  expiresInSeconds: number;
+  message: string;
+}
+
+export async function generatePrivateMp4Teaser(
+  recordId: string,
+  storyboardScenes: string[],
+): Promise<PrivateMp4Teaser> {
+  const response = await adminFetch("/api/neural-beat-private-video-preview", {
+    method: "POST",
+    body: JSON.stringify({ recordId, storyboardScenes }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success !== true || result.recordId !== recordId ||
+      typeof result.signedUrl !== "string" || !result.signedUrl.startsWith("https://") ||
+      result.durationSeconds !== 16 || result.sceneCount !== 8) {
+    throw new Error(result.error || "Kunne ikke lage privat MP4. Ingen video er publisert.");
+  }
+  return result as PrivateMp4Teaser;
+}
+
 /** Result of a server-side visual check. No video/AI/YouTube is involved. */
 export interface VisualPreflightResult {
   ready: true;
