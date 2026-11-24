@@ -28,10 +28,10 @@ describe("storyboard required and explicit confirmation before video", () => {
   it("always opens an explicit confirmation for the approved storyboard", () => {
     expect(source).toContain("setPendingRender({");
     expect(source).toContain("optionsKey: JSON.stringify(selectedOptions)");
-    expect(source).toContain("Bekreft videoproduksjon");
+    expect(source).toContain("Bekreft YouTube-produksjon");
     expect(source).toContain("Avbryt – ingen kostnader");
-    expect(source).toContain("Start video uten Gemini-bilder");
-    expect(source).toContain("Video med godkjent storyboard");
+    expect(source).toContain("Start YouTube-produksjon uten Gemini-bilder");
+    expect(source).toContain("Fullengde musikkvideo til YouTube med godkjent storyboard");
     expect(source).toContain("onClick={() => { if (song && valid) void runPipeline(song); }}");
   });
 
@@ -149,7 +149,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("savedSongImages[song.id] !== imageKey");
     expect(source).toContain("visualCheck?.songId !== song.id");
     expect(source).toContain("selected.length !== 8");
-    expect(source).toContain("publiserer ikke automatisk denne godkjente private MP4-filen.");
+    expect(source).toContain("Godkjent MP4 overføres ikke automatisk.");
     expect(client).toContain("/api/neural-beat-private-full-video");
     expect(client).toContain("sceneTiming?: StoryboardSceneTiming");
     expect(proxy).toContain("/api/neural-beat/private-full-video");
@@ -160,7 +160,7 @@ describe("storyboard required and explicit confirmation before video", () => {
   it("places full-length private video first, immediately AFTER storyboard approval, not before the editor", () => {
     const editor = source.indexOf("<StoryboardEditor");
     const approval = source.indexOf("onApprove={() => setPreview(", editor);
-    const choice = source.indexOf("Storyboard godkjent – velg videolengde", approval);
+    const choice = source.indexOf("Storyboard godkjent – velg hvor videoen skal brukes", approval);
     const full = source.indexOf('aria-label="Privat musikkvideo i full lengde"', choice);
     const short = source.indexOf('aria-label="Privat MP4-test uten publisering"', full);
     expect(editor).toBeGreaterThan(0);
@@ -168,7 +168,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(choice).toBeGreaterThan(approval);
     expect(full).toBeGreaterThan(choice);
     expect(short).toBeGreaterThan(full);
-    expect(source).toContain('Lag og se gjennom videoen her. Ingen automatisk YouTube-publisering.');
+    expect(source).toContain('Velg mellom en privat fullengdevideo for gjennomgang og en YouTube-produksjon.');
     const storyboard = readFileSync("src/StoryboardEditor.tsx", "utf8");
     expect(storyboard).toContain('Velg «Lag privat fullengdevideo» i feltet rett nedenfor.');
   });
