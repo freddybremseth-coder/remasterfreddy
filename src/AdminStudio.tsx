@@ -725,12 +725,22 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             const serverChecked = visualCheck?.songId === song.id &&
               visualCheck.imagesKey === JSON.stringify(songImages[song.id] || []);
             const disabledReason = !canProcess
-              ? "Sangen mangler lyd eller er allerede publisert."
-              : !youtubeHealth?.connected
-                ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
-                : !songImageCount ? "Velg videobilder fra bildebanken først."
-                : !serverChecked ? "Kontroller de valgte videobildene på serveren først."
-                : approved ? "Lag YouTube-video med godkjent storyboard og valgte bilder." : "Lag og godkjenn de åtte scenene først.";
+              ? "Sangen mangler lyd eller har allerede en YouTube-video."
+              : activeSongId !== song.id
+                ? "Velg denne sangen i «Videobilder for sang» ovenfor."
+                : !songImageCount
+                  ? "Velg åtte videobilder fra bildebanken."
+                  : savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])
+                    ? "Lagre bildevalgene på sangen."
+                    : !serverChecked
+                      ? "Trykk «Kontroller videobilder» ovenfor."
+                      : !approved
+                        ? "Trykk «Oppdater storyboard» og godkjenn alle åtte scenene."
+                        : !youtubeHealth?.connected
+                          ? "Koble Re-Master Freddy til YouTube-kanalen."
+                          : processingId !== null || previewLoadingId !== null
+                            ? "Avvent aktiv produksjon eller storyboard-forhåndsvisning."
+                            : "Klar for YouTube-produksjon.";
 
             return (
               <article className="admin-song-row" key={song.id}>
@@ -799,7 +809,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   )}
                   <button
                     className="admin-primary admin-run-button"
-                    disabled={!canProcess || !approved || !songImageCount ||
+                    disabled={!canProcess || activeSongId !== song.id || !approved || !songImageCount ||
+                        savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
                         !serverChecked || processingId !== null || previewLoadingId !== null || !youtubeHealth?.connected}
                     onClick={() => requestRender(song)}
                     title={disabledReason}
@@ -807,6 +818,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
                     Lag YouTube-video
                   </button>
+                  {canProcess && (!approved || !serverChecked || !songImageCount || activeSongId !== song.id || !youtubeHealth?.connected ||
+                    savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])) && (
+                    <small role="status" className="admin-video-blocker" style={{ display: "block", maxWidth: 300, lineHeight: 1.5 }}>
+                      Før YouTube: {disabledReason} Den private MP4-filen kan fortsatt spilles av uavhengig av dette.
+                    </small>
+                  )}
                   {canProcess && (
                     <a
                       className="admin-secondary"
