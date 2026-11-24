@@ -1,7 +1,7 @@
 import { useState } from "react";
 import LocalAudioSceneTiming from "./LocalAudioSceneTiming";
 import type { StoryboardSceneTiming } from "./lib/admin-api";
-import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, MUSIC_PLAN_PRESETS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
+import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, MUSIC_PLAN_PRESETS, SCENE_CAMERA_PLAN, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
 import "./storyboard-editor.css";
 
 const sceneStages = [
@@ -128,7 +128,7 @@ export default function StoryboardEditor({
             </button>
           ))}
         </div>
-        <small>Forslagene er dramaturgiske maler, ikke automatisk gjenkjenning av refrenget. Du kan endre hver scene før du bruker planen.</small>
+        <small>Forslagene er dramaturgiske maler, ikke automatisk gjenkjenning av refrenget. Du kan endre hver scene før du bruker planen. Når du legger planen til, får hver scene også forskjellig forslag til kamerautsnitt og overgang. Dette er tekstinstruksjoner, ikke ferdig renderte effekter.</small>
         <div className="storyboard-music-grid">
           {musicSections.map((section, index) => (
             <div key={index}>
@@ -173,6 +173,7 @@ export default function StoryboardEditor({
           >
             <span>Scene {index + 1}</span>
             <strong>{sceneStages[index]} · {musicSectionLabels[musicSections[index]]}</strong>
+            <small>{SCENE_CAMERA_PLAN[index].label}</small>
             <small>{scene.trim().slice(0, 100)}{scene.trim().length > 100 ? "…" : ""}</small>
           </button>
         ))}
