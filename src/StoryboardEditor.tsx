@@ -1,7 +1,7 @@
 import { useState } from "react";
 import LocalAudioSceneTiming from "./LocalAudioSceneTiming";
 import type { StoryboardSceneTiming } from "./lib/admin-api";
-import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
+import { applyMusicSectionCues, readMusicSectionCues, MUSIC_SECTIONS, MUSIC_PLAN_PRESETS, musicSectionLabels, type MusicSection } from "./lib/storyboard-music-sections";
 import "./storyboard-editor.css";
 
 const sceneStages = [
@@ -110,6 +110,25 @@ export default function StoryboardEditor({
       <div className="storyboard-music-plan">
         <strong>Musikkplan – intro, vers og refreng</strong>
         <p>Velg hvilken del av sangen hver scene skal illustrere. Dette er manuell kreativ regi, ikke automatisk lydanalyse eller nøyaktige tidsmarkører. Bildene fordeles fortsatt av eksisterende videopipeline.</p>
+        <div className="storyboard-music-presets" role="group" aria-label="Forslag til musikalsk oppbygning">
+          {MUSIC_PLAN_PRESETS.map(plan => (
+            <button
+              type="button"
+              className="admin-secondary"
+              key={plan.id}
+              title={plan.description}
+              disabled={approved}
+              aria-pressed={musicSections.every((section, index) => section === plan.sections[index])}
+              onClick={() => {
+                setMusicSections([...plan.sections]);
+                setReviewMessage("Musikkforslaget er valgt. Trykk «Legg musikkplanen til scenene» for å bruke det.");
+              }}
+            >
+              {plan.label}
+            </button>
+          ))}
+        </div>
+        <small>Forslagene er dramaturgiske maler, ikke automatisk gjenkjenning av refrenget. Du kan endre hver scene før du bruker planen.</small>
         <div className="storyboard-music-grid">
           {musicSections.map((section, index) => (
             <div key={index}>
