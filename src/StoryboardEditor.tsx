@@ -13,6 +13,8 @@ interface Props {
   songTitle: string;
   scenes: string[];
   approved: boolean;
+  imageUrls: string[];
+  imagesSaved: boolean;
   onChangeScene: (index: number, text: string) => void;
   onApplyContinuity: (note: string) => void;
   onApplyMusicSections: (sections: MusicSection[]) => void;
@@ -47,7 +49,7 @@ export function applyContinuityNote(scenes: string[], rawNote: string): string[]
 
 /** Text-only continuity review: no generated images, no AI credits and no paid rendering. */
 export default function StoryboardEditor({
-  songTitle, scenes, approved, onChangeScene, onApplyContinuity, onApplyMusicSections,
+  songTitle, scenes, approved, imageUrls, imagesSaved, onChangeScene, onApplyContinuity, onApplyMusicSections,
   sceneTiming, onApplyTiming, onClearTiming, onApprove, onDiscard,
 }: Props) {
   const [continuity, setContinuity] = useState("");
@@ -56,6 +58,9 @@ export default function StoryboardEditor({
   const [showAll, setShowAll] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const valid = isValidStoryboard(scenes);
+  const hasEightImages = imageUrls.length === 8 && new Set(imageUrls).size === 8;
+  const hasTiming = Boolean(sceneTiming && sceneTiming.startsSeconds.length === 8);
+  const displayTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
   const continuityResult = applyContinuityNote(scenes, continuity);
   const hasChanges = continuityResult !== null && continuityResult.some((scene, i) => scene !== scenes[i]);
   const canApply = !approved && hasChanges;
@@ -155,6 +160,38 @@ export default function StoryboardEditor({
       </div>
 
       <LocalAudioSceneTiming scenes={scenes} approvedTiming={sceneTiming} onApplyTiming={onApplyTiming} onClearTiming={onClearTiming} />
+
+      <section className="storyboard-image-plan" aria-label="Bilder og sceneskift før MP4">
+        <div className="storyboard-image-plan-heading">
+          <strong>Bilder og sceneskift i fullengdevideoen</strong>
+          <span>{hasEightImages ? "8 bilder valgt" : `${imageUrls.length} av 8 bilder valgt`}</span>
+        </div>
+        <p>Dette er en planvisning med de valgte originalbildene, ikke en ferdig video.
+          {hasTiming
+            ? " Tidene kommer fra din godkjente sceneplan."
+            : " Uten godkjente tidsmarkører fordeles scenene jevnt over sangen ved rendering."}
+        </p>
+        {!imagesSaved && <p className="storyboard-image-warning" role="status">Bildevalgene er ennå ikke lagret på sangen. Lagre og kontroller dem før MP4-produksjon.</p>}
+        {!hasEightImages && <p className="storyboard-image-warning" role="status">Velg åtte forskjellige bilder for å vise nøyaktig bilde per scene.</p>}
+        <div className="storyboard-image-grid">
+          {scenes.map((_, index) => (
+            <div className="storyboard-image-card" key={index}>
+              {hasEightImages ? (
+                <img src={imageUrls[index]} alt={`Valgt bilde til scene ${index + 1}`} loading="lazy" />
+              ) : (
+                <div className="storyboard-image-placeholder">Bilde {index + 1}</div>
+              )}
+              <div className="storyboard-image-card-copy">
+                <strong>Scene {index + 1} · {musicSectionLabels[musicSections[index]]}</strong>
+                <small>{hasTiming && sceneTiming
+                  ? `${displayTime(sceneTiming.startsSeconds[index])}–${displayTime(index === 7 ? sceneTiming.durationSeconds : sceneTiming.startsSeconds[index + 1])}`
+                  : "Tid beregnes ved rendering"}</small>
+                <small>{SCENE_CAMERA_PLAN[index].label}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="storyboard-review-header">
         <strong>Se rekkefølgen</strong>
