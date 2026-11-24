@@ -24,6 +24,18 @@ const visualDirections: Record<MusicSection, string> = {
   outro: "resolve the story calmly and echo the opening visual",
 };
 
+/** Suggested cinematic coverage and edit rhythm, not executable FFmpeg transitions. */
+export const SCENE_CAMERA_PLAN = [
+  { shot: "wide establishing frame", motion: "slow push-in", edit: "clean cut into a human-scale detail", label: "Totalbilde · rolig innkjøring" },
+  { shot: "medium human-scale shot", motion: "subtle lateral movement", edit: "cut on an action or gesture", label: "Halvtotal · sidebevegelse" },
+  { shot: "close detail or expressive face", motion: "steady frame with gentle drift", edit: "match a shape, gaze or gesture", label: "Nærbilde · detaljer" },
+  { shot: "low or contrasting perspective", motion: "gradual reveal", edit: "cut on rising musical intensity", label: "Ny vinkel · oppbygging" },
+  { shot: "wide dynamic hero composition", motion: "measured forward movement", edit: "strong clean cut on the emotional peak", label: "Kraftig total · høydepunkt" },
+  { shot: "intimate close-up from a fresh angle", motion: "gentle pull-back", edit: "visual contrast without a flashing effect", label: "Intimt utsnitt · kontrast" },
+  { shot: "layered medium-wide scene", motion: "slow tracking movement", edit: "visual echo of an earlier scene", label: "Halvtotal · tilbakekobling" },
+  { shot: "calm concluding wide frame", motion: "settle into a nearly still final shot", edit: "soft ending without generic visual effects", label: "Siste totalbilde · ro" },
+] as const;
+
 export const DEFAULT_MUSIC_SECTIONS: MusicSection[] = [
   "intro", "verse", "prechorus", "chorus", "verse", "chorus", "instrumental", "outro",
 ];
@@ -63,7 +75,8 @@ export function applyMusicSectionCues(scenes: readonly string[], sections: reado
     const base = scene.replace(cuePattern, "").trim();
     const section = sections[index];
     const label = section === "prechorus" ? "Pre-chorus" : section.charAt(0).toUpperCase() + section.slice(1);
-    return `${base} [Music cue: ${label} — ${visualDirections[section]}]`;
+    const camera = SCENE_CAMERA_PLAN[index];
+    return `${base} [Music cue: ${label} — ${visualDirections[section]}; framing: ${camera.shot}; camera: ${camera.motion}; transition: ${camera.edit}; keep the chosen scene image and avoid stock neon/disco motifs]`;
   });
   const clean = updated.map(scene => scene.trim().replace(/\s+/g, " "));
   return clean.every(scene => scene.length >= 25 && scene.length <= 1000) &&
