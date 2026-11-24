@@ -13,8 +13,8 @@ interface Props {
   songTitle: string;
   scenes: string[];
   approved: boolean;
-  imageUrls: string[];
-  imagesSaved: boolean;
+  imageUrls?: string[];
+  imagesSaved?: boolean;
   onChangeScene: (index: number, text: string) => void;
   onApplyContinuity: (note: string) => void;
   onApplyMusicSections: (sections: MusicSection[]) => void;
@@ -49,7 +49,7 @@ export function applyContinuityNote(scenes: string[], rawNote: string): string[]
 
 /** Text-only continuity review: no generated images, no AI credits and no paid rendering. */
 export default function StoryboardEditor({
-  songTitle, scenes, approved, imageUrls, imagesSaved, onChangeScene, onApplyContinuity, onApplyMusicSections,
+  songTitle, scenes, approved, imageUrls = [], imagesSaved = false, onChangeScene, onApplyContinuity, onApplyMusicSections,
   sceneTiming, onApplyTiming, onClearTiming, onApprove, onDiscard,
 }: Props) {
   const [continuity, setContinuity] = useState("");
