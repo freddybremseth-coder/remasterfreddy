@@ -4,17 +4,21 @@ import { requireAdmin } from "./_admin.js";
 export default async function handler(request: any, response: any) {
   const admin = await requireAdmin(request, response);
   if (!admin) return;
-  if (request.method !== "POST") {
-    response.setHeader("Allow", "POST");
+  if (request.method !== "POST" && request.method !== "GET") {
+    response.setHeader("Allow", "GET, POST");
     response.status(405).json({ error: "Method not allowed." });
     return;
   }
+  const isReopen = request.method === "GET";
   const body = request.body;
-  if (!body || typeof body !== "object" || Array.isArray(body) ||
-      typeof body.recordId !== "string" || !Array.isArray(body.storyboardScenes) ||
-      (body.gentleMotion !== undefined && typeof body.gentleMotion !== "boolean") ||
-      JSON.stringify(body).length > 14000) {
-    response.status(400).json({ error: "Velg sang og godkjenn storyboard før du lager privat fullengdevideo." });
+  const recordId = isReopen ? request.query?.recordId : body?.recordId;
+  if (typeof recordId !== "string" ||
+      !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(recordId) ||
+      (!isReopen && (!body || typeof body !== "object" || Array.isArray(body) ||
+        !Array.isArray(body.storyboardScenes) ||
+        (body.gentleMotion !== undefined && typeof body.gentleMotion !== "boolean") ||
+        JSON.stringify(body).length > 14000))) {
+    response.status(400).json({ error: "Velg en gyldig sang og et godkjent storyboard." });
     return;
   }
 
@@ -28,12 +32,14 @@ export default async function handler(request: any, response: any) {
     headers["X-ReMaster-Migration-Secret"] = process.env.REALTYFLOW_MIGRATION_SECRET;
   }
   try {
-    const upstream = await fetch(`${base.replace(/\/$/, "")}/api/neural-beat/private-full-video`, {
-      method: "POST",
+    const endpoint = `${base.replace(/\/$/, "")}/api/neural-beat/private-full-video`;
+    const upstream = await fetch(isReopen
+      ? `${endpoint}?recordId=${encodeURIComponent(recordId)}` : endpoint, {
+      method: isReopen ? "GET" : "POST",
       headers,
-      body: JSON.stringify(body),
+      ...(isReopen ? {} : { body: JSON.stringify(body) }),
       redirect: "manual",
-      signal: AbortSignal.timeout(290000),
+      signal: AbortSignal.timeout(isReopen ? 15000 : 290000),
     });
     response.setHeader("Cache-Control", "private, no-store");
     if ((upstream.status >= 300 && upstream.status < 400) ||
@@ -49,7 +55,9 @@ export default async function handler(request: any, response: any) {
     response.status(upstream.status).json(result);
   } catch {
     response.status(503).json({
-      error: "Privat videoproduksjon fikk ikke svar fra RealtyFlow. Ingen video er publisert.",
+      error: isReopen
+        ? "Kunne ikke åpne den eksisterende private videoen."
+        : "Privat videoproduksjon fikk ikke svar fra RealtyFlow. Ingen video er publisert.",
     });
   }
 }
