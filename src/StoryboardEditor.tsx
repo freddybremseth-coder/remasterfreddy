@@ -184,7 +184,7 @@ export default function StoryboardEditor({
         <button className="admin-secondary" type="button" onClick={onDiscard}>Lukk utkastet</button>
       </div>
       {approved && <p className="storyboard-editor-confirmation">
-        Storyboard godkjent{sceneTiming ? " med musikkstyrte sceneskift" : ""}. Et eget bekreftelsesvindu vises før eventuell betalt produksjon.
+        Storyboard godkjent{sceneTiming ? " med musikkstyrte sceneskift" : ""}. Velg «Lag privat fullengdevideo» i feltet rett nedenfor. 16-sekunders testen er et eget alternativ.
       </p>}
     </section>
   );
