@@ -399,7 +399,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     const approved = preview?.songId === song.id &&
       preview.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
       preview.approved && isValidStoryboard(preview.scenes);
-    if (!song.audioUrl || song.youtubeUrl || privateMp4LoadingId || processingId || !approved || !preview ||
+    if (!song.audioUrl || song.youtubeUrl || privateMp4LoadingId || privateFullMp4LoadingId || processingId || !approved || !preview ||
         activeSongId !== song.id || selected.length !== 8 ||
         savedSongImages[song.id] !== imageKey ||
         visualCheck?.songId !== song.id || visualCheck.imagesKey !== imageKey) {
@@ -798,7 +798,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     <strong>Privat testvideo – 16 sekunder</strong>
                     <p>Test åtte storyboard-scener med åtte bilder og starten av sangen. Fast to sekunder per scene. Dette er ikke den ferdige videoen eller full scenetiming. Ingen YouTube, Gemini eller OpenArt.</p>
                     <button type="button" className="admin-secondary"
-                      disabled={privateMp4LoadingId !== null || processingId !== null ||
+                      disabled={privateMp4LoadingId !== null || privateFullMp4LoadingId !== null || processingId !== null ||
                         songImageCount !== 8 || activeSongId !== song.id ||
                         savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
                         !serverChecked}
@@ -860,7 +860,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <a href={privateFullMp4.result.signedUrl} target="_blank" rel="noreferrer">
                           Åpne privat fullengdevideo <ExternalLink size={14} />
                         </a>
-                        <small>Dette er et privat videoutkast. Det er ikke sendt til YouTube. Egen godkjenning kreves før publisering.</small>
+                        <small>Dette er et privat videoutkast, ikke sendt til YouTube. Merk: «Lag video» bruker en annen produksjons- og publiseringsflyt, og publiserer ikke automatisk denne godkjente private MP4-filen.</small>
                       </div>
                     )}
                   </section>
