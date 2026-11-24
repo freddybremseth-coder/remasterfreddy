@@ -303,6 +303,29 @@ export async function generatePrivateFullMp4(
   return result as PrivateFullMp4;
 }
 
+/** A previously rendered video; requesting this NEVER renders or publishes again. */
+export interface ReopenedPrivateFullMp4 {
+  success: true;
+  recordId: string;
+  signedUrl: string;
+  expiresInSeconds: number;
+  createdAt: string | null;
+  message: string;
+}
+
+export async function reopenLatestPrivateFullMp4(recordId: string): Promise<ReopenedPrivateFullMp4> {
+  const response = await adminFetch(`/api/neural-beat-private-full-video?recordId=${encodeURIComponent(recordId)}`, {
+    method: "GET",
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success !== true || result.recordId !== recordId ||
+      typeof result.signedUrl !== "string" || !result.signedUrl.startsWith("https://") ||
+      result.expiresInSeconds !== 900) {
+    throw new Error(result.error || "Kunne ikke åpne den siste private MP4-filen.");
+  }
+  return result as ReopenedPrivateFullMp4;
+}
+
 /** Result of a server-side visual check. No video/AI/YouTube is involved. */
 export interface VisualPreflightResult {
   ready: true;
