@@ -880,6 +880,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     songTitle={song.title}
                     scenes={matchingPreview.scenes}
                     approved={matchingPreview.approved}
+                    imageUrls={songImages[song.id] || []}
+                    imagesSaved={savedSongImages[song.id] === JSON.stringify(songImages[song.id] || [])}
                     sceneTiming={matchingPreview.timing}
                     onApplyTiming={(timing) => setPreview(current => current?.songId === song.id &&
                       current.sourceKey === storyboardSourceKey(song, pipelineOptions)
