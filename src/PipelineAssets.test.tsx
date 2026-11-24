@@ -1,13 +1,15 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PipelineAssets from "./PipelineAssets";
-import { AdminImage, loadImageBank, PipelineOptions } from "./lib/admin-api";
+import { AdminImage, loadImageBank, loadRemasterVisualLibrary, PipelineOptions } from "./lib/admin-api";
 
 vi.mock("./lib/admin-api", () => ({
   loadImageBank: vi.fn(),
+  loadRemasterVisualLibrary: vi.fn(),
 }));
 
 const loadImageBankMock = vi.mocked(loadImageBank);
+const loadVisualLibraryMock = vi.mocked(loadRemasterVisualLibrary);
 
 function image(overrides: Partial<AdminImage>): AdminImage {
   return {
@@ -30,6 +32,7 @@ function renderAssets(value: PipelineOptions = {}, onOpenImageBank = vi.fn()) {
 describe("PipelineAssets", () => {
   beforeEach(() => {
     loadImageBankMock.mockReset();
+    loadVisualLibraryMock.mockReset();
   });
 
   it("shows empty states, default selections, and image-bank links when no assets exist", async () => {
@@ -138,6 +141,30 @@ describe("PipelineAssets", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Bilde ni/ }));
     expect(screen.getByRole("alert")).toHaveTextContent("Maks åtte bilder");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("loads disco and art previews from the shared Supabase library without auto-selecting them", async () => {
+    loadImageBankMock.mockResolvedValue([]);
+    loadVisualLibraryMock.mockImplementation(async options => ({
+      images: [image({
+        id: options.source === "music" ? "music-1" : "art-1",
+        url: options.source === "music" ? "https://cdn.example.com/disco.png" : "https://cdn.example.com/art.webp",
+        name: options.source === "music" ? "Disco motiv" : "Kunstverk",
+      })],
+      total: 1, page: 0, limit: 24, source: options.source,
+    }));
+    const { onChange } = renderAssets();
+    const sourceSelect = screen.getByRole("combobox", { name: "Bildesamling" });
+    fireEvent.change(sourceSelect, { target: { value: "music" } });
+    expect(await screen.findByRole("button", { name: /Disco motiv/ })).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Disco motiv/ }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      customImageUrls: ["https://cdn.example.com/disco.png"],
+    }));
+    fireEvent.change(sourceSelect, { target: { value: "art" } });
+    expect(await screen.findByRole("button", { name: /Kunstverk/ })).toBeInTheDocument();
+    expect(loadVisualLibraryMock).toHaveBeenCalledWith(expect.objectContaining({ source: "art" }));
   });
 
   it("refetches assets when the refresh token changes", async () => {

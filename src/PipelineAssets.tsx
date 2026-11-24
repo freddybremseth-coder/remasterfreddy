@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Image, Images, Loader2, RefreshCw, Upload } from "lucide-react";
-import { AdminImage, ImageKind, loadImageBank, PipelineOptions } from "./lib/admin-api";
+import { AdminImage, ImageKind, loadImageBank, loadRemasterVisualLibrary, type RemasterVisualSource, PipelineOptions } from "./lib/admin-api";
 import "./pipeline-assets.css";
 
 interface PipelineAssetsProps {
@@ -44,6 +44,58 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
   const [images, setImages] = useState<AdminImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [source, setSource] = useState<RemasterVisualSource>("mine");
+  const [genre, setGenre] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [libraryPage, setLibraryPage] = useState(0);
+  const [libraryRefresh, setLibraryRefresh] = useState(0);
+  const [libraryImages, setLibraryImages] = useState<AdminImage[]>([]);
+  const [libraryTotal, setLibraryTotal] = useState(0);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryError, setLibraryError] = useState("");
+
+  useEffect(() => {
+    if (source === "mine") {
+      setLibraryImages([]);
+      setLibraryTotal(0);
+      setLibraryLoading(false);
+      setLibraryError("");
+      return;
+    }
+    let cancelled = false;
+    setLibraryLoading(true);
+    setLibraryError("");
+    loadRemasterVisualLibrary({
+      source, genre: source === "music" ? genre : undefined,
+      search: searchTerm, page: libraryPage, limit: 24,
+    }).then(result => {
+      if (cancelled) return;
+      setLibraryTotal(result.total);
+      setLibraryImages(current => libraryPage === 0
+        ? result.images
+        : [...current, ...result.images.filter(next => !current.some(old => old.id === next.id))]);
+    }).catch(err => {
+      if (!cancelled) setLibraryError(err instanceof Error ? err.message : "Kunne ikke laste bildene.");
+    }).finally(() => { if (!cancelled) setLibraryLoading(false); });
+    return () => { cancelled = true; };
+  }, [source, genre, searchTerm, libraryPage, refreshToken, libraryRefresh]);
+
+  function chooseSource(next: RemasterVisualSource) {
+    setSource(next);
+    setLibraryImages([]);
+    setLibraryPage(0);
+    setSearchInput("");
+    setSearchTerm("");
+  }
+
+  function searchLibrary() {
+    setLibraryImages([]);
+    setLibraryPage(0);
+    setSearchTerm(searchInput.trim());
+    setLibraryRefresh(n => n + 1);
+  }
+
 
   async function refresh() {
     setLoading(true);
@@ -65,6 +117,10 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
   const logos = images.filter((item) => item.kind === "logo");
   const thumbnails = images.filter((item) => item.kind === "thumbnail");
   const slides = images.filter((item) => item.kind === "image");
+  const visibleSlides = source === "mine"
+    ? slides.filter(item => !searchTerm || (item.name || "").toLowerCase().includes(searchTerm.toLowerCase()))
+    : libraryImages;
+  const visibleCount = source === "mine" ? visibleSlides.length : libraryTotal;
   const selectedLogo = logos.find((item) => item.url === value.logoUrl);
   const selectedThumbnail = thumbnails.find((item) => item.url === value.customThumbnailUrl);
 
@@ -90,8 +146,11 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
           <strong>Visuelle valg</strong>
           <span>Velg bilder som skal brukes i videoen.</span>
         </div>
-        <button className="admin-secondary" type="button" onClick={refresh} disabled={loading}>
-          {loading ? <Loader2 className="admin-spinner" size={15} /> : <RefreshCw size={15} />}
+        <button className="admin-secondary" type="button" onClick={() => {
+          void refresh();
+          setLibraryRefresh(n => n + 1);
+        }} disabled={loading || libraryLoading}>
+          {loading || libraryLoading ? <Loader2 className="admin-spinner" size={15} /> : <RefreshCw size={15} />}
           Oppdater
         </button>
       </div>
@@ -159,25 +218,90 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
         </div>
       </div>
 
-      <p role="status">{selectedImages.size} av maks 8 videobilder valgt. Bildene brukes i valgt rekkefølge.</p>
+      <div className="pipeline-library-controls">
+        <label>
+          <span>Bildesamling</span>
+          <select aria-label="Bildesamling" value={source} onChange={event => chooseSource(event.target.value as RemasterVisualSource)}>
+            <option value="mine">Mine valgte Re-master-bilder</option>
+            <option value="music">Musikkbilder – disco, rock og andre sjangre</option>
+            <option value="art">Kunstgalleri – forhåndsvisninger</option>
+            <option value="other">Andre egne bilder fra Supabase</option>
+          </select>
+        </label>
+        {source === "music" && (
+          <label>
+            <span>Musikksjanger</span>
+            <select aria-label="Musikksjanger" value={genre} onChange={event => {
+              setGenre(event.target.value);
+              setLibraryPage(0);
+              setLibraryImages([]);
+            }}>
+              <option value="all">Alle sjangre</option>
+              <option value="dance">Dance / disco / neon</option>
+              <option value="rock">Rock</option>
+              <option value="dream">Drømmende</option>
+              <option value="nostalgic">Nostalgisk</option>
+              <option value="romantic">Romantisk</option>
+              <option value="sensual">Sensuell</option>
+            </select>
+          </label>
+        )}
+        <label>
+          <span>Søk etter bilder</span>
+          <input aria-label="Søk etter bilder" value={searchInput}
+            onChange={event => setSearchInput(event.target.value)}
+            onKeyDown={event => { if (event.key === "Enter") searchLibrary(); }}
+            placeholder={source === "art" ? "Søk etter kunstverkets tittel" : "Søk i samlingen"} />
+        </label>
+        <button type="button" className="admin-secondary" onClick={searchLibrary}>Søk</button>
+      </div>
+      <p role="status">{visibleCount} bilder i valgt samling · {selectedImages.size} av maks 8 videobilder valgt.</p>
+      {selectedImages.size > 0 && (
+        <div className="pipeline-chosen-images" aria-label="Valgte bilder i videorekkefølge">
+          {Array.from(selectedImages).map((url, index) => (
+            <button type="button" key={url} onClick={() => toggleSlide(url)}
+              title="Fjern dette bildet fra videoen">
+              <img src={url} alt={`Valgt bilde ${index + 1}`} loading="lazy" />
+              <span>{index + 1}. Fjern</span>
+            </button>
+          ))}
+        </div>
+      )}
       {imageLimitMessage && <p role="alert">{imageLimitMessage}</p>}
+      {libraryError && <p className="admin-error" role="alert">{libraryError}</p>}
+      {source === "art" && (
+        <p className="pipeline-library-note">Kunstarkivet viser kun visningsfiler. Salgsoriginaler og trykkfiler forblir private. Upubliserte verk må velges bevisst.</p>
+      )}
+      {source === "music" && (
+        <p className="pipeline-library-note">Disco-/neonbildene blir bare brukt når du velger dem til en sang – ingen automatisk stilblanding.</p>
+      )}
       <div className="pipeline-slide-grid">
-        {slides.length === 0 ? (
-          <EmptyAssetState
-            icon="image"
-            message="Ingen slideshow-bilder er lastet opp"
-            action="Gå til Bildebank og last opp bilder"
-            onClick={() => onOpenImageBank("image")}
-          />
+        {visibleSlides.length === 0 ? (
+          source === "mine" ? (
+            <EmptyAssetState
+              icon="image"
+              message="Ingen slideshow-bilder er lastet opp"
+              action="Gå til Bildebank og last opp bilder"
+              onClick={() => onOpenImageBank("image")}
+            />
+          ) : <p className="pipeline-empty">{libraryLoading ? "Henter bilder …" : "Ingen bilder funnet i denne samlingen."}</p>
         ) : (
-          slides.map((item) => (
-            <button key={item.id} type="button" className={selectedImages.has(item.url) ? "selected" : ""} onClick={() => toggleSlide(item.url)}>
+          visibleSlides.map((item) => (
+            <button key={item.id} type="button" className={selectedImages.has(item.url) ? "selected" : ""}
+              onClick={() => toggleSlide(item.url)} aria-pressed={selectedImages.has(item.url)}>
               <img src={item.thumbnail_url || item.url} alt={item.name || "Slideshow"} loading="lazy" />
               <span>{item.name || "Bilde"}</span>
+              {item.category && <small>{item.category}</small>}
             </button>
           ))
         )}
       </div>
+      {source !== "mine" && libraryImages.length < libraryTotal && (
+        <button type="button" className="admin-secondary pipeline-load-more"
+          disabled={libraryLoading} onClick={() => setLibraryPage(page => page + 1)}>
+          {libraryLoading ? "Henter flere …" : `Vis flere bilder (${libraryImages.length} av ${libraryTotal})`}
+        </button>
+      )}
     </div>
   );
 }

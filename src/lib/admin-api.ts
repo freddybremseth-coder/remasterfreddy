@@ -32,6 +32,9 @@ export interface AdminImage {
   size_bytes?: number | null;
   use_count?: number | null;
   created_at?: string;
+  source?: "mine" | "music" | "art" | "other";
+  category?: string;
+  published?: boolean;
 }
 
 export interface StoryboardSceneTiming {
@@ -278,6 +281,35 @@ export async function saveSongVideoImages(recordId: string, imageUrls: string[])
     throw new Error("Serveren bekreftet et annet bildeutvalg enn det du valgte.");
   }
   return result.imageUrls as string[];
+}
+
+export type RemasterVisualSource = "mine" | "music" | "art" | "other";
+
+export interface RemasterVisualPage {
+  images: AdminImage[];
+  total: number;
+  page: number;
+  limit: number;
+  source: RemasterVisualSource;
+}
+
+/** Read-only paginated catalogue: image bank, music library, public art and other first-party assets. */
+export async function loadRemasterVisualLibrary(options: {
+  source: RemasterVisualSource; genre?: string; search?: string; page?: number; limit?: number;
+}): Promise<RemasterVisualPage> {
+  const params = new URLSearchParams({
+    source: options.source,
+    page: String(options.page ?? 0),
+    limit: String(options.limit ?? 24),
+  });
+  if (options.genre && options.genre !== "all") params.set("genre", options.genre);
+  if (options.search) params.set("search", options.search);
+  const response = await adminFetch(`/api/neural-beat-visual-library?${params.toString()}`, { method: "GET" });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(result.images) || !Number.isFinite(result.total)) {
+    throw new Error(result.error || "Kunne ikke hente bilder fra Supabase.");
+  }
+  return result as RemasterVisualPage;
 }
 
 export async function loadImageBank(kind?: ImageKind): Promise<AdminImage[]> {
