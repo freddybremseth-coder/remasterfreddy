@@ -135,7 +135,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("savedSongImages[song.id] !== imageKey");
     expect(source).toContain("visualCheck?.songId !== song.id");
     expect(source).toContain("selected.length !== 8");
-    expect(source).toContain("Egen godkjenning kreves før publisering.");
+    expect(source).toContain("publiserer ikke automatisk denne godkjente private MP4-filen.");
     expect(client).toContain("/api/neural-beat-private-full-video");
     expect(client).toContain("sceneTiming?: StoryboardSceneTiming");
     expect(proxy).toContain("/api/neural-beat/private-full-video");
