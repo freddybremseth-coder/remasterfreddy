@@ -290,3 +290,11 @@
 .admin-private-video-status{padding:10px 12px;border-radius:10px;border:1px solid rgba(103,232,249,.35);background:rgba(12,33,56,.82);color:#e0f2fe;font-size:13px;line-height:1.5}
 .admin-private-video-status strong{display:block;color:#f8fafc;font-size:14px;margin-bottom:3px}
 .admin-private-video-error{padding:11px 12px;border-radius:10px;border:1px solid rgba(251,113,133,.6);background:rgba(72,23,34,.48);color:#ffe4e6;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+
+/* After scene approval, video length choices sit immediately below the editor.
+   Whole-song private review is the primary action; 16s remains secondary. */
+.admin-video-choice-intro{margin:16px 0 10px;padding:14px 16px;border:1px solid rgba(103,232,249,.42);border-radius:12px;background:rgba(11,37,56,.75);scroll-margin-top:90px}
+.admin-video-choice-intro strong{display:block;color:#f0f9ff;font-size:15px;margin:0 0 6px}
+.admin-video-choice-intro p{margin:0;color:#cbd5e1;font-size:13px;line-height:1.5}
+.admin-private-mp4-preview[aria-label="Privat musikkvideo i full lengde"]{border:1px solid rgba(103,232,249,.50);background:rgba(10,37,55,.87)}
+.admin-private-mp4-preview[aria-label="Privat musikkvideo i full lengde"]>button{min-height:48px;border-color:rgba(103,232,249,.65);font-weight:700}

@@ -797,35 +797,46 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     currentlyProcessing={Boolean(processingId)}
                   />
                 )}
-                {matchingPreview && approved && (
-                  <section className="admin-private-mp4-preview" aria-label="Privat MP4-test uten publisering">
-                    <strong>Privat testvideo – 16 sekunder</strong>
-                    <p>Test åtte storyboard-scener med åtte bilder og starten av sangen. Fast to sekunder per scene. Dette er ikke den ferdige videoen eller full scenetiming. Ingen YouTube, Gemini eller OpenArt.</p>
-                    <button type="button" className="admin-secondary"
-                      disabled={privateMp4LoadingId !== null || privateFullMp4LoadingId !== null || processingId !== null ||
-                        songImageCount !== 8 || activeSongId !== song.id ||
-                        savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
-                        !serverChecked}
-                      onClick={() => { void buildPrivateMp4(song); }}>
-                      {privateMp4LoadingId === song.id ? "Lager privat MP4 …" : "Lag privat MP4-test (16 sek)"}
-                    </button>
-                    {songImageCount !== 8 && <small>Velg og lagre åtte bilder, ett per scene, før testen.</small>}
-                    {privateMp4?.result.recordId === song.id &&
-                     privateMp4.imageKey === JSON.stringify(songImages[song.id] || []) &&
-                     privateMp4.scenesKey === JSON.stringify(matchingPreview.scenes) &&
-                     privateMp4.sourceKey === storyboardSourceKey(song, pipelineOptions) && (
-                      <div className="admin-private-mp4-result">
-                        <p role="status">Privat MP4 ferdig. Avspillingslenken er gyldig i 15 minutter.</p>
-                        <video controls playsInline preload="metadata"
-                          src={privateMp4.result.signedUrl}
-                          aria-label={`Privat MP4-forhåndsvisning av ${song.title}`} />
-                        <a href={privateMp4.result.signedUrl} target="_blank" rel="noreferrer">
-                          Åpne privat MP4 i ny fane <ExternalLink size={14} />
-                        </a>
-                      </div>
-                    )}
-                  </section>
+                {matchingPreview && (
+                  <StoryboardEditor
+                    songTitle={song.title}
+                    scenes={matchingPreview.scenes}
+                    approved={matchingPreview.approved}
+                    sceneTiming={matchingPreview.timing}
+                    onApplyTiming={(timing) => setPreview(current => current?.songId === song.id &&
+                      current.sourceKey === storyboardSourceKey(song, pipelineOptions)
+                      ? { ...current, timing, approved: false } : current)}
+                    onClearTiming={() => setPreview(current => current?.songId === song.id &&
+                      current.timing !== undefined
+                      ? { ...current, timing: undefined, approved: false } : current)}
+                    onChangeScene={(index, text) => setPreview(current => current?.songId === song.id
+                      ? { ...current, approved: false, scenes: current.scenes.map((scene, i) => i === index ? text : scene) }
+                      : current)}
+                    onApplyContinuity={(note) => setPreview(current => {
+                      if (!current || current.songId !== song.id ||
+                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
+                      const updated = applyContinuityNote(current.scenes, note);
+                      return updated ? { ...current, scenes: updated, approved: false } : current;
+                    })}
+                    onApplyMusicSections={(sections) => setPreview(current => {
+                      if (!current || current.songId !== song.id ||
+                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
+                      const updated = applyMusicSectionCues(current.scenes, sections);
+                      return updated ? { ...current, scenes: updated, approved: false } : current;
+                    })}
+                    onApprove={() => setPreview(current => current?.songId === song.id &&
+                      current.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+                      isValidStoryboard(current.scenes) ? { ...current, approved: true } : current)}
+                    onDiscard={() => setPreview(current => current?.songId === song.id ? null : current)}
+                  />
                 )}
+                {matchingPreview && approved && (
+                  <div className="admin-video-choice-intro" role="status">
+                    <strong>Storyboard godkjent – velg videolengde</strong>
+                    <p><b>Hele sangen:</b> Velg «Lag privat fullengdevideo» rett nedenfor. 16-sekunders testen ligger som alternativ etterpå.</p>
+                  </div>
+                )}
+
                 {matchingPreview && approved && (
                   <section className="admin-private-mp4-preview" aria-label="Privat musikkvideo i full lengde">
                     <strong>Komplett privat musikkvideo</strong>
@@ -882,39 +893,36 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     )}
                   </section>
                 )}
-                {matchingPreview && (
-                  <StoryboardEditor
-                    songTitle={song.title}
-                    scenes={matchingPreview.scenes}
-                    approved={matchingPreview.approved}
-                    sceneTiming={matchingPreview.timing}
-                    onApplyTiming={(timing) => setPreview(current => current?.songId === song.id &&
-                      current.sourceKey === storyboardSourceKey(song, pipelineOptions)
-                      ? { ...current, timing, approved: false } : current)}
-                    onClearTiming={() => setPreview(current => current?.songId === song.id &&
-                      current.timing !== undefined
-                      ? { ...current, timing: undefined, approved: false } : current)}
-                    onChangeScene={(index, text) => setPreview(current => current?.songId === song.id
-                      ? { ...current, approved: false, scenes: current.scenes.map((scene, i) => i === index ? text : scene) }
-                      : current)}
-                    onApplyContinuity={(note) => setPreview(current => {
-                      if (!current || current.songId !== song.id ||
-                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
-                      const updated = applyContinuityNote(current.scenes, note);
-                      return updated ? { ...current, scenes: updated, approved: false } : current;
-                    })}
-                    onApplyMusicSections={(sections) => setPreview(current => {
-                      if (!current || current.songId !== song.id ||
-                          current.sourceKey !== storyboardSourceKey(song, pipelineOptions)) return current;
-                      const updated = applyMusicSectionCues(current.scenes, sections);
-                      return updated ? { ...current, scenes: updated, approved: false } : current;
-                    })}
-                    onApprove={() => setPreview(current => current?.songId === song.id &&
-                      current.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
-                      isValidStoryboard(current.scenes) ? { ...current, approved: true } : current)}
-                    onDiscard={() => setPreview(current => current?.songId === song.id ? null : current)}
-                  />
+                {matchingPreview && approved && (
+                  <section className="admin-private-mp4-preview" aria-label="Privat MP4-test uten publisering">
+                    <strong>Privat testvideo – 16 sekunder</strong>
+                    <p>Test åtte storyboard-scener med åtte bilder og starten av sangen. Fast to sekunder per scene. Dette er ikke den ferdige videoen eller full scenetiming. Ingen YouTube, Gemini eller OpenArt.</p>
+                    <button type="button" className="admin-secondary"
+                      disabled={privateMp4LoadingId !== null || privateFullMp4LoadingId !== null || processingId !== null ||
+                        songImageCount !== 8 || activeSongId !== song.id ||
+                        savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
+                        !serverChecked}
+                      onClick={() => { void buildPrivateMp4(song); }}>
+                      {privateMp4LoadingId === song.id ? "Lager privat MP4 …" : "Lag privat MP4-test (16 sek)"}
+                    </button>
+                    {songImageCount !== 8 && <small>Velg og lagre åtte bilder, ett per scene, før testen.</small>}
+                    {privateMp4?.result.recordId === song.id &&
+                     privateMp4.imageKey === JSON.stringify(songImages[song.id] || []) &&
+                     privateMp4.scenesKey === JSON.stringify(matchingPreview.scenes) &&
+                     privateMp4.sourceKey === storyboardSourceKey(song, pipelineOptions) && (
+                      <div className="admin-private-mp4-result">
+                        <p role="status">Privat MP4 ferdig. Avspillingslenken er gyldig i 15 minutter.</p>
+                        <video controls playsInline preload="metadata"
+                          src={privateMp4.result.signedUrl}
+                          aria-label={`Privat MP4-forhåndsvisning av ${song.title}`} />
+                        <a href={privateMp4.result.signedUrl} target="_blank" rel="noreferrer">
+                          Åpne privat MP4 i ny fane <ExternalLink size={14} />
+                        </a>
+                      </div>
+                    )}
+                  </section>
                 )}
+
               </article>
             );
           })

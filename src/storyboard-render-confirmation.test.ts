@@ -143,6 +143,22 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(config).toContain("api/neural-beat-private-full-video.ts");
   });
 
+  it("places full-length private video first, immediately AFTER storyboard approval, not before the editor", () => {
+    const editor = source.indexOf("<StoryboardEditor");
+    const approval = source.indexOf("onApprove={() => setPreview(", editor);
+    const choice = source.indexOf("Storyboard godkjent – velg videolengde", approval);
+    const full = source.indexOf('aria-label="Privat musikkvideo i full lengde"', choice);
+    const short = source.indexOf('aria-label="Privat MP4-test uten publisering"', full);
+    expect(editor).toBeGreaterThan(0);
+    expect(approval).toBeGreaterThan(editor);
+    expect(choice).toBeGreaterThan(approval);
+    expect(full).toBeGreaterThan(choice);
+    expect(short).toBeGreaterThan(full);
+    expect(source).toContain('16-sekunders testen ligger som alternativ etterpå.');
+    const storyboard = readFileSync("src/StoryboardEditor.tsx", "utf8");
+    expect(storyboard).toContain('Velg «Lag privat fullengdevideo» i feltet rett nedenfor.');
+  });
+
   it("shows an immediately discoverable player or an inline error after private full-song rendering", () => {
     expect(source).toContain('privateFullMp4LoadingId === song.id && (');
     expect(source).toContain('Når den er klar, vises spilleren rett under knappen.');
