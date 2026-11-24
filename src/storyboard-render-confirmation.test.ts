@@ -131,7 +131,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("generatePrivateFullMp4(");
     expect(source).toContain("song.id, preview.scenes, preview.timing, fullVideoGentleMotion");
     expect(source).toContain("Lag privat fullengdevideo");
-    expect(source).toContain("Rolig kamerabevegelse (Ken Burns)");
+    expect(source).toContain("Rolig kamerabevegelse <small>Ken Burns-effekt</small>");
     expect(source).toContain("savedSongImages[song.id] !== imageKey");
     expect(source).toContain("visualCheck?.songId !== song.id");
     expect(source).toContain("selected.length !== 8");
@@ -154,9 +154,30 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(choice).toBeGreaterThan(approval);
     expect(full).toBeGreaterThan(choice);
     expect(short).toBeGreaterThan(full);
-    expect(source).toContain('16-sekunders testen ligger som alternativ etterpå.');
+    expect(source).toContain('Lag og se gjennom videoen her. Ingen automatisk YouTube-publisering.');
     const storyboard = readFileSync("src/StoryboardEditor.tsx", "utf8");
     expect(storyboard).toContain('Velg «Lag privat fullengdevideo» i feltet rett nedenfor.');
+  });
+
+  it("uses a full-row grid workspace for video reviews, with a wide responsive player and secondary 16-second option", () => {
+    const css = readFileSync("src/admin-studio.css", "utf8");
+    const row = css.indexOf(".admin-song-row {");
+    const workspace = css.indexOf(".admin-song-row > .admin-video-workspace");
+    const primary = source.indexOf('className="admin-private-mp4-preview admin-private-video-full"');
+    const short = source.indexOf('className="admin-private-mp4-preview admin-private-video-short"');
+    const editor = source.indexOf("<StoryboardEditor");
+    expect(row).toBeGreaterThan(-1);
+    expect(workspace).toBeGreaterThan(row);
+    expect(css.slice(workspace, workspace + 200)).toContain("grid-column: 1 / -1");
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(css).toContain("admin-private-mp4-result video");
+    expect(css).toContain("aspect-ratio: 16 / 9");
+    expect(css).toContain("@media (max-width: 620px)");
+    expect(source).toContain('className="admin-video-workspace"');
+    expect(source).toContain('className="admin-primary admin-private-full-action"');
+    expect(editor).toBeLessThan(primary);
+    expect(primary).toBeLessThan(short);
+    expect(source).toContain("Spill av eller åpne privat fullengdevideo");
   });
 
   it("shows an immediately discoverable player or an inline error after private full-song rendering", () => {

@@ -831,37 +831,50 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   />
                 )}
                 {matchingPreview && approved && (
-                  <div className="admin-video-choice-intro" role="status">
-                    <strong>Storyboard godkjent – velg videolengde</strong>
-                    <p><b>Hele sangen:</b> Velg «Lag privat fullengdevideo» rett nedenfor. 16-sekunders testen ligger som alternativ etterpå.</p>
-                  </div>
-                )}
+                  <div className="admin-video-workspace" aria-label={`Privat videoproduksjon for ${song.title}`}>
+                    <div className="admin-video-choice-intro" role="status">
+                      <div className="admin-video-choice-approved">
+                        <CheckCircle2 size={20} aria-hidden="true" />
+                        <strong>Storyboard godkjent – velg videolengde</strong>
+                      </div>
+                      <p>Lag og se gjennom videoen her. Ingen automatisk YouTube-publisering.</p>
+                    </div>
 
-                {matchingPreview && approved && (
-                  <section className="admin-private-mp4-preview" aria-label="Privat musikkvideo i full lengde">
-                    <strong>Komplett privat musikkvideo</strong>
-                    <p>Lag en MP4 med hele sangen og åtte videobilder. Bruker godkjente scenetider hvis du har satt dem, ellers fordeles scenene jevnt. Videoen lagres privat og publiseres aldri automatisk.</p>
-                    <label className="admin-private-motion-choice">
-                      <input type="checkbox" checked={fullVideoGentleMotion}
-                        onChange={event => {
-                          setFullVideoGentleMotion(event.target.checked);
-                          setPrivateFullMp4(null);
-                          setPrivateFullMp4Error(null);
-                        }} />
-                      Rolig kamerabevegelse (Ken Burns)
-                    </label>
-                    <small>{matchingPreview.timing
-                      ? "Godkjente tidsmarkører styrer sceneskiftene."
-                      : "Ingen tidsmarkører godkjent – scenene deles jevnt over hele sangen."}</small>
-                    <button type="button" className="admin-secondary"
+                    <section className="admin-private-mp4-preview admin-private-video-full" aria-label="Privat musikkvideo i full lengde">
+                      <div className="admin-private-video-heading">
+                        <div>
+                          <span className="admin-private-video-eyebrow">HOVEDVALG · PRIVAT FORHÅNDSVISNING</span>
+                          <strong>Komplett musikkvideo</strong>
+                          <p>Hele sangen med dine åtte bilder og godkjent storyboard.</p>
+                        </div>
+                        <span className="admin-private-video-chip">Hele sangen</span>
+                      </div>
+                      <div className="admin-private-video-settings">
+                        <label className="admin-private-motion-choice">
+                          <input type="checkbox" checked={fullVideoGentleMotion}
+                            onChange={event => {
+                              setFullVideoGentleMotion(event.target.checked);
+                              setPrivateFullMp4(null);
+                              setPrivateFullMp4Error(null);
+                            }} />
+                          <span>Rolig kamerabevegelse <small>Ken Burns-effekt</small></span>
+                        </label>
+                        <small className="admin-private-video-timing">{matchingPreview.timing
+                          ? "Godkjente tidsmarkører styrer sceneskiftene."
+                          : "Scenene fordeles jevnt over sangen."}</small>
+                      </div>
+                      <button type="button" className="admin-primary admin-private-full-action"
                       disabled={privateFullMp4LoadingId !== null || privateMp4LoadingId !== null ||
                         processingId !== null || songImageCount !== 8 ||
                         activeSongId !== song.id ||
                         savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
                         !serverChecked}
                       onClick={() => { void buildPrivateFullMp4(song); }}>
-                      {privateFullMp4LoadingId === song.id ? "Lager komplett privatvideo …" : "Lag privat fullengdevideo"}
-                    </button>
+                        {privateFullMp4LoadingId === song.id
+                          ? <Loader2 size={18} className="admin-spinner" aria-hidden="true" />
+                          : <Play size={18} aria-hidden="true" />}
+                        {privateFullMp4LoadingId === song.id ? "Lager komplett privatvideo …" : "Lag privat fullengdevideo"}
+                      </button>
                     {privateFullMp4LoadingId === song.id && (
                       <p className="admin-private-video-status" role="status">
                         Lager privat MP4 med hele sangen. Når den er klar, vises spilleren rett under knappen.
@@ -891,13 +904,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <small>Dette er et privat videoutkast, ikke sendt til YouTube. Merk: «Lag video» bruker en annen produksjons- og publiseringsflyt, og publiserer ikke automatisk denne godkjente private MP4-filen.</small>
                       </div>
                     )}
-                  </section>
-                )}
-                {matchingPreview && approved && (
-                  <section className="admin-private-mp4-preview" aria-label="Privat MP4-test uten publisering">
-                    <strong>Privat testvideo – 16 sekunder</strong>
-                    <p>Test åtte storyboard-scener med åtte bilder og starten av sangen. Fast to sekunder per scene. Dette er ikke den ferdige videoen eller full scenetiming. Ingen YouTube, Gemini eller OpenArt.</p>
-                    <button type="button" className="admin-secondary"
+                    </section>
+
+                    <section className="admin-private-mp4-preview admin-private-video-short" aria-label="Privat MP4-test uten publisering">
+                      <div className="admin-private-short-description">
+                        <strong>Privat testvideo – 16 sekunder</strong>
+                        <p>Valgfri hurtigtest med to sekunder per scene.</p>
+                      </div>
+                      <button type="button" className="admin-secondary"
                       disabled={privateMp4LoadingId !== null || privateFullMp4LoadingId !== null || processingId !== null ||
                         songImageCount !== 8 || activeSongId !== song.id ||
                         savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
@@ -920,7 +934,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         </a>
                       </div>
                     )}
-                  </section>
+                    </section>
+                  </div>
                 )}
 
               </article>
