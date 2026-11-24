@@ -86,7 +86,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("song.metadata?.remasterVideoImageUrls");
     expect(source).toContain("await saveSongVideoImages(songId, snapshot)");
     expect(source).toContain("savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || [])");
-    expect(source).toContain("Lagre bildevalg for denne sangen");
+    expect(source).toContain("onSaveSelection={activeSongId && activeSongId !== NEW_SONG_DRAFT");
+    expect(source).toContain("saveSelectionDisabled={savingImages");
   });
 
   it("offers a server-side visual check without AI and blocks video until it succeeds", () => {
@@ -94,7 +95,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     const proxy = readFileSync("api/neural-beat-visual-preflight.ts", "utf8");
     expect(source).toContain("async function inspectImageSelection()");
     expect(source).toContain("await checkSongVideoImages(songId)");
-    expect(source).toContain("Kontroller videobilder – uten AI eller YouTube");
+    expect(source).toContain("onCheckSelection={activeSongId && activeSongId !== NEW_SONG_DRAFT");
+    expect(source).toContain("imageCheckMessage={visualCheckMessage}");
     expect(source).toContain("visualCheck.imagesKey !== JSON.stringify(selectedOptions.customImageUrls)");
     expect(source).toContain("Bildeplan for åtte scener");
     expect(source).toContain("Dette er en kontroll av bildefiler og scenevalg, ikke en ferdig MP4-video.");

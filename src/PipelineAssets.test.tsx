@@ -143,6 +143,54 @@ describe("PipelineAssets", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("keeps the save action above a large paginated music gallery and calls the correct save handler", async () => {
+    loadImageBankMock.mockResolvedValue([]);
+    loadVisualLibraryMock.mockResolvedValue({
+      images: Array.from({ length: 24 }, (_, i) => image({
+        id: `music-${i}`, name: `Disco motiv ${i}`,
+        url: `https://cdn.example.com/music-${i}.png`,
+      })),
+      total: 930, page: 0, limit: 24, source: "music",
+    });
+    const onSaveSelection = vi.fn();
+    const onCheckSelection = vi.fn();
+    const { container } = render(
+      <PipelineAssets value={{ customImageUrls: ["https://cdn.example.com/music-0.png"] }}
+        onChange={vi.fn()} onOpenImageBank={vi.fn()}
+        onSaveSelection={onSaveSelection} saveSelectionDisabled={false}
+        selectionSaved={false} onCheckSelection={onCheckSelection} checkSelectionDisabled={true} />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Bildesamling" }), {
+      target: { value: "music" },
+    });
+    expect(await screen.findByText("930 bilder i valgt samling · 1 av maks 8 videobilder valgt.")).toBeInTheDocument();
+    const toolbar = screen.getByRole("group", { name: "Lagre og kontroller videobilder" });
+    const gallery = container.querySelector(".pipeline-slide-grid");
+    expect(gallery).not.toBeNull();
+    expect(toolbar.compareDocumentPosition(gallery!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    const save = within(toolbar).getByRole("button", { name: "Lagre bildevalg" });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(onSaveSelection).toHaveBeenCalledTimes(1);
+    expect(within(toolbar).getByRole("button", { name: "Kontroller bilder" })).toBeDisabled();
+    expect(onCheckSelection).not.toHaveBeenCalled();
+  });
+
+  it("shows saved state and disables unnecessary repeated save clicks", async () => {
+    loadImageBankMock.mockResolvedValue([]);
+    const onSaveSelection = vi.fn();
+    render(
+      <PipelineAssets value={{ customImageUrls: [] }} onChange={vi.fn()}
+        onOpenImageBank={vi.fn()} onSaveSelection={onSaveSelection}
+        selectionSaved saveSelectionDisabled />,
+    );
+    expect(await screen.findByText("Lagret på sangen")).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Lagre bildevalg" });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(onSaveSelection).not.toHaveBeenCalled();
+  });
+
   it("loads disco and art previews from the shared Supabase library without auto-selecting them", async () => {
     loadImageBankMock.mockResolvedValue([]);
     loadVisualLibraryMock.mockImplementation(async options => ({

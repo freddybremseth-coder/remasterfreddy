@@ -463,26 +463,24 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         onChange={updateScopedOptions}
         refreshToken={assetRefreshToken}
         onOpenImageBank={onOpenImageBank}
+        onSaveSelection={activeSongId && activeSongId !== NEW_SONG_DRAFT
+          ? () => { void saveImageSelection(); } : undefined}
+        savingSelection={savingImages}
+        saveSelectionDisabled={savingImages || Boolean(processingId) ||
+          Boolean(songs.find(song => song.id === activeSongId)?.youtubeUrl) ||
+          savedSongImages[activeSongId] === JSON.stringify(songImages[activeSongId] || [])}
+        selectionSaved={savedSongImages[activeSongId] === JSON.stringify(songImages[activeSongId] || [])}
+        imageSaveMessage={imageSaveMessage}
+        onCheckSelection={activeSongId && activeSongId !== NEW_SONG_DRAFT
+          ? () => { void inspectImageSelection(); } : undefined}
+        checkingSelection={checkingImages}
+        checkSelectionDisabled={checkingImages || savingImages || Boolean(processingId) ||
+          !songImages[activeSongId]?.length ||
+          savedSongImages[activeSongId] !== JSON.stringify(songImages[activeSongId] || [])}
+        imageCheckMessage={visualCheckMessage}
       />
       {activeSongId && activeSongId !== NEW_SONG_DRAFT && (
         <div className="pipeline-asset-field">
-          <button type="button" className="admin-secondary"
-            disabled={savingImages || Boolean(processingId) || Boolean(songs.find(song => song.id === activeSongId)?.youtubeUrl)}
-            onClick={() => { void saveImageSelection(); }}>
-            {savingImages ? "Lagrer bilder …" : "Lagre bildevalg for denne sangen"}
-          </button>
-          <p role="status">{savedSongImages[activeSongId] === JSON.stringify(songImages[activeSongId] || [])
-            ? "Bildevalgene er lagret på sangen."
-            : "Bildevalgene er ikke lagret på serveren ennå."}</p>
-          {imageSaveMessage && <p role="status">{imageSaveMessage}</p>}
-          <button type="button" className="admin-secondary"
-            disabled={checkingImages || savingImages || Boolean(processingId) ||
-              !songImages[activeSongId]?.length ||
-              savedSongImages[activeSongId] !== JSON.stringify(songImages[activeSongId] || [])}
-            onClick={() => { void inspectImageSelection(); }}>
-            {checkingImages ? "Kontrollerer bildefiler …" : "Kontroller videobilder – uten AI eller YouTube"}
-          </button>
-          {visualCheckMessage && <p className="admin-success" role="status">{visualCheckMessage}</p>}
           {visualCheck?.songId === activeSongId &&
            visualCheck.imagesKey === JSON.stringify(songImages[activeSongId] || []) && (
             <div aria-label="Bildeplan for åtte scener">
