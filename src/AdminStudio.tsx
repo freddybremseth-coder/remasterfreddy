@@ -683,9 +683,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         return (
           <div className="admin-render-confirmation" role="dialog" aria-modal="true" aria-labelledby="render-confirm-title">
             <div className="admin-render-confirmation-panel">
-              <h3 id="render-confirm-title">Bekreft videoproduksjon</h3>
+              <h3 id="render-confirm-title">Bekreft YouTube-produksjon</h3>
               <p><strong>{song?.title || "Ukjent sang"}</strong></p>
-              <p><strong>Video med godkjent storyboard</strong></p>
+              <p><strong>Fullengde musikkvideo til YouTube med godkjent storyboard</strong></p>
               <p>Videoen skal bruke bildene du har valgt fra bildebanken. Ingen abstrakte sirkler er godkjent som erstatning. Gemini brukes ikke til bilder. Sang- og metadataanalyse kan bruke andre AI-tjenester. Videomotorens støtte for dette må fortsatt verifiseres. Hvis du fortsetter, starter videoproduksjon og eventuell YouTube-publisering etter valgene dine.</p>
               <p><strong>{confirmedImages.length} valgte videobilder</strong> – sjekk at dette er bildene du ønsker før produksjon.</p>
               <p role="status">{imageCheckPassed
@@ -702,7 +702,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                 <button type="button" className="admin-secondary" onClick={() => setPendingRender(null)}>Avbryt – ingen kostnader</button>
                 <button type="button" className="admin-primary" disabled={!valid || processingId !== null}
                   onClick={() => { if (song && valid) void runPipeline(song); }}>
-                  Start video uten Gemini-bilder
+                  Start YouTube-produksjon uten Gemini-bilder
                 </button>
               </div>
             </div>
@@ -730,7 +730,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                 ? "Koble Re-Master Freddy til riktig YouTube-kanal først."
                 : !songImageCount ? "Velg videobilder fra bildebanken først."
                 : !serverChecked ? "Kontroller de valgte videobildene på serveren først."
-                : approved ? "Lag video med godkjent storyboard og valgte bilder." : "Lag og godkjenn de åtte scenene først.";
+                : approved ? "Lag YouTube-video med godkjent storyboard og valgte bilder." : "Lag og godkjenn de åtte scenene først.";
 
             return (
               <article className="admin-song-row" key={song.id}>
@@ -805,7 +805,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     title={disabledReason}
                   >
                     {processingId === song.id ? <Loader2 className="admin-spinner" size={16} /> : <Play size={16} />}
-                    Lag video
+                    Lag YouTube-video
                   </button>
                   {canProcess && (
                     <a
@@ -915,16 +915,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     <div className="admin-video-choice-intro" role="status">
                       <div className="admin-video-choice-approved">
                         <CheckCircle2 size={20} aria-hidden="true" />
-                        <strong>Storyboard godkjent – velg videolengde</strong>
+                        <strong>Storyboard godkjent – velg hvor videoen skal brukes</strong>
                       </div>
-                      <p>Lag og se gjennom videoen her. Ingen automatisk YouTube-publisering.</p>
+                      <p>Velg mellom en privat fullengdevideo for gjennomgang og en YouTube-produksjon. Begge bruker sangens valgte motiver, men YouTube-løpet rendrer foreløpig separat i RealtyFlow.</p>
                     </div>
 
                     <section className="admin-private-mp4-preview admin-private-video-full" aria-label="Privat musikkvideo i full lengde">
                       <div className="admin-private-video-heading">
                         <div>
-                          <span className="admin-private-video-eyebrow">HOVEDVALG · PRIVAT FORHÅNDSVISNING</span>
-                          <strong>Komplett musikkvideo</strong>
+                          <span className="admin-private-video-eyebrow">VALG 1 · PRIVAT FORHÅNDSVISNING</span>
+                          <strong>Komplett privat musikkvideo</strong>
                           <p>Hele sangen med dine åtte bilder og godkjent storyboard.</p>
                         </div>
                         <span className="admin-private-video-chip">Hele sangen</span>
@@ -993,7 +993,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <a href={privateFullMp4.result.signedUrl} target="_blank" rel="noreferrer">
                           Spill av eller åpne privat fullengdevideo <ExternalLink size={14} />
                         </a>
-                        <small>Dette er et privat videoutkast, ikke sendt til YouTube. Merk: «Lag video» bruker en annen produksjons- og publiseringsflyt, og publiserer ikke automatisk denne godkjente private MP4-filen.</small>
+                        <small>Dette er et privat videoutkast, ikke sendt til YouTube. YouTube-produksjonen bruker foreløpig en separat renderflyt. Godkjent MP4 overføres ikke automatisk. Kontroller derfor bildene og storyboardet før du starter YouTube-produksjonen.</small>
                       </div>
                     )}
                     </section>
