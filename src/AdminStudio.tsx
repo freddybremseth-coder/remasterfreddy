@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -77,6 +77,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [fullVideoGentleMotion, setFullVideoGentleMotion] = useState(true);
   const [privateFullMp4LoadingId, setPrivateFullMp4LoadingId] = useState<string | null>(null);
   const [privateFullMp4Error, setPrivateFullMp4Error] = useState<string | null>(null);
+  const [latestPrivateVideoLoadingId, setLatestPrivateVideoLoadingId] = useState<string | null>(null);
+  const [latestPrivateVideo, setLatestPrivateVideo] = useState<{
+    songId: string; result: ReopenedPrivateFullMp4;
+  } | null>(null);
+  const [latestPrivateVideoError, setLatestPrivateVideoError] = useState<{
+    songId: string; message: string;
+  } | null>(null);
   const [privateFullMp4, setPrivateFullMp4] = useState<{
     result: PrivateFullMp4; imageKey: string; scenesKey: string;
     timingKey: string; sourceKey: string; gentleMotion: boolean;
@@ -448,6 +455,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       const result = await generatePrivateFullMp4(
         song.id, preview.scenes, preview.timing, fullVideoGentleMotion,
       );
+      setLatestPrivateVideo(null);
+      setLatestPrivateVideoError(null);
       setPrivateFullMp4({
         result, imageKey, scenesKey: JSON.stringify(preview.scenes),
         timingKey: JSON.stringify(preview.timing ?? null),
@@ -459,6 +468,26 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setPrivateFullMp4Error(`${reason} Ingen video ble publisert.`);
     } finally {
       setPrivateFullMp4LoadingId(null);
+    }
+  }
+
+  async function openLastPrivateVideo(song: AdminSong) {
+    if (!song.audioUrl || latestPrivateVideoLoadingId) return;
+    setLatestPrivateVideoLoadingId(song.id);
+    setLatestPrivateVideo(null);
+    setLatestPrivateVideoError(null);
+    try {
+      // Only signs an already stored private file. No storyboard or render work.
+      const result = await reopenLatestPrivateFullMp4(song.id);
+      setLatestPrivateVideo({ songId: song.id, result });
+      setPrivateFullMp4(null);
+    } catch (err) {
+      setLatestPrivateVideoError({
+        songId: song.id,
+        message: err instanceof Error ? err.message : "Kunne ikke åpne den lagrede private videoen.",
+      });
+    } finally {
+      setLatestPrivateVideoLoadingId(null);
     }
   }
 
@@ -754,6 +783,20 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                       {matchingPreview ? "Oppdater storyboard" : "Se storyboard"}
                     </button>
                   )}
+                  {Boolean(song.audioUrl) && (
+                    <button
+                      type="button"
+                      className="admin-secondary admin-reopen-private-video-action"
+                      onClick={() => { void openLastPrivateVideo(song); }}
+                      disabled={latestPrivateVideoLoadingId !== null}
+                      title="Åpne den siste lagrede private MP4-filen uten å lage video på nytt"
+                    >
+                      {latestPrivateVideoLoadingId === song.id
+                        ? <Loader2 size={16} className="admin-spinner" aria-hidden="true" />
+                        : <Play size={16} aria-hidden="true" />}
+                      {latestPrivateVideoLoadingId === song.id ? "Henter privat video …" : "Se siste private video"}
+                    </button>
+                  )}
                   <button
                     className="admin-primary admin-run-button"
                     disabled={!canProcess || !approved || !songImageCount ||
@@ -782,6 +825,41 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                     </a>
                   )}
                 </div>
+                {latestPrivateVideoError?.songId === song.id && (
+                  <div className="admin-reopened-private-video admin-reopened-private-error" role="alert">
+                    {latestPrivateVideoError.message}
+                  </div>
+                )}
+                {latestPrivateVideo?.songId === song.id && (
+                  <section className="admin-reopened-private-video" aria-label={`Siste lagrede private MP4 for ${song.title}`}>
+                    <div className="admin-reopened-video-heading">
+                      <div>
+                        <strong>Siste lagrede private video</strong>
+                        <p>Hentet uten ny videoproduksjon. Privat lenke gyldig i 15 minutter.
+                          {latestPrivateVideo.result.createdAt
+                            ? ` Lagret ${new Date(latestPrivateVideo.result.createdAt).toLocaleString("nb-NO")}.`
+                            : ""}
+                        </p>
+                      </div>
+                      <button
+                        className="admin-secondary"
+                        type="button"
+                        disabled={latestPrivateVideoLoadingId !== null}
+                        onClick={() => { void openLastPrivateVideo(song); }}
+                        title="Forny avspillingslenken"
+                      >
+                        <RefreshCw size={15} aria-hidden="true" /> Forny lenken
+                      </button>
+                    </div>
+                    <video controls playsInline preload="metadata"
+                      src={latestPrivateVideo.result.signedUrl}
+                      aria-label={`Siste private fullengdevideo av ${song.title}`} />
+                    <a href={latestPrivateVideo.result.signedUrl} target="_blank" rel="noreferrer">
+                      Åpne privat MP4 i ny fane <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                    <small>Dette er siste lagrede videoutkast. Det kan bruke eldre bilder eller scenetider hvis du har gjort endringer etterpå. Ingenting publiseres på YouTube.</small>
+                  </section>
+                )}
                 {matchingPreview && (
                   <RenderReadinessPanel
                     songId={song.id}
@@ -863,6 +941,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                           ? "Godkjente tidsmarkører styrer sceneskiftene."
                           : "Scenene fordeles jevnt over sangen."}</small>
                       </div>
+                      <div className="admin-private-video-controls">
                       <button type="button" className="admin-primary admin-private-full-action"
                       disabled={privateFullMp4LoadingId !== null || privateMp4LoadingId !== null ||
                         processingId !== null || songImageCount !== 8 ||
@@ -875,6 +954,17 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                           : <Play size={18} aria-hidden="true" />}
                         {privateFullMp4LoadingId === song.id ? "Lager komplett privatvideo …" : "Lag privat fullengdevideo"}
                       </button>
+                      <button
+                        type="button"
+                        className="admin-secondary admin-reopen-private-video-action"
+                        disabled={latestPrivateVideoLoadingId !== null}
+                        onClick={() => { void openLastPrivateVideo(song); }}
+                        title="Vis siste private video uten å lage den på nytt"
+                      >
+                        <Play size={16} aria-hidden="true" />
+                        Åpne lagret MP4
+                      </button>
+                      </div>
                     {privateFullMp4LoadingId === song.id && (
                       <p className="admin-private-video-status" role="status">
                         Lager privat MP4 med hele sangen. Når den er klar, vises spilleren rett under knappen.
