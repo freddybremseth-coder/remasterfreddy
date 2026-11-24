@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, publishMissingArtShort, type PrivateMp4Teaser, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -74,6 +74,12 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [privateMp4, setPrivateMp4] = useState<{
     result: PrivateMp4Teaser; imageKey: string; scenesKey: string; sourceKey: string;
   } | null>(null);
+  const [fullVideoGentleMotion, setFullVideoGentleMotion] = useState(true);
+  const [privateFullMp4LoadingId, setPrivateFullMp4LoadingId] = useState<string | null>(null);
+  const [privateFullMp4, setPrivateFullMp4] = useState<{
+    result: PrivateFullMp4; imageKey: string; scenesKey: string;
+    timingKey: string; sourceKey: string; gentleMotion: boolean;
+  } | null>(null);
   const [songImages, setSongImages] = useState<Record<string, string[]>>(() => {
     try {
       const data: unknown = JSON.parse(window.localStorage.getItem("remaster-song-images-v1") || "{}");
@@ -92,6 +98,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     if (activeSongId) setSongImages(current => ({ ...current, [activeSongId]: next.customImageUrls || [] }));
     setImageSaveMessage("");
     setPrivateMp4(null);
+    setPrivateFullMp4(null);
     setVisualCheck(null);
     setVisualCheckMessage("");
     setPendingRender(null);
@@ -106,6 +113,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setVisualCheckMessage("");
     setImageSaveMessage("");
     setPrivateMp4(null);
+    setPrivateFullMp4(null);
     setError("");
     try {
       await saveSongVideoImages(songId, snapshot);
@@ -372,6 +380,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     const sourceKey = storyboardSourceKey(song, pipelineOptions);
     setPendingRender(null);
     setPrivateMp4(null);
+    setPrivateFullMp4(null);
     setPreviewLoadingId(song.id);
     setError("");
     try {
@@ -399,6 +408,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
     setPrivateMp4LoadingId(song.id);
     setPrivateMp4(null);
+    setPrivateFullMp4(null);
     setError("");
     try {
       const result = await generatePrivateMp4Teaser(song.id, preview.scenes);
@@ -410,6 +420,41 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError(err instanceof Error ? err.message : "Privat MP4-test feilet. Ingen YouTube-publisering er utført.");
     } finally {
       setPrivateMp4LoadingId(null);
+    }
+  }
+
+  async function buildPrivateFullMp4(song: AdminSong) {
+    const selected = songImages[song.id] || [];
+    const imageKey = JSON.stringify(selected);
+    const approved = preview?.songId === song.id &&
+      preview.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+      preview.approved && isValidStoryboard(preview.scenes) &&
+      (preview.timing === undefined || isValidSceneTiming(preview.timing));
+    if (!song.audioUrl || song.youtubeUrl || privateFullMp4LoadingId || privateMp4LoadingId ||
+        processingId || !approved || !preview ||
+        activeSongId !== song.id || selected.length !== 8 ||
+        savedSongImages[song.id] !== imageKey ||
+        visualCheck?.songId !== song.id || visualCheck.imagesKey !== imageKey) {
+      setError("Velg sangen, lagre og kontroller åtte bilder, og godkjenn storyboardet før fullengdevideo.");
+      return;
+    }
+    setPrivateFullMp4LoadingId(song.id);
+    setPrivateFullMp4(null);
+    setError("");
+    try {
+      const result = await generatePrivateFullMp4(
+        song.id, preview.scenes, preview.timing, fullVideoGentleMotion,
+      );
+      setPrivateFullMp4({
+        result, imageKey, scenesKey: JSON.stringify(preview.scenes),
+        timingKey: JSON.stringify(preview.timing ?? null),
+        sourceKey: storyboardSourceKey(song, pipelineOptions),
+        gentleMotion: fullVideoGentleMotion,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke lage privat fullengdevideo. Ingen video ble publisert.");
+    } finally {
+      setPrivateFullMp4LoadingId(null);
     }
   }
 
@@ -487,7 +532,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       <div className="pipeline-asset-field">
         <label htmlFor="remaster-song-images"><strong>Videobilder for sang</strong></label>
         <select id="remaster-song-images" value={activeSongId}
-          onChange={event => { setActiveSongId(event.target.value); setPendingRender(null); setPreview(null); setPrivateMp4(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
+          onChange={event => { setActiveSongId(event.target.value); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
           <option value="">Velg sang</option>
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
@@ -773,6 +818,49 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <a href={privateMp4.result.signedUrl} target="_blank" rel="noreferrer">
                           Åpne privat MP4 i ny fane <ExternalLink size={14} />
                         </a>
+                      </div>
+                    )}
+                  </section>
+                )}
+                {matchingPreview && approved && (
+                  <section className="admin-private-mp4-preview" aria-label="Privat musikkvideo i full lengde">
+                    <strong>Komplett privat musikkvideo</strong>
+                    <p>Lag en MP4 med hele sangen og åtte videobilder. Bruker godkjente scenetider hvis du har satt dem, ellers fordeles scenene jevnt. Videoen lagres privat og publiseres aldri automatisk.</p>
+                    <label className="admin-private-motion-choice">
+                      <input type="checkbox" checked={fullVideoGentleMotion}
+                        onChange={event => {
+                          setFullVideoGentleMotion(event.target.checked);
+                          setPrivateFullMp4(null);
+                        }} />
+                      Rolig kamerabevegelse (Ken Burns)
+                    </label>
+                    <small>{matchingPreview.timing
+                      ? "Godkjente tidsmarkører styrer sceneskiftene."
+                      : "Ingen tidsmarkører godkjent – scenene deles jevnt over hele sangen."}</small>
+                    <button type="button" className="admin-secondary"
+                      disabled={privateFullMp4LoadingId !== null || privateMp4LoadingId !== null ||
+                        processingId !== null || songImageCount !== 8 ||
+                        activeSongId !== song.id ||
+                        savedSongImages[song.id] !== JSON.stringify(songImages[song.id] || []) ||
+                        !serverChecked}
+                      onClick={() => { void buildPrivateFullMp4(song); }}>
+                      {privateFullMp4LoadingId === song.id ? "Lager komplett privatvideo …" : "Lag privat fullengdevideo"}
+                    </button>
+                    {privateFullMp4?.result.recordId === song.id &&
+                     privateFullMp4.imageKey === JSON.stringify(songImages[song.id] || []) &&
+                     privateFullMp4.scenesKey === JSON.stringify(matchingPreview.scenes) &&
+                     privateFullMp4.timingKey === JSON.stringify(matchingPreview.timing ?? null) &&
+                     privateFullMp4.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+                     privateFullMp4.gentleMotion === fullVideoGentleMotion && (
+                      <div className="admin-private-mp4-result">
+                        <p role="status">Privat fullengdevideo klar – {Math.round(privateFullMp4.result.durationSeconds)} sekunder. Avspillingslenken varer i 15 minutter.</p>
+                        <video controls playsInline preload="metadata"
+                          src={privateFullMp4.result.signedUrl}
+                          aria-label={`Privat fullengdevideo av ${song.title}`} />
+                        <a href={privateFullMp4.result.signedUrl} target="_blank" rel="noreferrer">
+                          Åpne privat fullengdevideo <ExternalLink size={14} />
+                        </a>
+                        <small>Dette er et privat videoutkast. Det er ikke sendt til YouTube. Egen godkjenning kreves før publisering.</small>
                       </div>
                     )}
                   </section>
