@@ -281,3 +281,7 @@
 .admin-private-mp4-result video{display:block;width:100%;max-width:750px;max-height:440px;aspect-ratio:16/9;border-radius:10px;background:#020617}
 .admin-private-mp4-result a{display:inline-flex;align-items:center;gap:7px;color:#67e8f9;font-size:12px;overflow-wrap:anywhere}
 @media(max-width:620px){.admin-private-mp4-preview>button{justify-self:stretch}.admin-private-mp4-result video{max-height:none}}
+
+/* A full-length private preview must remain easy to control on mobile. */
+.admin-private-motion-choice{display:flex;align-items:center;gap:9px;min-height:40px;color:#dbeafe;font-size:13px;font-weight:650}
+.admin-private-motion-choice input{width:18px;height:18px;accent-color:#67e8f9;flex:none}
