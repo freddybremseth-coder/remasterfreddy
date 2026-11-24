@@ -268,6 +268,41 @@ export async function generatePrivateMp4Teaser(
   return result as PrivateMp4Teaser;
 }
 
+/** Full soundtrack with eight scenes, stored privately and NEVER published. */
+export interface PrivateFullMp4 {
+  success: true;
+  recordId: string;
+  signedUrl: string;
+  durationSeconds: number;
+  sceneCount: 8;
+  expiresInSeconds: number;
+  sceneStartsSeconds: number[];
+  usedApprovedTiming: boolean;
+  gentleMotion: boolean;
+  message: string;
+}
+
+export async function generatePrivateFullMp4(
+  recordId: string,
+  storyboardScenes: string[],
+  sceneTiming?: StoryboardSceneTiming,
+  gentleMotion = true,
+): Promise<PrivateFullMp4> {
+  const response = await adminFetch("/api/neural-beat-private-full-video", {
+    method: "POST",
+    body: JSON.stringify({ recordId, storyboardScenes, sceneTiming, gentleMotion }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success !== true || result.recordId !== recordId ||
+      result.sceneCount !== 8 ||
+      typeof result.signedUrl !== "string" || !result.signedUrl.startsWith("https://") ||
+      typeof result.durationSeconds !== "number" || result.durationSeconds <= 20 ||
+      !Array.isArray(result.sceneStartsSeconds) || result.sceneStartsSeconds.length !== 8) {
+    throw new Error(result.error || "Kunne ikke lage privat fullengdevideo. Ingen video er publisert.");
+  }
+  return result as PrivateFullMp4;
+}
+
 /** Result of a server-side visual check. No video/AI/YouTube is involved. */
 export interface VisualPreflightResult {
   ready: true;

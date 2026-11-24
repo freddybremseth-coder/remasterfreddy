@@ -123,6 +123,26 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(deployment).toContain("api/neural-beat-private-video-preview.ts");
   });
 
+  it("exposes an owner-confirmed full-song MP4 test with timing, motion and no publish calls", () => {
+    const client = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-private-full-video.ts", "utf8");
+    const config = readFileSync("vercel.json", "utf8");
+    expect(source).toContain("async function buildPrivateFullMp4(song: AdminSong)");
+    expect(source).toContain("generatePrivateFullMp4(");
+    expect(source).toContain("song.id, preview.scenes, preview.timing, fullVideoGentleMotion");
+    expect(source).toContain("Lag privat fullengdevideo");
+    expect(source).toContain("Rolig kamerabevegelse (Ken Burns)");
+    expect(source).toContain("savedSongImages[song.id] !== imageKey");
+    expect(source).toContain("visualCheck?.songId !== song.id");
+    expect(source).toContain("selected.length !== 8");
+    expect(source).toContain("publiserer ikke automatisk denne godkjente private MP4-filen.");
+    expect(client).toContain("/api/neural-beat-private-full-video");
+    expect(client).toContain("sceneTiming?: StoryboardSceneTiming");
+    expect(proxy).toContain("/api/neural-beat/private-full-video");
+    expect(proxy).not.toContain("uploadVideo(");
+    expect(config).toContain("api/neural-beat-private-full-video.ts");
+  });
+
   it("the video uses original visuals without Gemini but discloses other services", () => {
     expect(source).toContain('imageMode: "original"');
     expect(source).toContain("Gemini brukes ikke til bilder.");
