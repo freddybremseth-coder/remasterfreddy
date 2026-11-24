@@ -105,6 +105,20 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(proxy).not.toContain("uploadVideo(");
   });
 
+  it("previews the eight saved selected images with approved timing without rendering", () => {
+    const editor = readFileSync("src/StoryboardEditor.tsx", "utf8");
+    const css = readFileSync("src/storyboard-editor.css", "utf8");
+    expect(source).toContain('imageUrls={songImages[song.id] || []}');
+    expect(source).toContain('imagesSaved={savedSongImages[song.id] === JSON.stringify(songImages[song.id] || [])}');
+    expect(editor).toContain('aria-label="Bilder og sceneskift før MP4"');
+    expect(editor).toContain('imageUrls[index]');
+    expect(editor).toContain('sceneTiming.startsSeconds[index]');
+    expect(editor).toContain("Bildevalgene er ennå ikke lagret på sangen.");
+    expect(editor).toContain("Uten godkjente tidsmarkører fordeles scenene jevnt");
+    expect(css).toContain(".storyboard-image-grid");
+    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+
   it("supports explicit 16-second private MP4 preview without YouTube publication", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-private-video-preview.ts", "utf8");
