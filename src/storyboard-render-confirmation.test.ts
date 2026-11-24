@@ -180,6 +180,29 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Spill av eller åpne privat fullengdevideo");
   });
 
+  it("can reopen the last stored private MP4 after reload without storyboard or paid rendering", () => {
+    const api = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-private-full-video.ts", "utf8");
+    const css = readFileSync("src/admin-studio.css", "utf8");
+    expect(api).toContain("export async function reopenLatestPrivateFullMp4(");
+    expect(api).toContain('method: "GET"');
+    expect(api).toContain("encodeURIComponent(recordId)");
+    expect(proxy).toContain('request.method !== "POST" && request.method !== "GET"');
+    expect(proxy).toContain('method: isReopen ? "GET" : "POST"');
+    expect(source).toContain("async function openLastPrivateVideo(song: AdminSong)");
+    expect(source).toContain("reopenLatestPrivateFullMp4(song.id)");
+    expect(source).toContain("Se siste private video");
+    expect(source).toContain("Åpne lagret MP4");
+    expect(source).toContain("Forny lenken");
+    expect(source).toContain("Dette er siste lagrede videoutkast.");
+    expect(source).toContain('className="admin-reopened-private-video"');
+    expect(source).toContain("latestPrivateVideo?.songId === song.id");
+    expect(css).toContain(".admin-song-row > .admin-reopened-private-video");
+    expect(css).toContain("grid-column: 1 / -1;");
+    expect(css).toContain("aspect-ratio: 16 / 9;");
+    expect(proxy).not.toContain("uploadVideo(");
+  });
+
   it("shows an immediately discoverable player or an inline error after private full-song rendering", () => {
     expect(source).toContain('privateFullMp4LoadingId === song.id && (');
     expect(source).toContain('Når den er klar, vises spilleren rett under knappen.');
