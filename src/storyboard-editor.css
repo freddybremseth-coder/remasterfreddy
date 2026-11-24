@@ -165,3 +165,27 @@
 .storyboard-live-preview-thumbs button span { font-size: 11px; font-weight: 600; }
 .storyboard-live-preview-thumbs button small { font-size: 10px; }
 @media(max-width:650px) { .storyboard-live-preview-thumbs { grid-template-columns: repeat(4,minmax(0,1fr)); } .storyboard-live-preview-screen { min-height: 260px; } }
+
+/* Review the actual ordered image selection and optional author-approved scene times. */
+.storyboard-image-plan {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 18px 0;
+  padding: 14px;
+  background: rgba(15,23,42,.55);
+  border: 1px solid rgba(125,211,252,.3);
+  border-radius: 12px;
+}
+.storyboard-image-plan-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.storyboard-image-plan-heading span { color: #bae6fd; font-size: 12px; }
+.storyboard-image-plan > p { color: #cbd5e1; line-height: 1.5; font-size: 13px; margin: 8px 0 12px; }
+.storyboard-image-plan .storyboard-image-warning { color: #fdba74; }
+.storyboard-image-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.storyboard-image-card { min-width: 0; overflow: hidden; border: 1px solid rgba(148,163,184,.35); border-radius: 10px; background: rgba(2,6,23,.45); }
+.storyboard-image-card img, .storyboard-image-placeholder { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #020617; }
+.storyboard-image-placeholder { display: grid; place-items: center; font-size: 13px; color: #94a3b8; }
+.storyboard-image-card-copy { display: flex; flex-direction: column; gap: 5px; padding: 9px; overflow-wrap: anywhere; }
+.storyboard-image-card-copy strong { color: #e2e8f0; font-size: 12px; }
+.storyboard-image-card-copy small { color: #cbd5e1; font-size: 11px; line-height: 1.4; }
+@media(max-width: 800px) { .storyboard-image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 440px) { .storyboard-image-grid { grid-template-columns: minmax(0, 1fr); } }
