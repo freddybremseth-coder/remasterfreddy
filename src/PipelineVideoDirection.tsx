@@ -6,6 +6,13 @@ interface Props {
   onChange: (value: PipelineOptions) => void;
 }
 
+const VIDEO_DIRECTIONS = [
+  { label: "Filmatisk historie", description: "Realistiske mennesker, steder og hendelser som følger sangens utvikling. Naturlig lys, variasjon i kameravinkler og emosjonell fortelling. Ingen generiske neonringer, DJ-er eller yachter." },
+  { label: "Natur og stemning", description: "Ekte landskap, skiftende vær, nærbilder av natur og rolige kamerabevegelser. Bildene skal følge sangens stemning og utvikling, ikke gjenta ett motiv." },
+  { label: "Kunstnerisk", description: "Gjennomarbeidede kunstneriske motiver med tydelig komposisjon, tekstur og avstemt fargepalett. Visuell variasjon uten tilfeldige abstrakte sirkler eller standard disco-effekter." },
+  { label: "Konsert og artist", description: "Troverdige opptak av artist, instrumenter, scener og publikum med variasjon mellom nærbilder og oversikter. Bruk bare artistbilder som faktisk er tilgjengelige og godkjent." },
+] as const;
+
 /** Optional song-specific direction; leaving it empty asks the engine to plan the visuals. */
 export default function PipelineVideoDirection({ value, onChange }: Props) {
   return (
@@ -17,6 +24,20 @@ export default function PipelineVideoDirection({ value, onChange }: Props) {
         </div>
         <span className="video-direction-mode">{value.visualTheme?.trim() ? "Ditt tema + AI" : "Automatisk AI-regi"}</span>
       </div>
+      <div className="video-direction-presets" role="group" aria-label="Forslag til videoretning">
+        {VIDEO_DIRECTIONS.map(direction => (
+          <button
+            key={direction.label}
+            type="button"
+            className="admin-secondary"
+            aria-pressed={value.visualTheme === direction.description}
+            onClick={() => onChange({ ...value, visualTheme: direction.description })}
+          >
+            {direction.label}
+          </button>
+        ))}
+      </div>
+      <small>Velg en retning som utgangspunkt, eller skriv din egen beskrivelse nedenfor. Du kan endre teksten etterpå.</small>
       <label>
         <span>Hva skal videoen handle om? (valgfritt)</span>
         <textarea
