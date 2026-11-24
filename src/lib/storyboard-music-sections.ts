@@ -28,6 +28,30 @@ export const DEFAULT_MUSIC_SECTIONS: MusicSection[] = [
   "intro", "verse", "prechorus", "chorus", "verse", "chorus", "instrumental", "outro",
 ];
 
+/** Editorial templates: these are suggested scene arcs, never inferred MP3 structure. */
+export const MUSIC_PLAN_PRESETS = [
+  {
+    id: "story",
+    label: "Historiefortelling",
+    description: "Fra rolig åpning til vendepunkt og avslutning",
+    sections: ["intro", "verse", "verse", "prechorus", "chorus", "bridge", "chorus", "outro"],
+  },
+  {
+    id: "rock",
+    label: "Rock og kraft",
+    description: "Oppbygging, sterke refreng og avsluttende klimaks",
+    sections: ["intro", "verse", "prechorus", "chorus", "verse", "bridge", "chorus", "outro"],
+  },
+  {
+    id: "calm",
+    label: "Rolig og kunstnerisk",
+    description: "Mer rom for stemning, instrumenter og ettertanke",
+    sections: ["intro", "instrumental", "verse", "instrumental", "verse", "bridge", "instrumental", "outro"],
+  },
+] as const satisfies ReadonlyArray<{
+  id: string; label: string; description: string; sections: readonly MusicSection[];
+}>;
+
 const cuePattern = /\s*\[Music cue: (?:Intro|Verse|Pre-chorus|Chorus|Instrumental|Bridge|Outro) — [^\]]*\]/g;
 
 export function applyMusicSectionCues(scenes: readonly string[], sections: readonly MusicSection[]): string[] | null {
