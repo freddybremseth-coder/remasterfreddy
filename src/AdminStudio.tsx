@@ -76,6 +76,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   } | null>(null);
   const [fullVideoGentleMotion, setFullVideoGentleMotion] = useState(true);
   const [privateFullMp4LoadingId, setPrivateFullMp4LoadingId] = useState<string | null>(null);
+  const [privateFullMp4Error, setPrivateFullMp4Error] = useState<string | null>(null);
   const [privateFullMp4, setPrivateFullMp4] = useState<{
     result: PrivateFullMp4; imageKey: string; scenesKey: string;
     timingKey: string; sourceKey: string; gentleMotion: boolean;
@@ -440,6 +441,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     }
     setPrivateFullMp4LoadingId(song.id);
     setPrivateFullMp4(null);
+    setPrivateFullMp4Error(null);
     setError("");
     try {
       const result = await generatePrivateFullMp4(
@@ -452,7 +454,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         gentleMotion: fullVideoGentleMotion,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke lage privat fullengdevideo. Ingen video ble publisert.");
+      const reason = err instanceof Error ? err.message : "Kunne ikke lage privat fullengdevideo.";
+      setPrivateFullMp4Error(`${reason} Ingen video ble publisert.`);
     } finally {
       setPrivateFullMp4LoadingId(null);
     }
@@ -831,6 +834,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         onChange={event => {
                           setFullVideoGentleMotion(event.target.checked);
                           setPrivateFullMp4(null);
+                          setPrivateFullMp4Error(null);
                         }} />
                       Rolig kamerabevegelse (Ken Burns)
                     </label>
@@ -846,6 +850,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                       onClick={() => { void buildPrivateFullMp4(song); }}>
                       {privateFullMp4LoadingId === song.id ? "Lager komplett privatvideo …" : "Lag privat fullengdevideo"}
                     </button>
+                    {privateFullMp4LoadingId === song.id && (
+                      <p className="admin-private-video-status" role="status">
+                        Lager privat MP4 med hele sangen. Når den er klar, vises spilleren rett under knappen.
+                      </p>
+                    )}
+                    {privateFullMp4Error && (
+                      <p className="admin-private-video-error" role="alert">
+                        Videoen kunne ikke vises: {privateFullMp4Error}
+                      </p>
+                    )}
                     {privateFullMp4?.result.recordId === song.id &&
                      privateFullMp4.imageKey === JSON.stringify(songImages[song.id] || []) &&
                      privateFullMp4.scenesKey === JSON.stringify(matchingPreview.scenes) &&
@@ -853,12 +867,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                      privateFullMp4.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
                      privateFullMp4.gentleMotion === fullVideoGentleMotion && (
                       <div className="admin-private-mp4-result">
-                        <p role="status">Privat fullengdevideo klar – {Math.round(privateFullMp4.result.durationSeconds)} sekunder. Avspillingslenken varer i 15 minutter.</p>
+                        <p className="admin-private-video-status" role="status">
+                          <strong>Videoen er klar! Spill den av nedenfor.</strong> Hele sangen: {Math.round(privateFullMp4.result.durationSeconds)} sekunder. Lenken er gyldig i 15 minutter.
+                        </p>
                         <video controls playsInline preload="metadata"
                           src={privateFullMp4.result.signedUrl}
                           aria-label={`Privat fullengdevideo av ${song.title}`} />
                         <a href={privateFullMp4.result.signedUrl} target="_blank" rel="noreferrer">
-                          Åpne privat fullengdevideo <ExternalLink size={14} />
+                          Spill av eller åpne privat fullengdevideo <ExternalLink size={14} />
                         </a>
                         <small>Dette er et privat videoutkast, ikke sendt til YouTube. Merk: «Lag video» bruker en annen produksjons- og publiseringsflyt, og publiserer ikke automatisk denne godkjente private MP4-filen.</small>
                       </div>
