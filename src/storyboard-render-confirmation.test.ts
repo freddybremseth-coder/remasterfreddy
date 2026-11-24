@@ -143,6 +143,17 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(config).toContain("api/neural-beat-private-full-video.ts");
   });
 
+  it("shows an immediately discoverable player or an inline error after private full-song rendering", () => {
+    expect(source).toContain('privateFullMp4LoadingId === song.id && (');
+    expect(source).toContain('Når den er klar, vises spilleren rett under knappen.');
+    expect(source).toContain('className="admin-private-video-error" role="alert"');
+    expect(source).toContain('Videoen kunne ikke vises:');
+    expect(source).toContain('Videoen er klar! Spill den av nedenfor.');
+    expect(source).toContain('Spill av eller åpne privat fullengdevideo');
+    expect(source).toContain('setPrivateFullMp4Error(null)');
+    expect(source).toContain('setPrivateFullMp4Error(`${reason} Ingen video ble publisert.`)');
+  });
+
   it("the video uses original visuals without Gemini but discloses other services", () => {
     expect(source).toContain('imageMode: "original"');
     expect(source).toContain("Gemini brukes ikke til bilder.");
