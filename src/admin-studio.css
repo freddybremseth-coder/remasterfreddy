@@ -285,3 +285,8 @@
 /* A full-length private preview must remain easy to control on mobile. */
 .admin-private-motion-choice{display:flex;align-items:center;gap:9px;min-height:40px;color:#dbeafe;font-size:13px;font-weight:650}
 .admin-private-motion-choice input{width:18px;height:18px;accent-color:#67e8f9;flex:none}
+
+/* Keep lengthy private rendering results visible at the exact action on mobile. */
+.admin-private-video-status{padding:10px 12px;border-radius:10px;border:1px solid rgba(103,232,249,.35);background:rgba(12,33,56,.82);color:#e0f2fe;font-size:13px;line-height:1.5}
+.admin-private-video-status strong{display:block;color:#f8fafc;font-size:14px;margin-bottom:3px}
+.admin-private-video-error{padding:11px 12px;border-radius:10px;border:1px solid rgba(251,113,133,.6);background:rgba(72,23,34,.48);color:#ffe4e6;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
