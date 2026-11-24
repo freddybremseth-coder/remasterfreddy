@@ -8,6 +8,15 @@ interface PipelineAssetsProps {
   onChange: (value: PipelineOptions) => void;
   refreshToken?: number;
   onOpenImageBank: (kind: ImageKind) => void;
+  onSaveSelection?: () => void;
+  savingSelection?: boolean;
+  saveSelectionDisabled?: boolean;
+  selectionSaved?: boolean;
+  imageSaveMessage?: string;
+  onCheckSelection?: () => void;
+  checkingSelection?: boolean;
+  checkSelectionDisabled?: boolean;
+  imageCheckMessage?: string;
 }
 
 function assetPreview(item?: AdminImage) {
@@ -40,7 +49,12 @@ function EmptyAssetState({
   );
 }
 
-export default function PipelineAssets({ value, onChange, refreshToken = 0, onOpenImageBank }: PipelineAssetsProps) {
+export default function PipelineAssets({
+  value, onChange, refreshToken = 0, onOpenImageBank,
+  onSaveSelection, savingSelection = false, saveSelectionDisabled = false,
+  selectionSaved = false, imageSaveMessage,
+  onCheckSelection, checkingSelection = false, checkSelectionDisabled = false, imageCheckMessage,
+}: PipelineAssetsProps) {
   const [images, setImages] = useState<AdminImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -265,6 +279,29 @@ export default function PipelineAssets({ value, onChange, refreshToken = 0, onOp
               <span>{index + 1}. Fjern</span>
             </button>
           ))}
+        </div>
+      )}
+      {onSaveSelection && (
+        <div className="pipeline-image-action-toolbar" role="group" aria-label="Lagre og kontroller videobilder">
+          <div className="pipeline-image-action-caption" role="status">
+            <strong>{selectedImages.size} / 8 bilder valgt</strong>
+            <small>{savingSelection ? "Lagrer bildevalg …" :
+              selectionSaved ? "Lagret på sangen" : "Endringer er ikke lagret"}</small>
+          </div>
+          <button type="button" className="admin-primary pipeline-image-save"
+            disabled={saveSelectionDisabled || savingSelection}
+            onClick={onSaveSelection}>
+            {savingSelection ? "Lagrer …" : "Lagre bildevalg"}
+          </button>
+          {onCheckSelection && (
+            <button type="button" className="admin-secondary pipeline-image-check"
+              disabled={checkSelectionDisabled || checkingSelection}
+              onClick={onCheckSelection}>
+              {checkingSelection ? "Kontrollerer …" : "Kontroller bilder"}
+            </button>
+          )}
+          {imageSaveMessage && <small className="pipeline-image-action-message" role="status">{imageSaveMessage}</small>}
+          {imageCheckMessage && <small className="pipeline-image-action-message" role="status">{imageCheckMessage}</small>}
         </div>
       )}
       {imageLimitMessage && <p role="alert">{imageLimitMessage}</p>}
