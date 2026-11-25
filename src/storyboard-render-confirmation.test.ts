@@ -137,6 +137,21 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(proxy).not.toContain("startSongPipeline(");
   });
 
+  it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
+    const client = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
+    expect(source).toContain("Analyser MP3-lyd");
+    expect(source).toContain("analyzeExistingMp3(song.id)");
+    expect(source).toContain("Faktisk målt fra MP3");
+    expect(source).toContain("Dynamikk i utdraget");
+    expect(source).toContain("Din bekreftede sjanger endres ikke.");
+    expect(client).toContain('adminFetch("/api/neural-beat-audio-analysis"');
+    expect(client).toContain('result.evidence !== "decoded_pcm"');
+    expect(proxy).toContain("requireAdmin(request, response)");
+    expect(proxy).toContain("/api/neural-beat/audio-analysis");
+    expect(proxy).not.toContain("uploadVideo(");
+  });
+
   it("supports explicit 16-second private MP4 preview without YouTube publication", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-private-video-preview.ts", "utf8");
