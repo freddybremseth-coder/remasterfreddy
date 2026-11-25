@@ -63,6 +63,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
+  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect">("all");
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
@@ -211,6 +212,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
     [songs],
   );
+  const unverifiedSongs = songs.filter(song => song.audioUrl && song.metadata?.genreSource !== "author");
+  const suspectSongs = unverifiedSongs.filter(song => /\\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic)\\b/i.test(song.genre || ""));
+  const filteredGenreSongs = genreReviewFilter === "suspect"
+    ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
+      : songs.filter(song => song.audioUrl);
   const activeSong = songs.find(song => song.id === activeSongId);
   const confirmedGenre = activeSong?.metadata?.genreSource === "author"
     ? activeSong.metadata.authorSelectedGenre || "" : "";
@@ -672,11 +678,31 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
 
       <div className="pipeline-asset-field">
         <label htmlFor="remaster-song-images"><strong>Videobilder for sang</strong></label>
+        <div className="admin-genre-filter">
+          <label htmlFor="remaster-genre-filter">Finn sanger som bør sjekkes</label>
+          <select id="remaster-genre-filter" value={genreReviewFilter}
+            onChange={event => {
+              const next = event.target.value as typeof genreReviewFilter;
+              setGenreReviewFilter(next);
+              const chosen = next === "suspect" ? suspectSongs
+                : next === "unverified" ? unverifiedSongs : songs.filter(song => song.audioUrl);
+              setActiveSongId(chosen[0]?.id || "");
+              setGenreMessage("");
+              setPreview(null);
+              setPendingRender(null);
+              setVisualCheck(null);
+              setPrivateFullMp4(null);
+            }}>
+            <option value="all">Alle sanger</option>
+            <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
+            <option value="suspect">Mulig feil EDM / Chillout ({suspectSongs.length})</option>
+          </select>
+        </div>
         <select id="remaster-song-images" value={activeSongId}
           onChange={event => { setActiveSongId(event.target.value); setGenreMessage(""); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
           <option value="">Velg sang</option>
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
-          {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
+          {filteredGenreSongs.map(song => <option key={song.id} value={song.id}>{song.title} {song.genre ? `· ${song.genre}` : "· ubekreftet"}</option>)}
         </select>
         <small>Ved ny MP3: velg bildene før opplasting. Bildevalgene lagres på sangen i RealtyFlow etter opplasting. For eksisterende sanger: velg bilder og trykk «Lagre bildevalg».</small>
       </div>
