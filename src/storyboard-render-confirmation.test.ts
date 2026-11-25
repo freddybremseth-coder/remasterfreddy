@@ -149,7 +149,9 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("savedSongImages[song.id] !== imageKey");
     expect(source).toContain("visualCheck?.songId !== song.id");
     expect(source).toContain("selected.length !== 8");
-    expect(source).toContain("Godkjent MP4 overføres ikke automatisk.");
+    expect(source).toContain("Godkjenn og send lagret MP4 til YouTube");
+    expect(source).toContain("publishApprovedStoredVideo(song)");
+    expect(source).toContain("publishStoredFullVideo(song.id, approved.scenes, approved.timing, fullVideoGentleMotion)");
     expect(client).toContain("/api/neural-beat-private-full-video");
     expect(client).toContain("sceneTiming?: StoryboardSceneTiming");
     expect(proxy).toContain("/api/neural-beat/private-full-video");
