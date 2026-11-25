@@ -119,6 +119,24 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });
 
+  it("corrects existing song genre with an owner-authenticated proxy without uploading audio or publishing", () => {
+    const client = readFileSync("src/lib/admin-api.ts", "utf8");
+    const proxy = readFileSync("api/neural-beat-song-genre.ts", "utf8");
+    expect(source).toContain("Kontroller sjanger –");
+    expect(source).toContain("Lagre korrigert sjanger");
+    expect(source).toContain("correctSongGenre(song.id, selected)");
+    expect(source).toContain("setPreview(null)");
+    expect(source).toContain("ikke verifisert fra lyd");
+    expect(source).toContain("Publiserte YouTube-videoer, eksisterende bilder og MP3-filen berøres ikke.");
+    expect(client).toContain('adminFetch("/api/neural-beat-song-genre"');
+    expect(client).toContain('method: "PUT"');
+    expect(client).toContain("result.youtubeUnchanged !== true");
+    expect(proxy).toContain("requireAdmin(request, response)");
+    expect(proxy).toContain("/api/neural-beat/song-genre");
+    expect(proxy).not.toContain("uploadVideo(");
+    expect(proxy).not.toContain("startSongPipeline(");
+  });
+
   it("supports explicit 16-second private MP4 preview without YouTube publication", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-private-video-preview.ts", "utf8");
