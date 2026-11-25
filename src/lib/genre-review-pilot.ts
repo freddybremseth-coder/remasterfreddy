@@ -10,7 +10,7 @@ export type GenrePilotStratum = "edm" | "house" | "calm" | "electronic" | "other
 export function legacyGenreStratum(genre: string | undefined): GenrePilotStratum {
   const label = (genre || "").trim().toLowerCase();
   if (/\b(house|techno|trance)\b/.test(label)) return "house";
-  if (/\b(chill|ambient|relax|meditat|lo-?fi|downtempo)\b/.test(label)) return "calm";
+  if (/\b(chill(?:out)?|ambient|relax\w*|meditat\w*|lo-?fi|downtempo)\b/.test(label)) return "calm";
   if (/\b(edm|electronic dance music)\b/.test(label)) return "edm";
   if (/\b(electronic|dance)\b/.test(label)) return "electronic";
   return "other";
