@@ -213,7 +213,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     [songs],
   );
   const unverifiedSongs = songs.filter(song => song.audioUrl && song.metadata?.genreSource !== "author");
-  const suspectSongs = unverifiedSongs.filter(song => /\\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic)\\b/i.test(song.genre || ""));
+  const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic)\b/i.test(song.genre || ""));
   const filteredGenreSongs = genreReviewFilter === "suspect"
     ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
       : songs.filter(song => song.audioUrl);
@@ -703,6 +703,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           <option value="">Velg sang</option>
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {filteredGenreSongs.map(song => <option key={song.id} value={song.id}>{song.title} {song.genre ? `· ${song.genre}` : "· ubekreftet"}</option>)}
+          {activeSong && !filteredGenreSongs.some(song => song.id === activeSong.id) &&
+            <option value={activeSong.id}>{activeSong.title} · nylig gjennomgått</option>}
         </select>
         <small>Ved ny MP3: velg bildene før opplasting. Bildevalgene lagres på sangen i RealtyFlow etter opplasting. For eksisterende sanger: velg bilder og trykk «Lagre bildevalg».</small>
       </div>
