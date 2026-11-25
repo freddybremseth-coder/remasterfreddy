@@ -27,7 +27,10 @@ export function planGenreReviewPilot(songs: readonly AdminSong[], limit = 20): A
   for (const song of candidates) {
     if (seen.has(song.id)) continue;
     seen.add(song.id);
-    grouped.get(legacyGenreStratum(song.genre))!.push(song);
+    // Genre corrections must not move a track out of the stable pilot sample.
+    const originalGenre = typeof song.metadata?.genreReviewLegacyGenre === "string"
+      ? song.metadata.genreReviewLegacyGenre : song.genre;
+    grouped.get(legacyGenreStratum(originalGenre))!.push(song);
   }
   const selected: AdminSong[] = [];
   // Round-robin prevents the old 97-EDM catalog skew from dominating review.
