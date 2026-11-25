@@ -11,6 +11,7 @@ import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
 import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, correctSongGenre, analyzeExistingMp3, type AcousticAudioAnalysis, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
+import { planGenreReviewPilot, genreReviewPilotProgress } from "./lib/genre-review-pilot";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -63,7 +64,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
-  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect" | "missingAudio">("all");
+  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect" | "missingAudio" | "pilot">("all");
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
@@ -212,10 +213,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
     [songs],
   );
+  // Fixed pilot sample; confirmed labels remain in it so progress persists.
+  const genrePilotSongs = useMemo(() => planGenreReviewPilot(songs, 20), [songs]);
+  const genrePilotProgress = useMemo(() => genreReviewPilotProgress(genrePilotSongs), [genrePilotSongs]);
   const unverifiedSongs = songs.filter(song => song.metadata?.genreSource !== "author");
   const missingAudioSongs = songs.filter(song => !song.audioUrl);
   const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic|dance|house|techno|trance)\b/i.test(song.genre || ""));
-  const filteredGenreSongs = genreReviewFilter === "suspect"
+  const filteredGenreSongs = genreReviewFilter === "pilot" ? genrePilotSongs : genreReviewFilter === "suspect"
     ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
       : genreReviewFilter === "missingAudio" ? missingAudioSongs : songs;
   const activeSong = songs.find(song => song.id === activeSongId);
@@ -714,7 +718,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             onChange={event => {
               const next = event.target.value as typeof genreReviewFilter;
               setGenreReviewFilter(next);
-              const chosen = next === "suspect" ? suspectSongs
+              const chosen = next === "pilot" ? genrePilotSongs : next === "suspect" ? suspectSongs
                 : next === "unverified" ? unverifiedSongs
                 : next === "missingAudio" ? missingAudioSongs : songs;
               setActiveSongId(chosen[0]?.id || "");
@@ -725,11 +729,24 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               setPrivateFullMp4(null);
             }}>
             <option value="all">Alle sanger</option>
+            <option value="pilot">Testgruppe for sjangeranalyse ({genrePilotProgress.reviewed}/{genrePilotProgress.total})</option>
             <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
             <option value="suspect">Sjekk elektronisk / Chillout / House ({suspectSongs.length})</option>
             <option value="missingAudio">Mangler registrert MP3 ({missingAudioSongs.length})</option>
           </select>
         </div>
+        {genreReviewFilter === "pilot" && (
+          <div className="admin-genre-pilot-progress" role="status">
+            <strong>Testgruppe: {genrePilotProgress.reviewed} av {genrePilotProgress.total} sanger bekreftet</strong>
+            <progress value={genrePilotProgress.reviewed} max={Math.max(1, genrePilotProgress.total)}
+              aria-label="Fremdrift i testgruppen" />
+            <small>Utvalget er fordelt på gamle sjangeretiketter, som fortsatt er ubekreftet.
+              Hør sangen, velg riktig sjanger og lagre. Minst 20 kontrollerte sanger gir et første
+              testgrunnlag, ikke tilstrekkelig dokumentasjon for automatisk publisering.
+              Bekreftede sanger forblir i utvalget slik at resultatene kan sammenlignes senere.</small>
+            <small>Bekreftede ulike sjangre i testgruppen: {genrePilotProgress.genres}.</small>
+          </div>
+        )}
         <select id="remaster-song-images" value={activeSongId}
           onChange={event => { setActiveSongId(event.target.value); setGenreMessage(""); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
           <option value="">Velg sang</option>
@@ -743,7 +760,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       {activeSong && (
         <section className="pipeline-asset-field" aria-label="Kontroller og endre sjanger for eksisterende sang">
           <div className="admin-genre-review-progress">
-            <span>{genreReviewFilter === "suspect" ? "Mulig feil sjanger" :
+            <span>{genreReviewFilter === "pilot" ? "Testgruppe for sjangeranalyse" : genreReviewFilter === "suspect" ? "Mulig feil sjanger" :
               genreReviewFilter === "unverified" ? "Ubekreftet sjanger" :
               genreReviewFilter === "missingAudio" ? "Lydfil mangler" : "Sangarkiv"}</span>
             <span>{activeReviewPosition >= 0 ? activeReviewPosition + 1 : "–"} av {filteredGenreSongs.length}</span>
