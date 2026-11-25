@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, correctSongGenre, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -63,6 +63,10 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
+  const [genreDraft, setGenreDraft] = useState("");
+  const [genreSaving, setGenreSaving] = useState(false);
+  const [genreMessage, setGenreMessage] = useState("");
+
   const [savingImages, setSavingImages] = useState(false);
   const [checkingImages, setCheckingImages] = useState(false);
   const [visualCheck, setVisualCheck] = useState<{
@@ -204,6 +208,44 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
     [songs],
   );
+  const activeSong = songs.find(song => song.id === activeSongId);
+  const confirmedGenre = activeSong?.metadata?.genreSource === "author"
+    ? activeSong.metadata.authorSelectedGenre || "" : "";
+  const needsGenreUpdate = genreDraft !== confirmedGenre ||
+    (!genreDraft && Boolean(activeSong?.genre) && !confirmedGenre);
+  useEffect(() => {
+    const song = songs.find(item => item.id === activeSongId);
+    setGenreDraft(song?.metadata?.genreSource === "author"
+      ? song.metadata.authorSelectedGenre || "" : "");
+    setGenreMessage("");
+  }, [activeSongId, songs]);
+
+  async function saveExistingGenre() {
+    const song = activeSong;
+    if (!song || !needsGenreUpdate || genreSaving || processingId) return;
+    const selected = genreDraft || null;
+    setGenreSaving(true);
+    setGenreMessage("");
+    setError("");
+    try {
+      const updated = await correctSongGenre(song.id, selected);
+      setSongs(current => current.map(item => item.id === song.id ? updated : item));
+      // Old story proposals may have been based on the previous wrong genre.
+      setPreview(null);
+      setPendingRender(null);
+      setPrivateMp4(null);
+      setPrivateFullMp4(null);
+      setVisualCheck(null);
+      setGenreMessage(selected
+        ? "Sjangeren er lagret som ditt bekreftede valg. MP3, bilder og YouTube er ikke endret."
+        : "Den ubekreftede sjangeretiketten er fjernet. MP3, bilder og YouTube er ikke endret.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke oppdatere sjanger.");
+    } finally {
+      setGenreSaving(false);
+    }
+  }
+
 
   function selectMp3(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] || null;
@@ -617,6 +659,51 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         </select>
         <small>Ved ny MP3: velg bildene før opplasting. Bildevalgene lagres på sangen i RealtyFlow etter opplasting. For eksisterende sanger: velg bilder og trykk «Lagre bildevalg».</small>
       </div>
+      {activeSong && (
+        <section className="pipeline-asset-field" aria-label="Kontroller og endre sjanger for eksisterende sang">
+          <label htmlFor="remaster-correct-genre"><strong>Kontroller sjanger – {activeSong.title}</strong></label>
+          <p>
+            {activeSong.metadata?.genreSource === "author"
+              ? `Din bekreftede sjanger: ${activeSong.genre || "Ukjent"}`
+              : `Tidligere etikett: ${activeSong.genre || "Ikke klassifisert"} (ikke verifisert fra lyd)`}
+          </p>
+          <select id="remaster-correct-genre" value={genreDraft}
+            disabled={genreSaving || Boolean(processingId)}
+            onChange={event => { setGenreDraft(event.target.value); setGenreMessage(""); }}>
+            <option value="">Ikke bekreftet / fjern feil etikett</option>
+            <option value="rock">Rock</option>
+            <option value="power-rock">Power Rock / episk rock</option>
+            <option value="metal">Metal</option>
+            <option value="ballad">Ballade</option>
+            <option value="pop">Pop</option>
+            <option value="acoustic">Akustisk</option>
+            <option value="folk">Folk</option>
+            <option value="country">Country</option>
+            <option value="blues">Blues</option>
+            <option value="jazz">Jazz</option>
+            <option value="classical">Klassisk</option>
+            <option value="soul">Soul</option>
+            <option value="latin">Latin</option>
+            <option value="chanson">Fransk chanson</option>
+            <option value="alternative">Alternative</option>
+            <option value="cinematic">Filmatisk / instrumental</option>
+            <option value="ambient">Ambient</option>
+            <option value="meditation">Meditation</option>
+            <option value="relaxing">Relaxing</option>
+            <option value="dance">Dance / EDM</option>
+          </select>
+          <div className="admin-genre-actions">
+            <button type="button" className="admin-secondary"
+              disabled={!needsGenreUpdate || genreSaving || Boolean(processingId)}
+              onClick={() => { void saveExistingGenre(); }}>
+              {genreSaving ? "Lagrer sjanger…" : "Lagre korrigert sjanger"}
+            </button>
+          </div>
+          {genreMessage && <p role="status" className="admin-success">{genreMessage}</p>}
+          <small>Dette endrer bare sangens interne sjanger og neste video-/metadataforslag.
+            Publiserte YouTube-videoer, eksisterende bilder og MP3-filen berøres ikke.</small>
+        </section>
+      )}
       <PipelineAssets
         value={scopedOptions}
         onChange={updateScopedOptions}
