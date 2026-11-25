@@ -202,6 +202,20 @@ export interface AcousticAudioAnalysis {
   rhythm: "regular_pulse" | "weak_pulse" | "not_detected";
   tempoEstimateBpm: number | null;
   pulseCorrelation: number;
+  durationSeconds?: number;
+  sections?: Array<{
+    label: "beginning" | "middle" | "ending";
+    startSeconds: number;
+    sampleSeconds: number;
+    averageLevelDbfs: number;
+    peakLevelDbfs: number;
+    dynamicRangeDb: number;
+    rhythm: "regular_pulse" | "weak_pulse" | "not_detected";
+    tempoEstimateBpm: number | null;
+    pulseCorrelation: number;
+  }>;
+  sectionLevelSpreadDb?: number;
+  visualPacingHint?: "varying_energy" | "fairly_consistent_energy" | "insufficient_sections";
   genre: string | null;
   genreSource: "author" | "unverified";
   message: string;
