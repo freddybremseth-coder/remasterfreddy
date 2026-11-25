@@ -54,7 +54,7 @@ describe("human-reviewed genre validation pilot", () => {
     expect(planGenreReviewPilot(tracks.map(item => ({
       ...item, genre: item.id === selected[9].id ? "chanson" : item.genre,
       metadata: item.id === selected[9].id
-        ? { genreSource: "author", authorSelectedGenre: "chanson" }
+        ? { genreSource: "author", authorSelectedGenre: "chanson", genreReviewLegacyGenre: selected[9].genre }
         : item.metadata,
     }))).some(item => item.id === selected[9].id)).toBe(true);
   });
