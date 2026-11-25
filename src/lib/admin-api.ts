@@ -19,6 +19,8 @@ export interface AdminSong {
     genreSource?: "author" | "unverified" | string;
     authorSelectedGenre?: string;
     genreConfirmedAt?: string | null;
+    /** Preserved first-seen legacy label used only for stable pilot sampling. */
+    genreReviewLegacyGenre?: string;
   };
 }
 
