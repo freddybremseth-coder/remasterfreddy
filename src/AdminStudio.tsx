@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -77,6 +77,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [fullVideoGentleMotion, setFullVideoGentleMotion] = useState(true);
   const [privateFullMp4LoadingId, setPrivateFullMp4LoadingId] = useState<string | null>(null);
   const [privateFullMp4Error, setPrivateFullMp4Error] = useState<string | null>(null);
+  const [storedPublishId, setStoredPublishId] = useState<string | null>(null);
+  const [storedPublishMessage, setStoredPublishMessage] = useState("");
   const [latestPrivateVideoLoadingId, setLatestPrivateVideoLoadingId] = useState<string | null>(null);
   const [latestPrivateVideo, setLatestPrivateVideo] = useState<{
     songId: string; result: ReopenedPrivateFullMp4;
@@ -429,6 +431,36 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       setError(err instanceof Error ? err.message : "Privat MP4-test feilet. Ingen YouTube-publisering er utført.");
     } finally {
       setPrivateMp4LoadingId(null);
+    }
+  }
+
+  async function publishApprovedStoredVideo(song: AdminSong) {
+    if (storedPublishId || !youtubeHealth?.connected || song.youtubeUrl) return;
+    const approved = preview?.songId === song.id &&
+      preview.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+      preview.approved && isValidStoryboard(preview.scenes) ? preview : null;
+    const selected = songImages[song.id] || [];
+    const matchingVideo = privateFullMp4?.result.recordId === song.id &&
+      privateFullMp4.imageKey === JSON.stringify(selected) &&
+      privateFullMp4.scenesKey === JSON.stringify(approved?.scenes) &&
+      privateFullMp4.timingKey === JSON.stringify(approved?.timing ?? null) &&
+      privateFullMp4.sourceKey === storyboardSourceKey(song, pipelineOptions) &&
+      privateFullMp4.gentleMotion === fullVideoGentleMotion;
+    if (!approved || !matchingVideo || selected.length !== 8 ||
+        savedSongImages[song.id] !== JSON.stringify(selected)) {
+      setStoredPublishMessage("Åpne den godkjente fullengdevideoen først og kontroller åtte lagrede bilder.");
+      return;
+    }
+    setStoredPublishMessage("");
+    setStoredPublishId(song.id);
+    try {
+      const result = await publishStoredFullVideo(song.id, approved.scenes, approved.timing, fullVideoGentleMotion);
+      setStoredPublishMessage("Den samme lagrede MP4-filen ble lastet opp som ikke oppført: " + result.youtubeUrl);
+      await refreshSongs();
+    } catch (err) {
+      setStoredPublishMessage(err instanceof Error ? err.message : "Kunne ikke verifisere YouTube-opplastingen.");
+    } finally {
+      setStoredPublishId(null);
     }
   }
 
@@ -1010,7 +1042,21 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <a href={privateFullMp4.result.signedUrl} target="_blank" rel="noreferrer">
                           Spill av eller åpne privat fullengdevideo <ExternalLink size={14} />
                         </a>
-                        <small>Dette er et privat videoutkast, ikke sendt til YouTube. YouTube-produksjonen bruker foreløpig en separat renderflyt. Godkjent MP4 overføres ikke automatisk. Kontroller derfor bildene og storyboardet før du starter YouTube-produksjonen.</small>
+                        <div className="admin-stored-youtube-upload" style={{ marginTop: 16, display: "grid", gap: 10 }}>
+                          <strong>Publiser denne eksakte MP4-filen på YouTube</strong>
+                          <p>Ingen ny bilde- eller videoproduksjon. Videoen lastes først opp som <strong>ikke oppført</strong>, slik at du kan kontrollere den på YouTube før offentlig publisering.</p>
+                          <button type="button" className="admin-primary"
+                            disabled={storedPublishId !== null || !youtubeHealth?.connected || Boolean(song.youtubeUrl)}
+                            onClick={() => {
+                              if (window.confirm("Last opp denne godkjente fullengdevideoen til Re-Master Freddy på YouTube som IKKE OPPFØRT? Ingen ny video blir rendret.")) {
+                                void publishApprovedStoredVideo(song);
+                              }
+                            }}>
+                            {storedPublishId === song.id ? "Laster opp godkjent MP4 …" : "Godkjenn og send lagret MP4 til YouTube"}
+                          </button>
+                          {storedPublishMessage && <p role="status">{storedPublishMessage}</p>}
+                          {!youtubeHealth?.connected && <small>Du må koble til riktig YouTube-kanal før opplasting.</small>}
+                        </div>
                       </div>
                     )}
                     </section>
