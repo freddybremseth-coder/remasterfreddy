@@ -34,6 +34,9 @@
     },
     "api/neural-beat-private-full-video.ts": {
       "maxDuration": 300
+    },
+    "api/neural-beat-publish-stored-video.ts": {
+      "maxDuration": 300
     }
   }
 }
