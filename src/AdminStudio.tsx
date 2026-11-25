@@ -217,7 +217,6 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     const song = songs.find(item => item.id === activeSongId);
     setGenreDraft(song?.metadata?.genreSource === "author"
       ? song.metadata.authorSelectedGenre || "" : "");
-    setGenreMessage("");
   }, [activeSongId, songs]);
 
   async function saveExistingGenre() {
@@ -652,7 +651,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       <div className="pipeline-asset-field">
         <label htmlFor="remaster-song-images"><strong>Videobilder for sang</strong></label>
         <select id="remaster-song-images" value={activeSongId}
-          onChange={event => { setActiveSongId(event.target.value); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
+          onChange={event => { setActiveSongId(event.target.value); setGenreMessage(""); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
           <option value="">Velg sang</option>
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {songs.filter(song => song.audioUrl).map(song => <option key={song.id} value={song.id}>{song.title}</option>)}
