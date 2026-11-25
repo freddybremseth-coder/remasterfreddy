@@ -12,7 +12,7 @@ export default async function handler(request: any, response: any) {
   const body = request.body || {};
   const genres = new Set([
     "meditation", "relaxing", "alternative", "dance", "rock", "power-rock",
-    "metal", "ballad", "pop", "acoustic", "folk", "country", "blues", "jazz",
+    "metal", "ballad", "pop", "electronic", "edm", "house", "deep-house", "techno", "trance", "chillout", "lofi", "downtempo", "acoustic", "folk", "country", "blues", "jazz",
     "classical", "soul", "latin", "chanson", "ambient", "cinematic",
   ]);
   if (typeof body !== "object" || Array.isArray(body) ||
