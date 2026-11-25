@@ -164,7 +164,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
-  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "ballad" | "pop" | "cinematic">("");
+  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "power-rock" | "metal" | "ballad" | "pop" | "acoustic" | "folk" | "country" | "blues" | "jazz" | "classical" | "soul" | "latin" | "chanson" | "ambient" | "cinematic">("");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
@@ -573,16 +573,29 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           <label>
             <span>Musikkategori og videostil</span>
             <select aria-label="Musikkategori og videostil" value={mp3Genre} onChange={(event) => setMp3Genre(event.target.value as typeof mp3Genre)}>
-              <option value="">Automatisk analyse (standard video)</option>
+              <option value="">Sjanger ikke bekreftet – ingen automatisk EDM/Chillout-etikett</option>
               <option value="meditation">Meditation – Freddy Bremseth Art</option>
               <option value="relaxing">Relaxing – Freddy Bremseth Art</option>
               <option value="alternative">Alternative – Freddy Bremseth Art</option>
               <option value="dance">Dance / EDM</option>
-              <option value="rock">Rock / Power Rock</option>
+              <option value="rock">Rock</option>
+              <option value="power-rock">Power Rock / episk rock</option>
+              <option value="metal">Metal</option>
               <option value="ballad">Ballade / følelsesladet</option>
               <option value="pop">Pop</option>
+              <option value="acoustic">Akustisk</option>
+              <option value="folk">Folk</option>
+              <option value="country">Country</option>
+              <option value="blues">Blues</option>
+              <option value="jazz">Jazz</option>
+              <option value="classical">Klassisk</option>
+              <option value="soul">Soul</option>
+              <option value="latin">Latin</option>
+              <option value="chanson">Fransk chanson</option>
+              <option value="ambient">Ambient</option>
               <option value="cinematic">Filmatisk / instrumental</option>
             </select>
+            <small>Velg gjerne sjangeren selv. Uten valg kan AI foreslå bildestil fra tittel og tekst, men den klassifiserer ikke selve MP3-lyden.</small>
           </label>
           <button className="admin-primary admin-upload-button" onClick={handleUpload} disabled={uploading || !mp3File || !mp3Title.trim()}>
             {uploading ? <Loader2 className="admin-spinner" size={17} /> : <Upload size={17} />}
