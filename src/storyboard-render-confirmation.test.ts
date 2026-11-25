@@ -124,6 +124,11 @@ describe("storyboard required and explicit confirmation before video", () => {
     const proxy = readFileSync("api/neural-beat-song-genre.ts", "utf8");
     expect(source).toContain("Kontroller sjanger –");
     expect(source).toContain("Lagre korrigert sjanger");
+    expect(source).toContain("Ubekreftet sjanger (");
+    expect(source).toContain("Mulig feil EDM / Chillout (");
+    expect(source).toContain('song.metadata?.genreSource !== "author"');
+    expect(source).toContain('const suspectSongs = unverifiedSongs.filter');
+    expect(source).toContain("filteredGenreSongs.map(");
     expect(source).toContain("correctSongGenre(song.id, selected)");
     expect(source).toContain("setPreview(null)");
     expect(source).toContain("ikke verifisert fra lyd");
