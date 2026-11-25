@@ -644,3 +644,12 @@
   .admin-private-video-controls > button { width: 100%; justify-content: center; }
   .admin-reopened-video-heading > button { width: 100%; justify-content: center; }
 }
+
+/* Evidence-only song audio review. Not an automatic genre or publishing control. */
+.admin-acoustic-sections { margin-top: 14px; padding: 12px; border-radius: 10px; border: 1px solid rgba(148,163,184,.3); }
+.admin-acoustic-sections strong { display: block; margin-bottom: 8px; }
+.admin-acoustic-table { display: grid; gap: 5px; margin: 10px 0; }
+.admin-acoustic-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 6px; background: rgba(148,163,184,.1); font-size: 13px; font-variant-numeric: tabular-nums; }
+.admin-acoustic-row span { overflow-wrap: anywhere; }
+.admin-acoustic-sections p { line-height: 1.5; font-size: 13px; }
+@media (max-width: 470px) { .admin-acoustic-row { grid-template-columns: minmax(0, 1fr) auto; } .admin-acoustic-row span:last-child { grid-column: 1 / -1; } }
