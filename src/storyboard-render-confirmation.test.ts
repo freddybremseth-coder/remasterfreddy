@@ -144,6 +144,13 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("analyzeExistingMp3(song.id)");
     expect(source).toContain("Faktisk målt fra MP3");
     expect(source).toContain("Dynamikk i utdraget");
+    expect(source).toContain("Tre ulike deler av sangen");
+    expect(source).toContain("Begynnelsen");
+    expect(source).toContain("Midten");
+    expect(source).toContain("Slutten");
+    expect(source).toContain("Dette er redaksjonell veiledning");
+    expect(client).toContain("sectionLevelSpreadDb");
+    expect(client).toContain("visualPacingHint");
     expect(source).toContain("Din bekreftede sjanger endres ikke.");
     expect(client).toContain('adminFetch("/api/neural-beat-audio-analysis"');
     expect(client).toContain('result.evidence !== "decoded_pcm"');
