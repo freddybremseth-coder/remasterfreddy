@@ -745,7 +745,28 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                   ? "Svak eller usikker" : "Ingen sikker puls påvist"}.
                 {acousticResult.data.tempoEstimateBpm !== null
                   ? ` Indikativt tempo: cirka ${acousticResult.data.tempoEstimateBpm} BPM (kan være halv/dobbel takt).`
-                  : " Ingen pålitelig BPM-verdi fra dette utdraget."}</p>
+                  : " Ingen pålitelig BPM-verdi fra de analyserte utdragene."}</p>
+              {acousticResult.data.sections && acousticResult.data.sections.length > 1 && (
+                <div className="admin-acoustic-sections">
+                  <strong>Tre ulike deler av sangen</strong>
+                  <div className="admin-acoustic-table" role="table" aria-label="Lydnivå i sangens begynnelse, midte og slutt">
+                    {acousticResult.data.sections.map(section => (
+                      <div className="admin-acoustic-row" role="row" key={section.label}>
+                        <span role="cell">{section.label === "beginning"
+                          ? "Begynnelsen" : section.label === "middle" ? "Midten" : "Slutten"}</span>
+                        <span role="cell">fra {Math.floor(section.startSeconds / 60)}:{String(Math.floor(section.startSeconds % 60)).padStart(2, "0")}</span>
+                        <span role="cell">{section.averageLevelDbfs} dBFS</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p>{acousticResult.data.visualPacingHint === "varying_energy"
+                    ? "Sangen har tydelige nivåforskjeller mellom delene. Vurder variasjon i scenenes intensitet og tempo."
+                    : acousticResult.data.visualPacingHint === "fairly_consistent_energy"
+                      ? "Lydnivået er forholdsvis jevnt mellom utdragene. Variasjon i bildene bør komme fra sangens historie."
+                      : "For kort eller usikkert lydgrunnlag til å foreslå variasjon mellom delene."}
+                    {" "}Dette er redaksjonell veiledning, og endrer ikke bildevalg eller kamerabevegelse automatisk.</p>
+                </div>
+              )}
               <small>Dette er signalmålinger, ikke en modell som kan høre og identifisere sjanger, instrumenter eller sangstemmer.
                 Din bekreftede sjanger endres ikke. Ingen AI-bilder eller videoer lages.</small>
             </div>
