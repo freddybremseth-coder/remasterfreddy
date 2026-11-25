@@ -213,7 +213,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     [songs],
   );
   const unverifiedSongs = songs.filter(song => song.audioUrl && song.metadata?.genreSource !== "author");
-  const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic)\b/i.test(song.genre || ""));
+  const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic|dance|house|techno|trance)\b/i.test(song.genre || ""));
   const filteredGenreSongs = genreReviewFilter === "suspect"
     ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
       : songs.filter(song => song.audioUrl);
@@ -695,7 +695,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             }}>
             <option value="all">Alle sanger</option>
             <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
-            <option value="suspect">Mulig feil EDM / Chillout ({suspectSongs.length})</option>
+            <option value="suspect">Sjekk elektronisk / Chillout / House ({suspectSongs.length})</option>
           </select>
         </div>
         <select id="remaster-song-images" value={activeSongId}
