@@ -303,6 +303,28 @@ export async function generatePrivateFullMp4(
   return result as PrivateFullMp4;
 }
 
+/** Upload only the previously rendered, author-approved MP4. Never re-renders images. */
+export async function publishStoredFullVideo(
+  recordId: string,
+  storyboardScenes: string[],
+  sceneTiming: StoryboardSceneTiming | undefined,
+  gentleMotion: boolean,
+): Promise<{ success: true; youtubeUrl: string; privacyStatus: "unlisted"; reusedStoredVideo: true }> {
+  const response = await adminFetch("/api/neural-beat-publish-stored-video", {
+    method: "POST",
+    body: JSON.stringify({
+      recordId, storyboardScenes, sceneTiming, gentleMotion,
+      privacyStatus: "unlisted", confirmUpload: true,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.success !== true || result.reusedStoredVideo !== true ||
+      typeof result.youtubeUrl !== "string" || !result.youtubeUrl.startsWith("https://")) {
+    throw new Error(result.error || "Kunne ikke laste opp den lagrede MP4-filen.");
+  }
+  return result;
+}
+
 /** A previously rendered video; requesting this NEVER renders or publishes again. */
 export interface ReopenedPrivateFullMp4 {
   success: true;
