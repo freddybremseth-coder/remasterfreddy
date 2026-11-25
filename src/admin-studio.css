@@ -695,3 +695,7 @@
   .admin-genre-review-next button { width: 100%; }
   .admin-genre-audio-review { padding: 11px; }
 }
+
+/* Jump past MP3 upload to the genre clean-up workspace. */
+#remaster-genre-review { scroll-margin-top: 26px; }
+.admin-genre-review-shortcut { display: inline-flex; margin-top: 7px; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
