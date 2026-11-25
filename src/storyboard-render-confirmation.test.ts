@@ -170,6 +170,23 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(proxy).not.toContain("uploadVideo(");
   });
 
+  it("builds a stable diverse 20-song pilot using owner-confirmed labels only", () => {
+    const pilot = readFileSync("src/lib/genre-review-pilot.ts", "utf8");
+    const css = readFileSync("src/admin-studio.css", "utf8");
+    expect(source).toContain('option value="pilot"');
+    expect(source).toContain("Testgruppe for sjangeranalyse");
+    expect(source).toContain("genrePilotSongs = useMemo(() => planGenreReviewPilot(songs, 20), [songs])");
+    expect(source).toContain("genreReviewPilotProgress(genrePilotSongs)");
+    expect(source).toContain("Bekreftede ulike sjangre i testgruppen");
+    expect(source).toContain('aria-label="Fremdrift i testgruppen"');
+    expect(source).toContain("Bekreftede sanger forblir i utvalget");
+    expect(pilot).toContain("genreReviewLegacyGenre");
+    expect(pilot).toContain('song.metadata?.genreSource === "author"');
+    expect(pilot).not.toContain("startSongPipeline(");
+    expect(pilot).not.toContain("fetch(");
+    expect(css).toContain(".admin-genre-pilot-progress progress");
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
