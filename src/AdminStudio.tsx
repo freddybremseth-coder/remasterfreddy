@@ -9,7 +9,7 @@ import { inspectRenderReadiness } from "./lib/render-readiness";
 import { applyMusicSectionCues } from "./lib/storyboard-music-sections";
 import PipelinePublishSettings from "./PipelinePublishSettings";
 import YouTubeHealthCard from "./YouTubeHealthCard";
-import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, correctSongGenre, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
+import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, previewSongStoryboard, uploadSong, saveSongVideoImages, correctSongGenre, analyzeExistingMp3, type AcousticAudioAnalysis, checkSongVideoImages, generatePrivateMp4Teaser, generatePrivateFullMp4, reopenLatestPrivateFullMp4, publishStoredFullVideo, publishMissingArtShort, type PrivateMp4Teaser, type PrivateFullMp4, type ReopenedPrivateFullMp4, type VisualPreflightResult, type StoryboardSceneTiming } from "./lib/admin-api";
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
@@ -66,6 +66,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
+  const [acousticLoadingId, setAcousticLoadingId] = useState<string | null>(null);
+  const [acousticResult, setAcousticResult] = useState<{songId: string; data: AcousticAudioAnalysis} | null>(null);
+  const [acousticError, setAcousticError] = useState<{songId: string; message: string} | null>(null);
 
   const [savingImages, setSavingImages] = useState(false);
   const [checkingImages, setCheckingImages] = useState(false);
@@ -218,6 +221,25 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setGenreDraft(song?.metadata?.genreSource === "author"
       ? song.metadata.authorSelectedGenre || "" : "");
   }, [activeSongId, songs]);
+
+  async function checkExistingMp3Audio() {
+    const song = activeSong;
+    if (!song?.audioUrl || acousticLoadingId || processingId) return;
+    setAcousticLoadingId(song.id);
+    setAcousticError(null);
+    setAcousticResult(null);
+    try {
+      const data = await analyzeExistingMp3(song.id);
+      setAcousticResult({ songId: song.id, data });
+    } catch (err) {
+      setAcousticError({
+        songId: song.id,
+        message: err instanceof Error ? err.message : "Lydanalysen ble ikke fullført.",
+      });
+    } finally {
+      setAcousticLoadingId(null);
+    }
+  }
 
   async function saveExistingGenre() {
     const song = activeSong;
@@ -701,6 +723,33 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           {genreMessage && <p role="status" className="admin-success">{genreMessage}</p>}
           <small>Dette endrer bare sangens interne sjanger og neste video-/metadataforslag.
             Publiserte YouTube-videoer, eksisterende bilder og MP3-filen berøres ikke.</small>
+          <div className="admin-genre-actions">
+            <button type="button" className="admin-secondary"
+              disabled={!activeSong.audioUrl || acousticLoadingId !== null || Boolean(processingId)}
+              onClick={() => { void checkExistingMp3Audio(); }}>
+              {acousticLoadingId === activeSong.id ? "Analyserer lydutdrag…" : "Analyser MP3-lyd"}
+            </button>
+          </div>
+          {acousticError?.songId === activeSong.id && (
+            <p role="alert" className="admin-error">{acousticError.message}</p>
+          )}
+          {acousticResult?.songId === activeSong.id && (
+            <div className="admin-acoustic-result" role="status">
+              <strong>Faktisk målt fra MP3 ({acousticResult.data.sampleSeconds} sekunder)</strong>
+              <p>Lydnivå i utdraget: {acousticResult.data.averageLevelDbfs} dBFS i gjennomsnitt,
+                topp {acousticResult.data.peakLevelDbfs} dBFS.</p>
+              <p>Dynamikk i utdraget: {acousticResult.data.dynamicRangeDb} dB.</p>
+              <p>Rytmisk puls: {acousticResult.data.rhythm === "regular_pulse"
+                ? "Relativt regelmessig"
+                : acousticResult.data.rhythm === "weak_pulse"
+                  ? "Svak eller usikker" : "Ingen sikker puls påvist"}.
+                {acousticResult.data.tempoEstimateBpm !== null
+                  ? ` Indikativt tempo: cirka ${acousticResult.data.tempoEstimateBpm} BPM (kan være halv/dobbel takt).`
+                  : " Ingen pålitelig BPM-verdi fra dette utdraget."}</p>
+              <small>Dette er signalmålinger, ikke en modell som kan høre og identifisere sjanger, instrumenter eller sangstemmer.
+                Din bekreftede sjanger endres ikke. Ingen AI-bilder eller videoer lages.</small>
+            </div>
+          )}
         </section>
       )}
       <PipelineAssets
