@@ -189,6 +189,39 @@ export async function correctSongGenre(recordId: string, genre: string | null): 
   return result.song as AdminSong;
 }
 
+/** Read-only signal analysis from the actual uploaded MP3, not AI genre guessing. */
+export interface AcousticAudioAnalysis {
+  ready: true;
+  recordId: string;
+  evidence: "decoded_pcm";
+  genreIdentification: "not_available";
+  sampleSeconds: number;
+  averageLevelDbfs: number;
+  peakLevelDbfs: number;
+  dynamicRangeDb: number;
+  rhythm: "regular_pulse" | "weak_pulse" | "not_detected";
+  tempoEstimateBpm: number | null;
+  pulseCorrelation: number;
+  genre: string | null;
+  genreSource: "author" | "unverified";
+  message: string;
+}
+
+export async function analyzeExistingMp3(recordId: string): Promise<AcousticAudioAnalysis> {
+  const response = await adminFetch("/api/neural-beat-audio-analysis", {
+    method: "POST", body: JSON.stringify({ recordId }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ready !== true || result.recordId !== recordId ||
+      result.evidence !== "decoded_pcm" || result.genreIdentification !== "not_available" ||
+      typeof result.averageLevelDbfs !== "number" ||
+      typeof result.peakLevelDbfs !== "number" ||
+      typeof result.dynamicRangeDb !== "number") {
+    throw new Error(result.error || "Kunne ikke bekrefte lydanalysen.");
+  }
+  return result as AcousticAudioAnalysis;
+}
+
 export async function publishMissingArtShort(songId: string): Promise<{ status: string; shortUrl: string | null }> {
   const response = await adminFetch("/api/neural-beat-art-short", {
     method: "POST",
