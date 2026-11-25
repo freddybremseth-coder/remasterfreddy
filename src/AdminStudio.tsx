@@ -642,6 +642,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           <p className="admin-eyebrow">Ny sang</p>
           <h2>Last opp MP3</h2>
           <p>Filen lastes direkte til Supabase med en kortvarig, signert opplastingsadresse.</p>
+          <a className="admin-genre-review-shortcut" href="#remaster-genre-review">
+            Gå direkte til sjangergjennomgang av eksisterende sanger
+          </a>
         </div>
         <div className="admin-upload-grid">
           <label className="admin-file-field">
@@ -703,7 +706,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
 
       <PipelineVideoDirection value={pipelineOptions} onChange={setPipelineOptions} />
 
-      <div className="pipeline-asset-field">
+      <div className="pipeline-asset-field" id="remaster-genre-review">
         <label htmlFor="remaster-song-images"><strong>Videobilder for sang</strong></label>
         <div className="admin-genre-filter">
           <label htmlFor="remaster-genre-filter">Finn sanger som bør sjekkes</label>
