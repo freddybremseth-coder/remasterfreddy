@@ -29,6 +29,9 @@
     "api/neural-beat-visual-preflight.ts": {
       "maxDuration": 90
     },
+    "api/neural-beat-audio-analysis.ts": {
+      "maxDuration": 90
+    },
     "api/neural-beat-private-video-preview.ts": {
       "maxDuration": 210
     },
