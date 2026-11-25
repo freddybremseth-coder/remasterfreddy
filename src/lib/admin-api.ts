@@ -15,6 +15,10 @@ export interface AdminSong {
     shortsError?: string | null;
     /** Ordered video images stored on the song record in RealtyFlow. */
     remasterVideoImageUrls?: string[];
+    /** Set only when the owner explicitly selected or corrected the genre. */
+    genreSource?: "author" | "unverified" | string;
+    authorSelectedGenre?: string;
+    genreConfirmedAt?: string | null;
   };
 }
 
@@ -168,6 +172,21 @@ export async function loadSongs(): Promise<AdminSong[]> {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || "Kunne ikke hente sangene.");
   return Array.isArray(data.songs) ? data.songs : [];
+}
+
+/** Correct an existing song's internal genre; leaves MP3, images and YouTube unchanged. */
+export async function correctSongGenre(recordId: string, genre: string | null): Promise<AdminSong> {
+  const response = await adminFetch("/api/neural-beat-song-genre", {
+    method: "PUT",
+    body: JSON.stringify({ recordId, genre }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.saved !== true || result.recordId !== recordId ||
+      result.genre !== genre || result.genreSource !== (genre ? "author" : "unverified") ||
+      result.youtubeUnchanged !== true || !result.song || result.song.id !== recordId) {
+    throw new Error(result.error || "Serveren bekreftet ikke sjangerendringen.");
+  }
+  return result.song as AdminSong;
 }
 
 export async function publishMissingArtShort(songId: string): Promise<{ status: string; shortUrl: string | null }> {
