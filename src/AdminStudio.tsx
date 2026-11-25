@@ -63,7 +63,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
-  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect">("all");
+  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect" | "missingAudio">("all");
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
@@ -212,12 +212,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
     [songs],
   );
-  const unverifiedSongs = songs.filter(song => song.audioUrl && song.metadata?.genreSource !== "author");
+  const unverifiedSongs = songs.filter(song => song.metadata?.genreSource !== "author");
+  const missingAudioSongs = songs.filter(song => !song.audioUrl);
   const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic|dance|house|techno|trance)\b/i.test(song.genre || ""));
   const filteredGenreSongs = genreReviewFilter === "suspect"
     ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
-      : songs.filter(song => song.audioUrl);
+      : genreReviewFilter === "missingAudio" ? missingAudioSongs : songs;
   const activeSong = songs.find(song => song.id === activeSongId);
+  const activeReviewPosition = filteredGenreSongs.findIndex(song => song.id === activeSongId);
   const confirmedGenre = activeSong?.metadata?.genreSource === "author"
     ? activeSong.metadata.authorSelectedGenre || "" : "";
   const needsGenreUpdate = genreDraft !== confirmedGenre ||
@@ -227,6 +229,22 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     setGenreDraft(song?.metadata?.genreSource === "author"
       ? song.metadata.authorSelectedGenre || "" : "");
   }, [activeSongId, songs]);
+
+  function goToNextGenreReview() {
+    if (!filteredGenreSongs.length || genreSaving) return;
+    const next = filteredGenreSongs[activeReviewPosition < 0
+      ? 0 : (activeReviewPosition + 1) % filteredGenreSongs.length];
+    setActiveSongId(next.id);
+    setGenreMessage("");
+    setPreview(null);
+    setPendingRender(null);
+    setVisualCheck(null);
+    setPrivateMp4(null);
+    setPrivateFullMp4(null);
+    setPrivateFullMp4Error(null);
+    setAcousticError(null);
+    setAcousticResult(null);
+  }
 
   async function checkExistingMp3Audio() {
     const song = activeSong;
@@ -685,7 +703,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               const next = event.target.value as typeof genreReviewFilter;
               setGenreReviewFilter(next);
               const chosen = next === "suspect" ? suspectSongs
-                : next === "unverified" ? unverifiedSongs : songs.filter(song => song.audioUrl);
+                : next === "unverified" ? unverifiedSongs
+                : next === "missingAudio" ? missingAudioSongs : songs;
               setActiveSongId(chosen[0]?.id || "");
               setGenreMessage("");
               setPreview(null);
@@ -696,6 +715,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             <option value="all">Alle sanger</option>
             <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
             <option value="suspect">Sjekk elektronisk / Chillout / House ({suspectSongs.length})</option>
+            <option value="missingAudio">Mangler registrert MP3 ({missingAudioSongs.length})</option>
           </select>
         </div>
         <select id="remaster-song-images" value={activeSongId}
@@ -710,12 +730,34 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       </div>
       {activeSong && (
         <section className="pipeline-asset-field" aria-label="Kontroller og endre sjanger for eksisterende sang">
+          <div className="admin-genre-review-progress">
+            <span>{genreReviewFilter === "suspect" ? "Mulig feil sjanger" :
+              genreReviewFilter === "unverified" ? "Ubekreftet sjanger" :
+              genreReviewFilter === "missingAudio" ? "Lydfil mangler" : "Sangarkiv"}</span>
+            <span>{activeReviewPosition >= 0 ? activeReviewPosition + 1 : "–"} av {filteredGenreSongs.length}</span>
+          </div>
           <label htmlFor="remaster-correct-genre"><strong>Kontroller sjanger – {activeSong.title}</strong></label>
           <p>
             {activeSong.metadata?.genreSource === "author"
               ? `Din bekreftede sjanger: ${activeSong.genre || "Ukjent"}`
               : `Tidligere etikett: ${activeSong.genre || "Ikke klassifisert"} (ikke verifisert fra lyd)`}
           </p>
+          {activeSong.audioUrl ? (
+            <div className="admin-genre-audio-review">
+              <strong>Hør sangen før du bekrefter sjangeren</strong>
+              <audio key={activeSong.id} controls preload="none" src={activeSong.audioUrl}
+                aria-label={`Hør ${activeSong.title}`}>Nettleseren støtter ikke MP3-avspilling.</audio>
+              <small>Dette spiller av den registrerte lydfilen direkte. Ingen AI-analyse eller publisering starter.</small>
+            </div>
+          ) : (
+            <p role="status" className="admin-genre-missing-audio">
+              Ingen MP3-lenke er registrert på denne sangen.
+              {activeSong.youtubeUrl && (
+                <> Du kan <a href={activeSong.youtubeUrl} target="_blank" rel="noopener noreferrer">åpne den publiserte versjonen på YouTube</a> for å lytte.</>
+              )}
+              {" "}Lydanalyse er utilgjengelig til MP3-tilknytningen er avklart.
+            </p>
+          )}
           <select id="remaster-correct-genre" value={genreDraft}
             disabled={genreSaving || Boolean(processingId)}
             onChange={event => { setGenreDraft(event.target.value); setGenreMessage(""); }}>
@@ -749,6 +791,14 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             </button>
           </div>
           {genreMessage && <p role="status" className="admin-success">{genreMessage}</p>}
+          <div className="admin-genre-review-next">
+            <button type="button" className="admin-secondary"
+              disabled={filteredGenreSongs.length < 2 || genreSaving || Boolean(processingId)}
+              onClick={goToNextGenreReview}>
+              Neste sang til gjennomgang
+            </button>
+            <small>Ingen endring lagres automatisk når du går videre.</small>
+          </div>
           <small>Dette endrer bare sangens interne sjanger og neste video-/metadataforslag.
             Publiserte YouTube-videoer, eksisterende bilder og MP3-filen berøres ikke.</small>
           <div className="admin-genre-actions">
