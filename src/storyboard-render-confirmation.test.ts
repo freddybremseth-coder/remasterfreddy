@@ -152,6 +152,9 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("goToNextGenreReview");
     expect(source).toContain("Ingen endring lagres automatisk når du går videre.");
     expect(source).toContain("Mangler registrert MP3 (");
+    expect(source).toContain('href="#remaster-genre-review"');
+    expect(source).toContain('id="remaster-genre-review"');
+    expect(css).toContain("#remaster-genre-review { scroll-margin-top");
     expect(source).toContain("activeSong.youtubeUrl");
     expect(source).toContain('rel="noopener noreferrer"');
     expect(source).toContain("Deep House");
