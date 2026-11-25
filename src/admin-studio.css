@@ -699,3 +699,22 @@
 /* Jump past MP3 upload to the genre clean-up workspace. */
 #remaster-genre-review { scroll-margin-top: 26px; }
 .admin-genre-review-shortcut { display: inline-flex; margin-top: 7px; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+
+/* A small human-confirmed benchmark: the legacy tags are not genre truth. */
+.admin-genre-pilot-progress {
+  display: grid;
+  gap: 9px;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, .35);
+  border-radius: 10px;
+  background: rgba(148, 163, 184, .06);
+}
+.admin-genre-pilot-progress strong { font-size: .93rem; }
+.admin-genre-pilot-progress progress {
+  width: 100%;
+  max-width: 600px;
+  height: 12px;
+  accent-color: currentColor;
+}
+.admin-genre-pilot-progress small { display: block; line-height: 1.5; }
