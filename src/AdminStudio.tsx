@@ -172,7 +172,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [mp3Title, setMp3Title] = useState("");
   const [mp3Artist, setMp3Artist] = useState("Re-Master Freddy");
-  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "power-rock" | "metal" | "ballad" | "pop" | "acoustic" | "folk" | "country" | "blues" | "jazz" | "classical" | "soul" | "latin" | "chanson" | "ambient" | "cinematic">("");
+  const [mp3Genre, setMp3Genre] = useState<"" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "power-rock" | "metal" | "ballad" | "pop" | "acoustic" | "folk" | "country" | "blues" | "jazz" | "classical" | "soul" | "latin" | "chanson" | "ambient" | "electronic" | "edm" | "house" | "deep-house" | "techno" | "trance" | "chillout" | "lofi" | "downtempo" | "cinematic">("");
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
 
@@ -664,7 +664,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               <option value="meditation">Meditation – Freddy Bremseth Art</option>
               <option value="relaxing">Relaxing – Freddy Bremseth Art</option>
               <option value="alternative">Alternative – Freddy Bremseth Art</option>
-              <option value="dance">Dance / EDM</option>
+              <option value="dance">Dance / elektronisk pop</option>
+              <option value="electronic">Elektronisk (bred sjanger)</option>
+              <option value="edm">EDM</option>
+              <option value="house">House</option>
+              <option value="deep-house">Deep House</option>
+              <option value="techno">Techno</option>
+              <option value="trance">Trance</option>
+              <option value="chillout">Chillout</option>
+              <option value="lofi">Lo-Fi</option>
+              <option value="downtempo">Downtempo</option>
               <option value="rock">Rock</option>
               <option value="power-rock">Power Rock / episk rock</option>
               <option value="metal">Metal</option>
@@ -781,7 +790,16 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             <option value="ambient">Ambient</option>
             <option value="meditation">Meditation</option>
             <option value="relaxing">Relaxing</option>
-            <option value="dance">Dance / EDM</option>
+            <option value="dance">Dance / elektronisk pop</option>
+              <option value="electronic">Elektronisk (bred sjanger)</option>
+              <option value="edm">EDM</option>
+              <option value="house">House</option>
+              <option value="deep-house">Deep House</option>
+              <option value="techno">Techno</option>
+              <option value="trance">Trance</option>
+              <option value="chillout">Chillout</option>
+              <option value="lofi">Lo-Fi</option>
+              <option value="downtempo">Downtempo</option>
           </select>
           <div className="admin-genre-actions">
             <button type="button" className="admin-secondary"
