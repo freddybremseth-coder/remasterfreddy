@@ -252,7 +252,7 @@ export async function publishMissingArtShort(songId: string): Promise<{ status: 
   return data as { status: string; shortUrl: string | null };
 }
 
-export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "power-rock" | "metal" | "ballad" | "pop" | "acoustic" | "folk" | "country" | "blues" | "jazz" | "classical" | "soul" | "latin" | "chanson" | "ambient" | "cinematic" = ""): Promise<AdminSong> {
+export async function uploadSong(file: File, title: string, artist: string, genre: "" | "meditation" | "relaxing" | "alternative" | "dance" | "rock" | "power-rock" | "metal" | "ballad" | "pop" | "acoustic" | "folk" | "country" | "blues" | "jazz" | "classical" | "soul" | "latin" | "chanson" | "ambient" | "electronic" | "edm" | "house" | "deep-house" | "techno" | "trance" | "chillout" | "lofi" | "downtempo" | "cinematic" = ""): Promise<AdminSong> {
   if (!file || !title.trim()) throw new Error("Velg en MP3-fil og skriv inn tittel.");
   if (file.type && file.type !== "audio/mpeg") throw new Error("Filen må være en MP3.");
 
