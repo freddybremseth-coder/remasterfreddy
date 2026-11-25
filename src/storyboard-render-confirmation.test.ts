@@ -125,7 +125,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Kontroller sjanger –");
     expect(source).toContain("Lagre korrigert sjanger");
     expect(source).toContain("Ubekreftet sjanger (");
-    expect(source).toContain("Mulig feil EDM / Chillout (");
+    expect(source).toContain("Sjekk elektronisk / Chillout / House (");
+    expect(source).toContain("electronic|dance|house|techno|trance");
     expect(source).toContain('song.metadata?.genreSource !== "author"');
     expect(source).toContain('const suspectSongs = unverifiedSongs.filter');
     expect(source).toContain("filteredGenreSongs.map(");
