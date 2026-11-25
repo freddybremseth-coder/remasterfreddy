@@ -143,6 +143,30 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(proxy).not.toContain("startSongPipeline(");
   });
 
+  it("offers playable MP3 and a next-song control across all 135 archived records", () => {
+    const css = readFileSync("src/admin-studio.css", "utf8");
+    const proxy = readFileSync("api/neural-beat-song-genre.ts", "utf8");
+    expect(source).toContain('<audio key={activeSong.id} controls preload="none" src={activeSong.audioUrl}');
+    expect(source).toContain('aria-label={`Hør ${activeSong.title}`}');
+    expect(source).toContain("Neste sang til gjennomgang");
+    expect(source).toContain("goToNextGenreReview");
+    expect(source).toContain("Ingen endring lagres automatisk når du går videre.");
+    expect(source).toContain("Mangler registrert MP3 (");
+    expect(source).toContain("activeSong.youtubeUrl");
+    expect(source).toContain('rel="noopener noreferrer"');
+    expect(source).toContain("Deep House");
+    expect(source).toContain("Downtempo");
+    expect(source).toContain("Sjekk elektronisk / Chillout / House");
+    expect(css).toContain(".admin-genre-audio-review audio");
+    expect(css).toContain("max-width: 680px");
+    expect(css).toContain(".admin-genre-review-next");
+    for (const key of ["electronic", "edm", "house", "deep-house", "techno", "trance", "chillout", "lofi", "downtempo"]) {
+      expect(proxy).toContain('"' + key + '"');
+      expect(source).toContain('value="' + key + '"');
+    }
+    expect(proxy).not.toContain("uploadVideo(");
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
