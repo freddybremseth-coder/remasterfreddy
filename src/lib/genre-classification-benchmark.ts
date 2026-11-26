@@ -101,6 +101,17 @@ export function firstFiveAudioCalibration(songs: readonly AdminSong[]): Verified
   return selected;
 }
 
+/**
+ * Five calibration examples are NOT counted as blind test accuracy.
+ * Evaluate on the remaining verified files after choosing model and labels.
+ */
+export function splitAudioCalibration(songs: readonly AdminSong[]) {
+  const calibration = firstFiveAudioCalibration(songs);
+  const calibrationIds = new Set(calibration.map(item => item.songId));
+  const holdout = verifiedAudioReferences(songs).filter(item => !calibrationIds.has(item.songId));
+  return { calibration, holdout };
+}
+
 /** Pure evaluator for future licensed, audio-only model predictions. */
 export interface IndependentAudioPrediction {
   songId: string;
