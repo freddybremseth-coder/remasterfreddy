@@ -68,6 +68,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
+  const [genreError, setGenreError] = useState("");
   const [acousticLoadingId, setAcousticLoadingId] = useState<string | null>(null);
   const [acousticResult, setAcousticResult] = useState<{songId: string; data: AcousticAudioAnalysis} | null>(null);
   const [acousticError, setAcousticError] = useState<{songId: string; message: string} | null>(null);
@@ -240,6 +241,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       ? 0 : (activeReviewPosition + 1) % filteredGenreSongs.length];
     setActiveSongId(next.id);
     setGenreMessage("");
+    setGenreError("");
     setPreview(null);
     setPendingRender(null);
     setVisualCheck(null);
@@ -275,6 +277,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
     const selected = genreDraft || null;
     setGenreSaving(true);
     setGenreMessage("");
+    setGenreError("");
     setError("");
     try {
       const updated = await correctSongGenre(song.id, selected);
@@ -289,7 +292,8 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         ? "Sjangeren er lagret som ditt bekreftede valg. MP3, bilder og YouTube er ikke endret."
         : "Den ubekreftede sjangeretiketten er fjernet. MP3, bilder og YouTube er ikke endret.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke oppdatere sjanger.");
+      const message = err instanceof Error ? err.message : "Kunne ikke oppdatere sjanger.";
+      setGenreError(message);
     } finally {
       setGenreSaving(false);
     }
@@ -718,6 +722,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             onChange={event => {
               const next = event.target.value as typeof genreReviewFilter;
               setGenreReviewFilter(next);
+              setGenreError("");
               const chosen = next === "pilot" ? genrePilotSongs : next === "suspect" ? suspectSongs
                 : next === "unverified" ? unverifiedSongs
                 : next === "missingAudio" ? missingAudioSongs : songs;
@@ -748,7 +753,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           </div>
         )}
         <select id="remaster-song-images" value={activeSongId}
-          onChange={event => { setActiveSongId(event.target.value); setGenreMessage(""); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
+          onChange={event => { setActiveSongId(event.target.value); setGenreMessage(""); setGenreError(""); setPendingRender(null); setPreview(null); setPrivateMp4(null); setPrivateFullMp4(null); setPrivateFullMp4Error(null); setVisualCheck(null); setVisualCheckMessage(""); }}>
           <option value="">Velg sang</option>
           <option value={NEW_SONG_DRAFT}>Ny sang – bilder før MP3-opplasting</option>
           {filteredGenreSongs.map(song => <option key={song.id} value={song.id}>{song.title} {song.genre ? `· ${song.genre}` : "· ubekreftet"}</option>)}
@@ -789,7 +794,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           )}
           <select id="remaster-correct-genre" value={genreDraft}
             disabled={genreSaving || Boolean(processingId)}
-            onChange={event => { setGenreDraft(event.target.value); setGenreMessage(""); }}>
+            onChange={event => { setGenreDraft(event.target.value); setGenreMessage(""); setGenreError(""); }}>
             <option value="">Ikke bekreftet / fjern feil etikett</option>
             <option value="rock">Rock</option>
             <option value="power-rock">Power Rock / episk rock</option>
@@ -823,11 +828,23 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           </select>
           <div className="admin-genre-actions">
             <button type="button" className="admin-secondary"
-              disabled={!needsGenreUpdate || genreSaving || Boolean(processingId)}
+              disabled={!genreDraft || !needsGenreUpdate || genreSaving || Boolean(processingId)}
               onClick={() => { void saveExistingGenre(); }}>
-              {genreSaving ? "Lagrer sjanger…" : "Lagre korrigert sjanger"}
+              {genreSaving ? "Lagrer og kontrollerer…" : "Lagre og bekreft sjanger"}
             </button>
+            {needsGenreUpdate && !genreDraft && (
+              <button type="button" className="admin-secondary"
+                disabled={genreSaving || Boolean(processingId)}
+                onClick={() => { void saveExistingGenre(); }}>
+                Fjern tidligere sjangeretikett
+              </button>
+            )}
           </div>
+          {!genreDraft && !genreMessage && !genreError && (
+            <small>Velg riktig sjanger før du lagrer. Å fjerne en feil etikett er et eget valg og bekrefter ikke ny sjanger.</small>
+          )}
+          {genreSaving && <p role="status">Kontrollerer lagringen mot RealtyFlow-databasen …</p>}
+          {genreError && <p role="alert" className="admin-genre-save-error">{genreError}</p>}
           {genreMessage && <p role="status" className="admin-success">{genreMessage}</p>}
           <div className="admin-genre-review-next">
             <button type="button" className="admin-secondary"
