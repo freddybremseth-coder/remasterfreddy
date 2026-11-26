@@ -129,6 +129,7 @@ export function compareModelWithOwner(
     const key = prediction.songId + ":" + prediction.axis;
     if (!lookup.has(key)) lookup.set(key, prediction);
   }
+  let analyzed = 0;
   let attempted = 0;
   let correct = 0;
   let wrongElectronic = 0;
@@ -137,7 +138,9 @@ export function compareModelWithOwner(
     style: { attempted: 0, correct: 0 } };
   for (const item of reference) {
     const result = lookup.get(item.songId + ":" + item.axis);
-    const predicted = normalize(result?.predictedLabel);
+    if (!result) continue;
+    analyzed++;
+    const predicted = normalize(result.predictedLabel);
     if (!predicted) continue;
     attempted++;
     byAxis[item.axis].attempted++;
@@ -150,10 +153,12 @@ export function compareModelWithOwner(
   }
   return {
     evaluated: reference.length,
+    analyzed,
+    notTested: reference.length - analyzed,
     attempted,
     correct,
     wrongElectronic,
-    abstained: reference.length - attempted,
+    abstained: analyzed - attempted,
     exactMatchRate: attempted ? correct / attempted : null,
     byAxis,
   };
