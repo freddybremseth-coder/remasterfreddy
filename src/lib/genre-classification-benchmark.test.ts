@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AdminSong } from "./admin-api";
 import {
   audioBenchmarkSummary, compareModelWithOwner, firstFiveAudioCalibration,
-  verifiedAudioReferences, splitAudioCalibration,
+  verifiedAudioReferences, splitAudioCalibration, summarizeAudioModelCalibration,
 } from "./genre-classification-benchmark";
 
 function track(id: string, label: string, oldGenre = "EDM", audio = true): AdminSong {
@@ -93,6 +93,47 @@ describe("human confirmed MP3 classification benchmark", () => {
       evaluated: 5, analyzed: 2, notTested: 3, attempted: 2,
       correct: 0, abstained: 0, wrongElectronic: 0,
     }));
+  });
+
+  it("blocks automatic use even after five real calibration results with low quality", () => {
+    const refs = verifiedAudioReferences([
+      track("1", "power-rock"), track("2", "electronic"), track("3", "ballad"),
+      track("4", "relaxing"), track("5", "chillout"),
+    ]);
+    const score = summarizeAudioModelCalibration(refs, [
+      { songId: "1", axis: "genre", predictedLabel: null },
+      { songId: "2", axis: "genre", predictedLabel: "pop" },
+      { songId: "3", axis: "genre", predictedLabel: "ballad" },
+      { songId: "4", axis: "mood", predictedLabel: "energetic" },
+      { songId: "5", axis: "style", predictedLabel: "lofi" },
+    ]);
+    expect(score.allCalibrated).toBe(true);
+    expect(score.autoLabelingAllowed).toBe(false);
+    expect(score.status).toBe("not-approved-for-automatic-genre-labels");
+    expect(score).toEqual(expect.objectContaining({
+      evaluated: 5, analyzed: 5, attempted: 4, correct: 1, abstained: 1,
+      exactMatchRate: 0.25,
+    }));
+    expect(score.perAxis).toEqual([
+      { axis: "genre", total: 3, analyzed: 3, suggested: 2, correct: 1,
+        wrong: 1, abstained: 1, untested: 0, accuracyAmongSuggestions: 0.5 },
+      { axis: "mood", total: 1, analyzed: 1, suggested: 1, correct: 0,
+        wrong: 1, abstained: 0, untested: 0, accuracyAmongSuggestions: 0 },
+      { axis: "style", total: 1, analyzed: 1, suggested: 1, correct: 0,
+        wrong: 1, abstained: 0, untested: 0, accuracyAmongSuggestions: 0 },
+    ]);
+  });
+
+  it("cannot approve automatic labels from a high-scoring five-song sample either", () => {
+    const refs = verifiedAudioReferences([
+      track("1", "power-rock"), track("2", "electronic"), track("3", "ballad"),
+      track("4", "relaxing"), track("5", "chillout"),
+    ]);
+    const score = summarizeAudioModelCalibration(refs, refs.map(item => ({
+      songId: item.songId, axis: item.axis, predictedLabel: item.referenceLabel,
+    })));
+    expect(score.exactMatchRate).toBe(1);
+    expect(score.autoLabelingAllowed).toBe(false);
   });
 
   it("scores only compatible model dimensions and refuses invented success", () => {
