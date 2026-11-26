@@ -7,6 +7,9 @@ export interface AdminSong {
   artist?: string;
   audioUrl?: string;
   youtubeUrl?: string;
+  /** Actual state from RealtyFlow, not "video ready" implied from an MP3 alone. */
+  status?: string;
+  errorMessage?: string;
   genre?: string;
   mood?: string;
   metadata?: {
