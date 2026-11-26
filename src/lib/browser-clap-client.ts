@@ -34,12 +34,13 @@ export function representativeClapOffsets(totalFrames: number, clipFrames: numbe
 }
 
 /**
- * Obtain a 10s 48kHz mono segment in the BROWSER only, after user click.
+ * Obtain three independent 10s mono excerpts in the BROWSER after a click.
  * No audio, owner label, title, lyric or old genre is sent to an AI provider.
  * Assumes the song is already part of first-party Supabase public storage.
  */
-export async function prepareBrowserClapAudioSegments(
+export async function prepareBrowserMusicAudioSegments(
   url: string,
+  sampleRate: 16_000 | 48_000,
   signal?: AbortSignal,
 ): Promise<Float32Array[]> {
   const supabaseBase = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -75,7 +76,7 @@ export async function prepareBrowserClapAudioSegments(
   let cursor = 0;
   for (const part of chunks) { encoded.set(part, cursor); cursor += part.length; }
 
-  const audio = new AudioContext({ sampleRate: 48_000 });
+  const audio = new AudioContext({ sampleRate });
   try {
     const decoded = await audio.decodeAudioData(encoded.buffer);
     const rate = decoded.sampleRate;
@@ -86,9 +87,9 @@ export async function prepareBrowserClapAudioSegments(
     const duration = Math.min(10, decoded.duration / 3);
     const samples = Math.min(decoded.length, Math.floor(duration * rate));
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, n) => decoded.getChannelData(n));
-    if (rate !== 48_000) {
+    if (rate !== sampleRate) {
       // decodeAudioData normally resamples to AudioContext sample rate.
-      throw new Error("Nettleseren kunne ikke levere lyd i 48 kHz.");
+      throw new Error("Nettleseren kunne ikke levere riktig lydovertakingsfrekvens.");
     }
     const offsets = representativeClapOffsets(decoded.length, samples);
     return offsets.map(offset => {
@@ -99,6 +100,15 @@ export async function prepareBrowserClapAudioSegments(
       return mono;
     });
   } finally { await audio.close(); }
+}
+
+/** CLAP uses 48 kHz and AST uses 16 kHz, each decoded locally. */
+export function prepareBrowserClapAudioSegments(url: string, signal?: AbortSignal) {
+  return prepareBrowserMusicAudioSegments(url, 48_000, signal);
+}
+
+export function prepareBrowserAstAudioSegments(url: string, signal?: AbortSignal) {
+  return prepareBrowserMusicAudioSegments(url, 16_000, signal);
 }
 
 /** Compatibility helper for one-section consumers. New CLAP trials use 3 segments. */
