@@ -18,6 +18,22 @@ export function isFirstPartyMusicFile(url: string, supabaseBase: string | undefi
 }
 
 /**
+ * Choose the CENTER of each third of the song. Unlike first/middle/last
+ * excerpts, this avoids a long intro, silence at the head, or a fading outro.
+ * For short tracks each excerpt occupies up to one third, never overlapping.
+ */
+export function representativeClapOffsets(totalFrames: number, clipFrames: number): [number, number, number] {
+  if (!Number.isInteger(totalFrames) || !Number.isInteger(clipFrames) ||
+      clipFrames < 1 || totalFrames < 3 * clipFrames) {
+    throw new Error("Sangen er for kort til tre uavhengige lydutdrag.");
+  }
+  const third = totalFrames / 3;
+  return [0, 1, 2].map(part =>
+    Math.min(totalFrames - clipFrames,
+      Math.max(0, Math.floor((part + 0.5) * third - clipFrames / 2)))) as [number, number, number];
+}
+
+/**
  * Obtain a 10s 48kHz mono segment in the BROWSER only, after user click.
  * No audio, owner label, title, lyric or old genre is sent to an AI provider.
  * Assumes the song is already part of first-party Supabase public storage.
@@ -74,8 +90,7 @@ export async function prepareBrowserClapAudioSegments(
       // decodeAudioData normally resamples to AudioContext sample rate.
       throw new Error("Nettleseren kunne ikke levere lyd i 48 kHz.");
     }
-    const available = Math.max(0, decoded.length - samples);
-    const offsets = [0, Math.floor(available / 2), available];
+    const offsets = representativeClapOffsets(decoded.length, samples);
     return offsets.map(offset => {
       const mono = new Float32Array(samples);
       for (const channel of channels) {
