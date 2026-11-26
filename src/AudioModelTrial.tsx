@@ -4,7 +4,7 @@ import type { VerifiedAudioReference, IndependentAudioPrediction } from "./lib/g
 import { compareModelWithOwner } from "./lib/genre-classification-benchmark";
 import { CLAP_MODEL_ID, CLAP_MODEL_LICENSE, interpretClapOutput } from "./lib/browser-clap-labels";
 import type { BrowserClapReply } from "./lib/browser-clap-client";
-import { prepareBrowserClapAudio } from "./lib/browser-clap-client";
+import { prepareBrowserClapAudioSegments } from "./lib/browser-clap-client";
 
 type Result = ReturnType<typeof interpretClapOutput>;
 type Run = { entry: VerifiedAudioReference; result: Result };
@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * Explicitly-clicked, temporary local experiment; never writes to DB.
- * Only 48kHz PCM + target axis reaches the browser Worker. No genre
+ * Only three 48kHz PCM segments + target axis reach the browser Worker. No genre
  * ground truth, title, lyrics, legacy labels or YouTube data reach the model.
  */
 export default function AudioModelTrial({ songs, references }: Props) {
@@ -59,10 +59,10 @@ export default function AudioModelTrial({ songs, references }: Props) {
     abortRef.current = controller;
     setRunning(entry.songId);
     setError("");
-    setStatus("Henter 10 sekunder lyd fra egen Supabase-bank …");
+    setStatus("Henter tre korte lydutdrag fra egen Supabase-bank …");
     setPercent(null);
     try {
-      const audio = await prepareBrowserClapAudio(song.audioUrl, controller.signal);
+      const audioClips = await prepareBrowserClapAudioSegments(song.audioUrl, controller.signal);
       if (id !== jobIdRef.current || controller.signal.aborted) return;
       if (!workerRef.current) {
         workerRef.current = new Worker(new URL("./workers/clap-audio.worker.ts", import.meta.url), {
@@ -87,7 +87,7 @@ export default function AudioModelTrial({ songs, references }: Props) {
           setRunning(null);
           setPercent(null);
         } else if (event.data.type === "result") {
-          const interpreted = interpretClapOutput(entry.axis, event.data.scores);
+          const interpreted = interpretClapOutput(entry.axis, event.data.scores, event.data.clipWinners);
           setResults(previous => [...previous.filter(x => x.entry.songId !== entry.songId),
             { entry, result: interpreted }]);
           setStatus("Lokal lydanalyse fullført. Resultatet er ikke lagret.");
@@ -96,7 +96,8 @@ export default function AudioModelTrial({ songs, references }: Props) {
         }
       };
       setStatus("Starter nettlesermodellen (første gang: omtrent 160 MB nedlasting) …");
-      worker.postMessage({ type: "classify", id, axis: entry.axis, audio }, [audio.buffer]);
+      worker.postMessage({ type: "classify", id, axis: entry.axis, audioClips },
+        audioClips.map(clip => clip.buffer));
     } catch (e) {
       if (id !== jobIdRef.current || controller.signal.aborted) return;
       setError(e instanceof Error ? e.message : "Kunne ikke lese MP3 i nettleseren.");
@@ -118,8 +119,8 @@ export default function AudioModelTrial({ songs, references }: Props) {
         Første gang lastes omtrent 160 MB modellfiler ned fra Hugging Face.
         Lyd hentes fra din Supabase-bank og analyseres <b>lokalt i nettleseren</b>.
         Ingen lyd sendes til en ekstern AI-tjeneste og ingen betalt API brukes.</p>
-      <p>Velg én sang om gangen. Modellen får bare 10 sekunder med lyd og hvilken type
-        analyse som ønskes – ikke sangnavn, tidligere sjanger eller dine fasitsvar.
+      <p>Velg én sang om gangen. Modellen undersøker tre deler av sangen, inntil 10 sekunder fra hver,
+        og sammenligner dem – uten å få sangnavn, tidligere sjanger eller dine fasitsvar.
         Likhetsscore er <b>ikke</b> en prosentvis sikkerhetsvurdering.
         På langsom mobil eller med lite minne kan modellen feile.</p>
       <ul className="admin-genre-clap-list">
@@ -142,6 +143,7 @@ export default function AudioModelTrial({ songs, references }: Props) {
                   <strong>{!guess ? "Usikkert – ingen sjanger tvunget frem" :
                     guess === entry.referenceLabel ? "Samsvar med din fasit" : "Modellforslaget avviker fra din fasit"}</strong>
                   <span>Forslag: {guess || "Avstår"}. Avstand til nest høyeste: {prior.result.margin.toFixed(3)}.</span>
+                  <small>Enighet mellom sangdelene: {prior.result.sectionsAgree} av {prior.result.sectionsAnalyzed}. Ved uenighet gis ikke et sikkert forslag.</small>
                   <small>Alternativer: {prior.result.alternatives.map(item =>
                     item.label + " (" + item.score.toFixed(3) + ")").join(" · ")}</small>
                 </div>
