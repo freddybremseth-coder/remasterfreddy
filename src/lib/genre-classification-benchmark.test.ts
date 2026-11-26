@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AdminSong } from "./admin-api";
 import {
   audioBenchmarkSummary, compareModelWithOwner, firstFiveAudioCalibration,
-  verifiedAudioReferences,
+  verifiedAudioReferences, splitAudioCalibration,
 } from "./genre-classification-benchmark";
 
 function track(id: string, label: string, oldGenre = "EDM", audio = true): AdminSong {
@@ -64,6 +64,20 @@ describe("human confirmed MP3 classification benchmark", () => {
     expect(new Set(first.map(x => x.axis))).toEqual(new Set(["genre", "mood", "style"]));
     expect(firstFiveAudioCalibration(s.slice().reverse()).map(x => x.songId))
       .toEqual(first.map(x => x.songId));
+  });
+
+  it("holds out every song not used in the five-song calibration", () => {
+    const tracks = [
+      track("1", "power-rock"), track("2", "electronic"), track("3", "ballad"),
+      track("4", "relaxing"), track("5", "chillout"),
+      ...Array.from({ length: 17 }, (_, i) => track("x-" + String(i).padStart(2, "0"), "relaxing")),
+    ];
+    const split = splitAudioCalibration(tracks);
+    expect(split.calibration).toHaveLength(5);
+    expect(split.holdout).toHaveLength(17);
+    const trainingIds = new Set(split.calibration.map(item => item.songId));
+    expect(split.holdout.every(item => !trainingIds.has(item.songId))).toBe(true);
+    expect(split.calibration.length + split.holdout.length).toBe(22);
   });
 
   it("scores only compatible model dimensions and refuses invented success", () => {
