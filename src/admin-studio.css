@@ -857,3 +857,36 @@
 @media (max-width: 600px) {
   .admin-genre-clap-axis-row { flex-direction: column; align-items: flex-start; }
 }
+
+/* Read-only independent AudioSet trial; never a source of saved genres. */
+.admin-ast-trial {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  margin: 12px 0;
+  border: 1px solid rgba(148, 163, 184, .38);
+  border-radius: 12px;
+  background: rgba(148, 163, 184, .06);
+}
+.admin-ast-trial p, .admin-ast-trial small { margin: 0; line-height: 1.5; }
+.admin-ast-trial p { font-size: 13px; }
+.admin-ast-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.admin-ast-actions select { flex: 1 1 210px; min-width: 0; }
+.admin-ast-results { display: grid; gap: 10px; }
+.admin-ast-result-group {
+  border-radius: 8px;
+  padding: 11px;
+  background: rgba(148, 163, 184, .1);
+  border: 1px solid rgba(148, 163, 184, .25);
+}
+.admin-ast-result-group ul { padding-left: 20px; margin: 8px 0 0; }
+.admin-ast-result-group li { padding: 3px 0; font-size: 13px; overflow-wrap: anywhere; }
+.admin-ast-export { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.admin-ast-progress { display: grid; justify-items: start; gap: 8px; }
+.admin-ast-progress progress { max-width: 100%; width: 440px; }
+@media (max-width: 600px) {
+  .admin-ast-trial { padding: 11px; }
+  .admin-ast-actions { align-items: stretch; flex-direction: column; }
+  .admin-ast-actions select, .admin-ast-actions button { width: 100%; }
+  .admin-ast-export > button { width: 100%; }
+}
