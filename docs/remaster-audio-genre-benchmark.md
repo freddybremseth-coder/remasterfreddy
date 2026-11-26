@@ -46,3 +46,23 @@ The implementation provides `verifiedAudioReferences`, `audioBenchmarkSummary`, 
 ## Exit criteria
 
 A genuine five-song browser inference run with documented license, raw outputs, no cross-song metadata leakage, no unexpected song/YouTube mutation, and reproducible evaluation. The model test is **available on click, not automatically run**. A READY Vercel build and passing unit tests do not establish that model loading and inference work on the user’s browser.
+
+## Outcome of the first real five-song browser test (2026-11-26)
+
+A screenshot submitted by the owner after analyzing all five calibration songs shows:
+- 5 analyzed, 4 non-abstained suggestions, 1 exact match, 3 incorrect suggestions, 1 abstention.
+- One confirmed rock genre abstained; the electronic genre was suggested as pop; the confirmed ballad matched ballad; a relaxing mood was called energetic; chillout style was called lo-fi.
+- Accuracy **among non-abstained suggestions**: 1/4 (25%). This is not a robust estimate of future accuracy and does not authorize auto classification.
+- These results are manually transcribed from the owner-provided UI screenshot, **not** persisted model predictions or a blinded independent test. Subsequent local changes to audio sampling and prompts are not independently evaluated until the owner runs new comparisons.
+
+Decision: **CLAP is rejected as the sole automatic genre decision-maker for Re-master.** Keep it as an optional research tool with no path to change `songs.genre`, `authorSelectedGenre`, video visuals or YouTube.
+
+## Alternative classifiers considered
+
+- `dima806/music_genres_classification` (https://huggingface.co/dima806/music_genres_classification) is a dedicated wav2vec2-based classifier with Apache-2.0 listed on its model card. It supports the ten GTZAN labels (blues, classical, country, disco, hip-hop, jazz, metal, pop, reggae, rock). Its model card reports 94.6M parameters and a roughly 378 MB float-weight file. It **does not support electronic, chillout, relaxing or a power-rock subclass**, so it cannot replace the current label taxonomy as-is. The model is not deployed by a hosted inference provider on its page. Research candidate only; **no API calls, downloads or charges have been made**.
+- `ccmusic-database/music_genre` (https://huggingface.co/ccmusic-database/music_genre) lists an MIT license and 16 fine-tuning genre categories, but requires its own spectrogram/vision architecture. Category mapping, dataset rights, inference compatibility and independent accuracy need checking. Research candidate only.
+- Specialist classifier licensing and target-label coverage must be verified *before* implementing or paying for inference. In particular, do not treat GTZAN's disco class as equivalent to all electronic music or chillout.
+
+## Go / no-go gate
+
+A separate genre model may only **suggest** labels when a technically verified, independently evaluated and license-appropriate deployment exists. The five calibration cases cannot greenlight the automated path regardless of score. User-confirmed genre metadata always takes precedence. Visual selection requires a separate content/theme decision; no model may inject neon, yacht or DJ imagery based solely on a broad genre guess.
