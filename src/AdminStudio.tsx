@@ -776,9 +776,11 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               ))}
             </ul>
           </div>
-          <small>Modelltest: Ikke kjørt. Ingen modell er koblet til, ingen MP3 er sendt til en ekstern tjeneste,
-            og ingen sjanger, video eller YouTube-publisering endres av denne oversikten.</small>
-          <small>En fremtidig lydmodell må få kun lyd og skal måles blindt mot dine allerede lagrede valg.</small>
+          <small>En valgfri lokal lydmodelltest er tilgjengelig nedenfor under «Første 5 til modelltest».
+            Ingen analyse starter før du selv trykker «Analyser lyd lokalt» på én sang.
+            Ingen MP3 sendes til en ekstern AI-tjeneste, og ingen sjanger eller YouTube-publisering endres.</small>
+          <small>Modellen mottar kun et lydutdrag og type analyse – aldri din bekreftede etikett.
+            Nettleserkompatibilitet og treffsikkerhet må bekreftes gjennom en faktisk test.</small>
         </div>
         )}
         {genreReviewFilter === "calibration" && (
