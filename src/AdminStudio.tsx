@@ -765,6 +765,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             eldre etiketter er forskjellige fra dine bekreftede valg. Gamle etiketter brukes aldri som modellfasit.</p>
           <div className="admin-genre-benchmark-pilot">
             <strong>De fem første lydtestene</strong>
+            <small>Disse {firstFiveAudio.length} sangene brukes til å kontrollere modelloppsettet. De resterende {Math.max(0, genreBenchmark.playableReferences - firstFiveAudio.length)} bekreftede MP3-filene holdes utenfor kalibreringen for en mer uavhengig test.</small>
             <ul>
               {firstFiveAudio.map(entry => (
                 <li key={entry.songId}>
