@@ -286,6 +286,14 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(worker).toContain("top_k: 50");
     expect(worker).toContain("AST_MODEL_ID");
     expect(model).toContain("BSD-3-Clause");
+    expect(model).toContain("AST_DIAGNOSTIC_SCORE_FLOOR");
+    expect(model).toContain("bySection: validSections.map");
+    expect(ast).toContain("Hva AST faktisk rangerer høyest");
+    expect(ast).toContain("Vis svake og enkeltstående utslag");
+    expect(ast).toContain("Ingen gjentatte musikksjangersignaler");
+    expect(ast).toContain("evidence.overall.map");
+    expect(ast).toContain("result.bySection.map");
+    expect(ast).toContain("isAstRepeatedDisplaySignal");
     expect(model).toContain('"Electronic dance music"');
     expect(client).toContain("sampleRate: 16_000 | 48_000");
   });
