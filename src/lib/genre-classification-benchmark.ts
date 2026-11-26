@@ -80,8 +80,8 @@ export function audioBenchmarkSummary(songs: readonly AdminSong[]) {
 export function firstFiveAudioCalibration(songs: readonly AdminSong[]): VerifiedAudioReference[] {
   const references = verifiedAudioReferences(songs);
   const priority = [
-    "power-rock", "rock", "electronic", "ballad", "relaxing",
-    "chillout", "chanson", "meditation", "deep-house", "pop",
+    "power-rock", "electronic", "ballad", "relaxing", "chillout",
+    "rock", "chanson", "meditation", "deep-house", "pop",
   ];
   const selected: VerifiedAudioReference[] = [];
   const selectedIds = new Set<string>();
