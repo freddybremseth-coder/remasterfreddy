@@ -69,6 +69,7 @@ export function interpretClapOutput(
     margin: Math.round(margin * 1000) / 1000,
     sectionsAnalyzed: winners.length,
     sectionsAgree: agreement,
+    sectionLeaders: winners,
     alternatives: valid.slice(0, 3),
     abstained: predictedLabel === null,
   };
