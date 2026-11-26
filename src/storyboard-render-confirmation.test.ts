@@ -205,7 +205,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("genreBenchmark.moods");
     expect(source).toContain("genreBenchmark.styles");
     expect(source).toContain("firstFiveAudio.map(entry => (");
-    expect(source).toContain("Modelltest: Ikke kjørt.");
+    expect(source).toContain("En valgfri lokal lydmodelltest er tilgjengelig");
+    expect(source).toContain("Ingen analyse starter før du selv trykker");
     expect(source).toContain("Gamle etiketter brukes aldri som modellfasit.");
     expect(benchmark).toContain('meta?.genreSource !== "author"');
     expect(benchmark).toContain("firstFiveAudioCalibration");
