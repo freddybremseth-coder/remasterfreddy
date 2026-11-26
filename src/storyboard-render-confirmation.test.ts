@@ -431,6 +431,18 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Spill av eller åpne privat fullengdevideo");
   });
 
+  it("distinguishes login redirects before upload from ambiguous non-JSON YouTube responses", () => {
+    const proxy = readFileSync("api/neural-beat-publish-stored-video.ts", "utf8");
+    expect(proxy).toContain('/api/neural-beat/publish-stored-video');
+    expect(proxy).toContain('redirect: "manual"');
+    expect(proxy).toContain('body.confirmUpload !== true');
+    expect(proxy).toContain('body.privacyStatus !== "unlisted"');
+    expect(proxy).toContain("upstream.status >= 300 && upstream.status < 400");
+    expect(proxy).toContain("RealtyFlow avviste tilkoblingen før YouTube-opplastingen startet.");
+    expect(proxy).toContain("Kontroller YouTube-kanalen før et nytt forsøk");
+    expect(proxy).not.toContain('error: "Kunne ikke kontrollere YouTube-opplastingen."');
+  });
+
   it("can reopen the last stored private MP4 after reload without storyboard or paid rendering", () => {
     const api = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-private-full-video.ts", "utf8");
