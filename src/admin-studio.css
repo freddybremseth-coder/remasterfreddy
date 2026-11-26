@@ -941,3 +941,14 @@
   .admin-video-queue-actions { width: 100%; }
   .admin-video-queue-actions > button { flex: 1 1 auto; }
 }
+
+/* Prevent same-title songs from looking like the same YouTube recording. */
+.admin-duplicate-title-warning {
+  padding: 11px 12px;
+  margin: 0;
+  border-radius: 9px;
+  border: 1px solid rgba(245, 158, 11, .65);
+  background: rgba(245, 158, 11, .09);
+  line-height: 1.5;
+}
+.admin-duplicate-title-warning a { text-decoration: underline; text-underline-offset: 3px; }
