@@ -42,6 +42,25 @@ describe("locally computed CLAP audio trial guardrails", () => {
     expect(interpretClapOutput("genre", []).predictedLabel).toBe(null);
   });
 
+  it("abstains when independent song sections disagree, even with a large average margin", () => {
+    const prompts = CLAP_LABELS.genre;
+    const rock = prompts.find(x => x.id === "rock")!.prompt;
+    const chanson = prompts.find(x => x.id === "chanson")!.prompt;
+    const edm = prompts.find(x => x.id === "edm")!.prompt;
+    const scores = [
+      { label: rock, score: 0.75 },
+      { label: chanson, score: 0.16 },
+      { label: edm, score: 0.09 },
+    ];
+    const disagreement = interpretClapOutput("genre", scores, [chanson, edm, rock]);
+    expect(disagreement.predictedLabel).toBe(null);
+    expect(disagreement.sectionsAnalyzed).toBe(3);
+    expect(disagreement.sectionsAgree).toBe(1);
+    const agreement = interpretClapOutput("genre", scores, [rock, chanson, rock]);
+    expect(agreement.predictedLabel).toBe("rock");
+    expect(agreement.sectionsAgree).toBe(2);
+  });
+
   it("denies arbitrary audio hosts, signed remote inputs, and SSRF paths", () => {
     const base = "https://example.supabase.co";
     expect(isFirstPartyMusicFile(
