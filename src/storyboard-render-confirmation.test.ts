@@ -195,6 +195,25 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(css).toContain(".admin-genre-pilot-progress progress");
   });
 
+  it("shows owner-confirmed audio benchmark without running a model or changing YouTube", () => {
+    const benchmark = readFileSync("src/lib/genre-classification-benchmark.ts", "utf8");
+    const styles = readFileSync("src/admin-studio.css", "utf8");
+    expect(source).toContain("Testgrunnlag for ekte MP3-klassifisering");
+    expect(source).toContain('value="calibration"');
+    expect(source).toContain("Første 5 til modelltest");
+    expect(source).toContain("genreBenchmark.genres");
+    expect(source).toContain("genreBenchmark.moods");
+    expect(source).toContain("genreBenchmark.styles");
+    expect(source).toContain("firstFiveAudio.map(entry => (");
+    expect(source).toContain("Modelltest: Ikke kjørt.");
+    expect(source).toContain("Gamle etiketter brukes aldri som modellfasit.");
+    expect(benchmark).toContain('meta?.genreSource !== "author"');
+    expect(benchmark).toContain("firstFiveAudioCalibration");
+    expect(benchmark).not.toContain("fetch(");
+    expect(benchmark).not.toContain("startSongPipeline(");
+    expect(styles).toContain(".admin-genre-benchmark-stats");
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
