@@ -46,6 +46,7 @@ export interface ClapSimilarLabel { label: string; score: number }
 export function interpretClapOutput(
   axis: MusicLabelAxis,
   raw: readonly ClapSimilarLabel[],
+  clipWinners: readonly string[] = [],
 ) {
   const candidates = CLAP_LABELS[axis];
   const canonical = new Map(candidates.map(x => [x.prompt, x.id]));
@@ -53,15 +54,21 @@ export function interpretClapOutput(
     .filter(x => canonical.has(x.label) && Number.isFinite(x.score) && x.score >= 0 && x.score <= 1)
     .map(x => ({ label: canonical.get(x.label)!, score: x.score }))
     .sort((a, b) => b.score - a.score);
-  const best = valid[0], next = valid[1];
-  const margin = best && next ? best.score - next.score : 0;
-  // Uncalibrated CLAP similarity is NOT a calibrated percentage certainty.
-  // A tiny separation is a reason to abstain, never a reason to force "EDM".
-  const predictedLabel = best && next && margin >= 0.05 ? best.label : null;
+  const best = valid[0], second = valid[1];
+  const margin = best && second ? best.score - second.score : 0;
+  const winners = clipWinners.map(prompt => canonical.get(prompt)).filter((id): id is string => Boolean(id));
+  const agreement = best ? winners.filter(id => id === best.label).length : 0;
+  // These are prompt-conditional CLAP similarities, NOT calibrated confidence.
+  // A large margin for one 10s excerpt does not prove the genre. A local
+  // three-section trial also requires two or more clips to agree on the label.
+  const segmentAgreement = clipWinners.length === 0 || (winners.length === 3 && agreement >= 2);
+  const predictedLabel = best && second && margin >= 0.05 && segmentAgreement ? best.label : null;
   return {
     axis,
     predictedLabel,
     margin: Math.round(margin * 1000) / 1000,
+    sectionsAnalyzed: winners.length,
+    sectionsAgree: agreement,
     alternatives: valid.slice(0, 3),
     abstained: predictedLabel === null,
   };
