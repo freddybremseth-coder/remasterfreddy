@@ -3,7 +3,7 @@ import type { ClapSimilarLabel } from "./browser-clap-labels";
 
 export type BrowserClapReply =
   | { type: "progress"; id: number; step: string; percent?: number }
-  | { type: "result"; id: number; axis: MusicLabelAxis; scores: ClapSimilarLabel[] }
+  | { type: "result"; id: number; axis: MusicLabelAxis; scores: ClapSimilarLabel[]; clipWinners: string[] }
   | { type: "error"; id: number; message: string };
 
 export function isFirstPartyMusicFile(url: string, supabaseBase: string | undefined) {
@@ -22,10 +22,10 @@ export function isFirstPartyMusicFile(url: string, supabaseBase: string | undefi
  * No audio, owner label, title, lyric or old genre is sent to an AI provider.
  * Assumes the song is already part of first-party Supabase public storage.
  */
-export async function prepareBrowserClapAudio(
+export async function prepareBrowserClapAudioSegments(
   url: string,
   signal?: AbortSignal,
-): Promise<Float32Array> {
+): Promise<Float32Array[]> {
   const supabaseBase = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   if (!isFirstPartyMusicFile(url, supabaseBase)) {
     throw new Error("Kun MP3 fra din registrerte Supabase-lydbank kan analyseres.");
@@ -66,17 +66,31 @@ export async function prepareBrowserClapAudio(
     if (!decoded.length || !decoded.numberOfChannels || rate <= 0) {
       throw new Error("Ingen dekodet lyd ble funnet.");
     }
-    const duration = Math.min(10, decoded.duration);
-    if (duration < 2) throw new Error("Sangen er for kort til å klassifiseres.");
+    if (decoded.duration < 6) throw new Error("Sangen er for kort til tre uavhengige lydutdrag.");
+    const duration = Math.min(10, decoded.duration / 3);
     const samples = Math.min(decoded.length, Math.floor(duration * rate));
-    const offset = Math.max(0, Math.floor((decoded.length - samples) / 2));
-    const mono = new Float32Array(samples);
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, n) => decoded.getChannelData(n));
-    for (const channel of channels) for (let i = 0; i < samples; i++) mono[i] += channel[offset + i] / channels.length;
     if (rate !== 48_000) {
       // decodeAudioData normally resamples to AudioContext sample rate.
       throw new Error("Nettleseren kunne ikke levere lyd i 48 kHz.");
     }
-    return mono;
+    const available = Math.max(0, decoded.length - samples);
+    const offsets = [0, Math.floor(available / 2), available];
+    return offsets.map(offset => {
+      const mono = new Float32Array(samples);
+      for (const channel of channels) {
+        for (let i = 0; i < samples; i++) mono[i] += channel[offset + i] / channels.length;
+      }
+      return mono;
+    });
   } finally { await audio.close(); }
+}
+
+/** Compatibility helper for one-section consumers. New CLAP trials use 3 segments. */
+export async function prepareBrowserClapAudio(
+  url: string,
+  signal?: AbortSignal,
+): Promise<Float32Array> {
+  const segments = await prepareBrowserClapAudioSegments(url, signal);
+  return segments[1];
 }
