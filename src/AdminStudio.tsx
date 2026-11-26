@@ -13,6 +13,7 @@ import { AdminSong, ImageKind, loadSongs, PipelineOptions, startSongPipeline, pr
 import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { planGenreReviewPilot, genreReviewPilotProgress } from "./lib/genre-review-pilot";
 import { audioBenchmarkSummary, firstFiveAudioCalibration } from "./lib/genre-classification-benchmark";
+import AudioModelTrial from "./AudioModelTrial";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -779,6 +780,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             og ingen sjanger, video eller YouTube-publisering endres av denne oversikten.</small>
           <small>En fremtidig lydmodell må få kun lyd og skal måles blindt mot dine allerede lagrede valg.</small>
         </div>
+        )}
+        {genreReviewFilter === "calibration" && (
+          <AudioModelTrial songs={songs} references={firstFiveAudio} />
         )}
         {genreReviewFilter === "pilot" && (
           <div className="admin-genre-pilot-progress" role="status">
