@@ -431,6 +431,17 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("Spill av eller åpne privat fullengdevideo");
   });
 
+  it("warns before any extra YouTube version when two separate MP3s share a title", () => {
+    const styles = readFileSync("src/admin-studio.css", "utf8");
+    expect(source).toContain("function publishedVersionWithSameTitle(song: AdminSong");
+    expect(source).toContain("other.id !== song.id && other.youtubeUrl");
+    expect(source).toContain("publishedVersionWithSameTitle(song, songs)");
+    expect(source).toContain("Se eksisterende YouTube-video");
+    expect(source).toContain("Kontroller riktig MP3/versjon");
+    expect(styles).toContain(".admin-duplicate-title-warning");
+    expect(source).toContain("window.confirm(warning +");
+  });
+
   it("distinguishes login redirects before upload from ambiguous non-JSON YouTube responses", () => {
     const proxy = readFileSync("api/neural-beat-publish-stored-video.ts", "utf8");
     expect(proxy).toContain('/api/neural-beat/publish-stored-video');
