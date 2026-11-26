@@ -748,6 +748,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             <option value="missingAudio">Mangler registrert MP3 ({missingAudioSongs.length})</option>
           </select>
         </div>
+        {(genreReviewFilter === "calibration" || genreReviewFilter === "pilot") && (
         <div className="admin-genre-benchmark" role="region" aria-label="Testgrunnlag for musikkmodell">
           <strong>Testgrunnlag for ekte MP3-klassifisering</strong>
           <div className="admin-genre-benchmark-stats">
@@ -777,6 +778,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             og ingen sjanger, video eller YouTube-publisering endres av denne oversikten.</small>
           <small>En fremtidig lydmodell må få kun lyd og skal måles blindt mot dine allerede lagrede valg.</small>
         </div>
+        )}
         {genreReviewFilter === "pilot" && (
           <div className="admin-genre-pilot-progress" role="status">
             <strong>Testgruppe: {genrePilotProgress.reviewed} av {genrePilotProgress.total} sanger bekreftet</strong>
