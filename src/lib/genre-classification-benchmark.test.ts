@@ -46,8 +46,8 @@ describe("human confirmed MP3 classification benchmark", () => {
     expect(cases[0].legacyLabel).toBe("EDM");
     const noModel = compareModelWithOwner(cases, []);
     expect(noModel).toEqual(expect.objectContaining({
-      evaluated: 2, attempted: 0, correct: 0, abstained: 2,
-      exactMatchRate: null,
+      evaluated: 2, analyzed: 0, notTested: 2,
+      attempted: 0, correct: 0, abstained: 0, exactMatchRate: null,
     }));
   });
 
@@ -80,6 +80,21 @@ describe("human confirmed MP3 classification benchmark", () => {
     expect(split.calibration.length + split.holdout.length).toBe(22);
   });
 
+  it("does not falsely call four not-yet-tested MP3s model abstentions", () => {
+    const references = verifiedAudioReferences([
+      track("1", "power-rock"), track("2", "electronic"), track("3", "ballad"),
+      track("4", "relaxing"), track("5", "chillout"),
+    ]);
+    const result = compareModelWithOwner(references, [
+      { songId: "1", axis: "genre", predictedLabel: "chanson" },
+      { songId: "5", axis: "style", predictedLabel: "lofi" },
+    ]);
+    expect(result).toEqual(expect.objectContaining({
+      evaluated: 5, analyzed: 2, notTested: 3, attempted: 2,
+      correct: 0, abstained: 0, wrongElectronic: 0,
+    }));
+  });
+
   it("scores only compatible model dimensions and refuses invented success", () => {
     const cases = verifiedAudioReferences([
       track("one", "rock"), track("two", "relaxing"), track("three", "chillout"),
@@ -92,8 +107,8 @@ describe("human confirmed MP3 classification benchmark", () => {
       { songId: "untrusted", axis: "genre", predictedLabel: "rock" },
     ]);
     expect(result).toEqual(expect.objectContaining({
-      evaluated: 3, attempted: 2, correct: 1, abstained: 1,
-      wrongElectronic: 1, exactMatchRate: 0.5,
+      evaluated: 3, analyzed: 3, notTested: 0, attempted: 2, correct: 1,
+      abstained: 1, wrongElectronic: 1, exactMatchRate: 0.5,
     }));
     expect(result.byAxis.genre).toEqual({ attempted: 1, correct: 0 });
     expect(result.byAxis.mood).toEqual({ attempted: 1, correct: 1 });
