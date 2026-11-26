@@ -718,3 +718,19 @@
   accent-color: currentColor;
 }
 .admin-genre-pilot-progress small { display: block; line-height: 1.5; }
+
+/* Keep save failures next to the genre action, not at the top of a long form. */
+.admin-genre-save-error {
+  margin: 9px 0;
+  padding: 10px 12px;
+  color: #991b1b;
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.4);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.admin-genre-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 600px) {
+  .admin-genre-actions { flex-direction: column; align-items: stretch; }
+  .admin-genre-actions button { width: 100%; }
+}
