@@ -188,7 +188,23 @@ export async function correctSongGenre(recordId: string, genre: string | null): 
       result.youtubeUnchanged !== true || !result.song || result.song.id !== recordId) {
     throw new Error(result.error || "Serveren bekreftet ikke sjangerendringen.");
   }
-  return result.song as AdminSong;
+  // A successful PUT is not sufficient evidence that the saved genre survives
+  // a fresh fetch from the actual song database. Verify before reporting success.
+  const refreshed = (await loadSongs()).find(song => song.id === recordId);
+  if (!refreshed) {
+    throw new Error("RealtyFlow bekreftet ikke at sangen finnes etter lagring. Oppdater oversikten og prøv igjen.");
+  }
+  const metadata = refreshed.metadata;
+  const persisted =
+    genre === null
+      ? !refreshed.genre && metadata?.genreSource !== "author"
+      : refreshed.genre === genre &&
+        metadata?.genreSource === "author" &&
+        metadata?.authorSelectedGenre === genre;
+  if (!persisted) {
+    throw new Error("RealtyFlow bekreftet ikke at den nye sjangeren er lagret i databasen. Ingen endring er godkjent.");
+  }
+  return refreshed;
 }
 
 /** Read-only signal analysis from the actual uploaded MP3, not AI genre guessing. */
