@@ -161,11 +161,15 @@ export default function AudioModelTrial({ songs, references }: Props) {
       )}
       {error && <p role="alert" className="admin-genre-save-error">{error}</p>}
       {!running && status && !error && <small role="status">{status}</small>}
-      <div className="admin-genre-clap-summary">
-        <strong>{comparison.attempted} av {references.length} analyser har et bestemt forslag.</strong>
-        <small>Eksakte treff: {comparison.correct}. Avstår: {comparison.abstained}.
-          Feilaktige EDM-forslag på sjangeraksen: {comparison.wrongElectronic}.
-          Dette er et lite eksperiment – ikke bevis for at modellen er trygg nok til automatikk.</small>
+      <div className="admin-genre-clap-summary" role="status">
+        <strong>{comparison.analyzed} av {references.length} sanger er analysert.</strong>
+        <small>Modellen ga et forslag på {comparison.attempted} av disse.
+          Eksakte treff: {comparison.correct}.
+          Usikre analyser (avstår): {comparison.abstained}.
+          Ikke testet: {comparison.notTested}.
+          Feilaktige EDM-forslag på sjangeraksen: {comparison.wrongElectronic}.</small>
+        <small>Modellen er foreløpig kun en eksperimentell sammenligning.
+          Forslag er ikke bekreftede fakta og endrer aldri dine sjangre.</small>
       </div>
       <small>Modellforslagene finnes bare på denne siden frem til den lukkes.
         Ingen sanger, bilder eller YouTube-data oppdateres.</small>
