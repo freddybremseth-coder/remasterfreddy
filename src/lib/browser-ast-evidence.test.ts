@@ -23,7 +23,8 @@ describe("AST independent music characteristics without automatic genres", () =>
         { label: "Female singing", score: .75 }],
     ]);
     expect(evidence.sections).toBe(3);
-    expect(evidence.genres[0]).toEqual({ label: "Rock music", sections: 3, score: .8 });
+    expect(evidence.genres[0]).toEqual(expect.objectContaining({ label: "Rock music", sections: 3 }));
+    expect(evidence.genres[0].score).toBeCloseTo(.8, 6);
     expect(evidence.genres.some(x => x.label === "Electronic music" && x.sections === 1)).toBe(true);
     expect(evidence.instruments[0].label).toBe("Electric guitar");
     expect(evidence.vocals[0].sections).toBe(2);
