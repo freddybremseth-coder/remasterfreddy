@@ -39,12 +39,19 @@ interface EditedStoryboard {
   timing?: StoryboardSceneTiming;
 }
 
+function ownerConfirmedVideoGenre(song: AdminSong): string {
+  return song.metadata?.genreSource === "author" &&
+    typeof song.metadata.authorSelectedGenre === "string"
+    ? song.metadata.authorSelectedGenre.trim() : "";
+}
+
 function storyboardSourceKey(song: AdminSong, options: PipelineOptions): string {
-  return JSON.stringify([song.id, song.title, song.genre || "", options.visualTheme?.trim() || "", options.songLyrics?.trim() || ""]);
+  return JSON.stringify([song.id, song.title, ownerConfirmedVideoGenre(song), options.visualTheme?.trim() || "", options.songLyrics?.trim() || ""]);
 }
 
 export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: AdminStudioProps) {
   const [songs, setSongs] = useState<AdminSong[]>([]);
+  const [showOnlyWithoutYouTube, setShowOnlyWithoutYouTube] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -213,10 +220,15 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   useEffect(() => {
     if (!activeSongId && songs.length && !mp3File) setActiveSongId((songs.find(song => song.audioUrl && !song.youtubeUrl) || songs[0]).id);
   }, [songs, activeSongId]);
-  const readyCount = useMemo(
-    () => songs.filter((song) => song.audioUrl && !song.youtubeUrl).length,
+  const pendingVideoSongs = useMemo(
+    () => songs.filter((song) => song.audioUrl && !song.youtubeUrl),
     [songs],
   );
+  const savedVideoImageCount = pendingVideoSongs.filter(song =>
+    Array.isArray(song.metadata?.remasterVideoImageUrls) &&
+    song.metadata.remasterVideoImageUrls.length > 0).length;
+  const displayedVideoSongs = showOnlyWithoutYouTube
+    ? songs.filter(song => !song.youtubeUrl) : songs;
   // Fixed pilot sample; confirmed labels remain in it so progress persists.
   const genrePilotSongs = useMemo(() => planGenreReviewPilot(songs, 20), [songs]);
   const genrePilotProgress = useMemo(() => genreReviewPilotProgress(genrePilotSongs), [genrePilotSongs]);
@@ -957,6 +969,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
           )}
         </section>
       )}
+      <div id="remaster-video-assets" className="admin-video-assets-anchor" />
       <PipelineAssets
         value={scopedOptions}
         onChange={updateScopedOptions}
@@ -1003,13 +1016,25 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       <div className="admin-studio-header">
         <div>
           <p className="admin-eyebrow">Publiseringskø</p>
-          <h2>Sanger klare for YouTube</h2>
-          <p>{readyCount} av {songs.length} sanger har lyd og mangler YouTube-video.</p>
+          <h2>Publiseringskø og videoklargjøring</h2>
+          <p>{pendingVideoSongs.length} av {songs.length} sanger har lyd, men mangler YouTube-video.
+            {" "}{savedVideoImageCount} har lagrede videobilder. Resten må klargjøres før produksjon.</p>
+          <p className="admin-video-queue-notice">
+            En MP3 alene betyr ikke at en video er klar. Før publisering må du lagre bilder,
+            kontrollere dem på serveren og godkjenne storyboardet.
+          </p>
         </div>
-        <button className="admin-secondary" onClick={refreshSongs} disabled={loading}>
-          {loading ? <Loader2 className="admin-spinner" size={16} /> : <RefreshCw size={16} />}
-          Oppdater
-        </button>
+        <div className="admin-video-queue-actions">
+          <button type="button" className="admin-secondary"
+            aria-pressed={showOnlyWithoutYouTube}
+            onClick={() => setShowOnlyWithoutYouTube(current => !current)}>
+            {showOnlyWithoutYouTube ? "Vis alle sanger" : "Vis sanger uten YouTube"}
+          </button>
+          <button className="admin-secondary" onClick={refreshSongs} disabled={loading}>
+            {loading ? <Loader2 className="admin-spinner" size={16} /> : <RefreshCw size={16} />}
+            Oppdater
+          </button>
+        </div>
       </div>
 
       {shortsMessage && <div className="admin-success"><CheckCircle2 size={17} />{shortsMessage}</div>}
@@ -1101,7 +1126,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         ) : songs.length === 0 ? (
           <div className="admin-empty"><Music2 size={24} /> Ingen sanger funnet.</div>
         ) : (
-          songs.map((song) => {
+          displayedVideoSongs.map((song) => {
             const canProcess = Boolean(song.audioUrl && !song.youtubeUrl);
             const matchingPreview = preview?.songId === song.id &&
               preview.sourceKey === storyboardSourceKey(song, pipelineOptions) ? preview : null;
@@ -1134,7 +1159,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                 </div>
                 <div className="admin-song-copy">
                   <strong>{song.title || "Uten tittel"}</strong>
-                  <span>{song.artist || "Re-Master Freddy"}{song.genre ? ` · ${song.genre}` : ""}</span>
+                  <span>{song.artist || "Re-Master Freddy"}{song.genre
+                    ? ` · ${song.genre}${ownerConfirmedVideoGenre(song) ? " (bekreftet)" : " (tidligere etikett – ikke bekreftet)"}`
+                    : ""}</span>
                 </div>
                 <div className="admin-song-state">
                   {song.youtubeUrl ? (
@@ -1159,13 +1186,24 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         </button>
                       )}
                     </>
+                  ) : song.audioUrl && !(song.metadata?.remasterVideoImageUrls?.length) ? (
+                    <span className="admin-missing">Mangler lagrede bilder</span>
+                  ) : song.audioUrl && song.status === "error" ? (
+                    <span className="admin-missing">Tidligere videofeil</span>
                   ) : song.audioUrl ? (
-                    <span className="admin-ready">Klar</span>
+                    <span className="admin-ready">Klargjøres</span>
                   ) : (
                     <span className="admin-missing">Mangler lyd</span>
                   )}
                 </div>
                 <div className="admin-song-actions">
+                  {canProcess && (
+                    <a className="admin-secondary admin-video-prepare-link"
+                      href="#remaster-video-assets"
+                      onClick={() => { setActiveSongId(song.id); setError(""); setPendingRender(null); }}>
+                      {activeSongId === song.id ? "Gå til videobilder" : "Velg bilder for video"}
+                    </a>
+                  )}
                   {canProcess && (
                     <button
                       className="admin-secondary"
@@ -1216,7 +1254,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         source: "remaster",
                         provider: "openart",
                         song: song.title,
-                        genre: song.genre || "",
+                        genre: ownerConfirmedVideoGenre(song),
                         theme: pipelineOptions.visualTheme?.trim() || "",
                       }).toString()}`}
                       target="_blank"
