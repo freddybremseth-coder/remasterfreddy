@@ -214,6 +214,29 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(styles).toContain(".admin-genre-benchmark-stats");
   });
 
+  it("keeps CLAP audio inference local, explicit, read-only and limited to five owner-verified files", () => {
+    const worker = readFileSync("src/workers/clap-audio.worker.ts", "utf8");
+    const trial = readFileSync("src/AudioModelTrial.tsx", "utf8");
+    const guard = readFileSync("src/lib/browser-clap-client.ts", "utf8");
+    expect(source).toContain('genreReviewFilter === "calibration" && (');
+    expect(source).toContain('<AudioModelTrial songs={songs} references={firstFiveAudio} />');
+    expect(trial).toContain("Analyser lyd lokalt");
+    expect(trial).toContain("worker.postMessage");
+    expect(trial).toContain("new Worker(new URL(");
+    expect(trial).toContain("new AbortController()");
+    expect(trial).toContain("workerRef.current?.terminate()");
+    expect(trial).toContain("compareModelWithOwner");
+    expect(trial).not.toContain("correctSongGenre(");
+    expect(trial).not.toContain("startSongPipeline(");
+    expect(trial).not.toContain("publishStoredFullVideo(");
+    expect(worker).toContain('"zero-shot-audio-classification"');
+    expect(worker).toContain("CLAP_MODEL_ID");
+    expect(worker).toContain("const prompts = CLAP_LABELS[axis]");
+    expect(guard).toContain('isFirstPartyMusicFile(url, supabaseBase)');
+    expect(guard).toContain("32 * 1024 * 1024");
+    expect(guard).toContain("AudioContext({ sampleRate: 48_000 })");
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
