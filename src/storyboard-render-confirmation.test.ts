@@ -235,7 +235,9 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(worker).toContain("const prompts = CLAP_LABELS[axis]");
     expect(guard).toContain('isFirstPartyMusicFile(url, supabaseBase)');
     expect(guard).toContain("32 * 1024 * 1024");
-    expect(guard).toContain("AudioContext({ sampleRate: 48_000 })");
+    expect(guard).toContain("AudioContext({ sampleRate })");
+    expect(guard).toContain("prepareBrowserMusicAudioSegments(url, 48_000, signal)");
+    expect(guard).toContain("prepareBrowserMusicAudioSegments(url, 16_000, signal)");
   });
 
   it("exposes a manually copied three-section audio report without sending audio or saved genre", () => {
@@ -265,6 +267,27 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(trial).not.toContain("correctSongGenre(");
     expect(benchmark).toContain('autoLabelingAllowed: false');
     expect(benchmark).toContain('status: "not-approved-for-automatic-genre-labels"');
+  });
+
+  it("offers a second independent local AST audio model but never stores its tags as music genres", () => {
+    const ast = readFileSync("src/AstAudioTrial.tsx", "utf8");
+    const worker = readFileSync("src/workers/ast-audio.worker.ts", "utf8");
+    const model = readFileSync("src/lib/browser-ast-evidence.ts", "utf8");
+    const client = readFileSync("src/lib/browser-clap-client.ts", "utf8");
+    expect(source).toContain('option value="ast"');
+    expect(source).toContain('<AstAudioTrial songs={songs} references={firstFiveAudio} />');
+    expect(ast).toContain("Undersøk lyden med AST");
+    expect(ast).toContain("prepareBrowserAstAudioSegments");
+    expect(ast).toContain("worker.postMessage");
+    expect(ast).toContain("workerRef.current?.terminate()");
+    expect(ast).not.toContain("correctSongGenre(");
+    expect(ast).not.toContain("publishStoredFullVideo(");
+    expect(worker).toContain('"audio-classification"');
+    expect(worker).toContain("top_k: 50");
+    expect(worker).toContain("AST_MODEL_ID");
+    expect(model).toContain("BSD-3-Clause");
+    expect(model).toContain('"Electronic dance music"');
+    expect(client).toContain("sampleRate: 16_000 | 48_000");
   });
 
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
