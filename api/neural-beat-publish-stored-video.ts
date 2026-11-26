@@ -37,9 +37,22 @@ export default async function handler(request: any, response: any) {
       signal: AbortSignal.timeout(290000),
     });
     response.setHeader("Cache-Control", "private, no-store");
-    if ((upstream.status >= 300 && upstream.status < 400) ||
-        !(upstream.headers.get("content-type") || "").includes("application/json")) {
-      response.status(502).json({ error: "Kunne ikke kontrollere YouTube-opplastingen." });
+    if (upstream.status >= 300 && upstream.status < 400) {
+      // A login redirect occurs BEFORE the upload route can execute.
+      // Do not mistake it for a failed/ambiguous YouTube insertion.
+      console.warn("[RemasterStoredPublishProxy] RealtyFlow login redirect", upstream.status);
+      response.status(502).json({
+        error: "RealtyFlow avviste tilkoblingen før YouTube-opplastingen startet. Ingen video ble sendt. Kontroller tilgangen før nytt forsøk.",
+      });
+      return;
+    }
+    if (!(upstream.headers.get("content-type") || "").includes("application/json")) {
+      // A non-JSON upstream response can be a gateway error after work started.
+      // Do NOT encourage blind retries when YouTube state is uncertain.
+      console.warn("[RemasterStoredPublishProxy] Non-JSON upstream", upstream.status);
+      response.status(502).json({
+        error: "RealtyFlow ga ikke et gyldig publiseringssvar. Kontroller YouTube-kanalen før et nytt forsøk for å unngå duplikater.",
+      });
       return;
     }
     const result = await upstream.json().catch(() => null);
