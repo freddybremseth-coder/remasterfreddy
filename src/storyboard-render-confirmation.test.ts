@@ -129,8 +129,8 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain("genreError && <p role=");
     expect(source).toContain("Kontrollerer lagringen mot RealtyFlow-databasen");
     expect(client).toContain("const refreshed = (await loadSongs()).find");
-    expect(client).toContain('metadata?.genreSource === "author"');
-    expect(client).toContain("metadata?.authorSelectedGenre === genre");
+    expect(client).toContain('matchesPersistedGenre(refreshed, genre)');
+    expect(client).toContain('import { matchesPersistedGenre }');
     expect(client).toContain("RealtyFlow bekreftet ikke at den nye sjangeren er lagret");
     expect(source).toContain("Ubekreftet sjanger (");
     expect(source).toContain("Sjekk elektronisk / Chillout / House (");
