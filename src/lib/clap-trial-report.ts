@@ -1,6 +1,6 @@
 import type { VerifiedAudioReference, IndependentAudioPrediction } from "./genre-classification-benchmark";
 import { compareModelWithOwner } from "./genre-classification-benchmark";
-import { CLAP_MODEL_ID, CLAP_BROWSER_LIBRARY, type interpretClapOutput } from "./browser-clap-labels";
+import { CLAP_MODEL_ID, CLAP_BROWSER_LIBRARY, interpretClapOutput } from "./browser-clap-labels";
 
 export interface LocalClapTrial {
   entry: VerifiedAudioReference;
