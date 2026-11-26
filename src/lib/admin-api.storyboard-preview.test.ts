@@ -43,7 +43,10 @@ describe("cost-free scene preview and approved storyboard transport", () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({ mode: "free-text-outline", title: "Still I Rise", scenes: approved, aiCalls: 0, imagesGenerated: 0 }));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await previewSongStoryboard({ id: "song-1", title: "Still I Rise", genre: "rock" }, {
+    const result = await previewSongStoryboard({
+      id: "song-1", title: "Still I Rise", genre: "rock",
+      metadata: { genreSource: "author", authorSelectedGenre: "rock" },
+    }, {
       visualTheme: "Hope returns at dawn", songLyrics: "I rise through the storm",
     });
     expect(result.scenes).toHaveLength(8);
@@ -56,6 +59,30 @@ describe("cost-free scene preview and approved storyboard transport", () => {
       visualTheme: "Hope returns at dawn", songLyrics: "I rise through the storm",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("prevents stale EDM song labels from influencing the free preview storyboard", async () => {
+    const mock = vi.fn(async () => jsonResponse({
+      mode: "free-text-outline", title: "Two Roads", scenes: approved,
+      aiCalls: 0, imagesGenerated: 0,
+    }));
+    vi.stubGlobal("fetch", mock);
+    await previewSongStoryboard({
+      id: "old-song", title: "Two Roads", genre: "EDM",
+      metadata: { genreSource: "unverified", genreReviewLegacyGenre: "EDM" },
+    }, { visualTheme: "A person deciding between two roads" });
+    const first = mock.mock.calls[0] as unknown as [string, RequestInit];
+    const payload = JSON.parse(String(first[1].body));
+    expect(payload.genre).toBeUndefined();
+    expect(payload.title).toBe("Two Roads");
+    expect(payload.visualTheme).toContain("two roads");
+
+    await previewSongStoryboard({
+      id: "approved-song", title: "Two Roads", genre: "EDM",
+      metadata: { genreSource: "author", authorSelectedGenre: "power-rock", genreReviewLegacyGenre: "EDM" },
+    }, {});
+    const second = mock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(second[1].body)).genre).toBe("power-rock");
   });
 
   it("passes approved scene start times through the paid render request, not the free preview", async () => {
