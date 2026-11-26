@@ -45,6 +45,17 @@ function ownerConfirmedVideoGenre(song: AdminSong): string {
     ? song.metadata.authorSelectedGenre.trim() : "";
 }
 
+/**
+ * Title alone never identifies an MP3. Published namesakes stay separate,
+ * and the owner explicitly decides whether to upload another version.
+ */
+function publishedVersionWithSameTitle(song: AdminSong, all: readonly AdminSong[]) {
+  const title = song.title.trim().toLowerCase();
+  if (!title) return undefined;
+  return all.find(other => other.id !== song.id && other.youtubeUrl &&
+    other.title.trim().toLowerCase() === title);
+}
+
 function storyboardSourceKey(song: AdminSong, options: PipelineOptions): string {
   return JSON.stringify([song.id, song.title, ownerConfirmedVideoGenre(song), options.visualTheme?.trim() || "", options.songLyrics?.trim() || ""]);
 }
@@ -1436,10 +1447,22 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
                         <div className="admin-stored-youtube-upload" style={{ marginTop: 16, display: "grid", gap: 10 }}>
                           <strong>Publiser denne eksakte MP4-filen på YouTube</strong>
                           <p>Ingen ny bilde- eller videoproduksjon. Videoen lastes først opp som <strong>ikke oppført</strong>, slik at du kan kontrollere den på YouTube før offentlig publisering.</p>
+                          {publishedVersionWithSameTitle(song, songs) && (
+                            <p className="admin-duplicate-title-warning" role="note">
+                              <strong>En annen sangregistrering med samme tittel finnes allerede på YouTube.</strong>
+                              {" "}Den kan være en annen innspilling. Kontroller den eksisterende videoen før du laster opp denne MP4-en som en separat versjon.
+                              {" "}<a href={publishedVersionWithSameTitle(song, songs)?.youtubeUrl}
+                                target="_blank" rel="noopener noreferrer">Se eksisterende YouTube-video</a>
+                            </p>
+                          )}
                           <button type="button" className="admin-primary"
                             disabled={storedPublishId !== null || !youtubeHealth?.connected || Boolean(song.youtubeUrl)}
                             onClick={() => {
-                              if (window.confirm("Last opp denne godkjente fullengdevideoen til Re-Master Freddy på YouTube som IKKE OPPFØRT? Ingen ny video blir rendret.")) {
+                              const other = publishedVersionWithSameTitle(song, songs);
+                              const warning = other
+                                ? "OBS: En annen registrering med samme sangtittel er allerede på YouTube. Kontroller riktig MP3/versjon før du publiserer en ekstra video. "
+                                : "";
+                              if (window.confirm(warning + "Last opp denne godkjente fullengdevideoen til Re-Master Freddy på YouTube som IKKE OPPFØRT? Ingen ny video blir rendret.")) {
                                 void publishApprovedStoredVideo(song);
                               }
                             }}>
