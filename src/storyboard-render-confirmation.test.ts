@@ -238,6 +238,23 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(guard).toContain("AudioContext({ sampleRate: 48_000 })");
   });
 
+  it("exposes a manually copied three-section audio report without sending audio or saved genre", () => {
+    const trial = readFileSync("src/AudioModelTrial.tsx", "utf8");
+    const report = readFileSync("src/lib/clap-trial-report.ts", "utf8");
+    const audio = readFileSync("src/lib/browser-clap-client.ts", "utf8");
+    expect(trial).toContain("Kopier testrapport til ChatGPT");
+    expect(trial).toContain("Vis rapport");
+    expect(trial).toContain("navigator.clipboard.writeText(report)");
+    expect(trial).toContain("setShowReport(true)");
+    expect(trial).toContain("Ingen rapport sendes automatisk.");
+    expect(report).toContain("Sangdeler, beste forslag");
+    expect(report).toContain("Ikke testet");
+    expect(report).not.toContain("fetch(");
+    expect(report).not.toContain("audioUrl");
+    expect(audio).toContain("representativeClapOffsets(decoded.length, samples)");
+    expect(trial).not.toContain("correctSongGenre(");
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
