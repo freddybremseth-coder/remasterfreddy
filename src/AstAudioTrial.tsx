@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AdminSong } from "./lib/admin-api";
 import type { VerifiedAudioReference } from "./lib/genre-classification-benchmark";
-import { AST_MODEL_ID, AST_MODEL_LICENSE, summarizeAstEvidence } from "./lib/browser-ast-evidence";
+import { AST_DIAGNOSTIC_SCORE_FLOOR, AST_MODEL_ID, AST_MODEL_LICENSE, isAstRepeatedDisplaySignal, summarizeAstEvidence } from "./lib/browser-ast-evidence";
 import type { AstSectionScores } from "./lib/browser-ast-evidence";
 import { prepareBrowserAstAudioSegments } from "./lib/browser-clap-client";
 
@@ -120,11 +120,23 @@ export default function AstAudioTrial({ songs, references }: Props) {
       if (!evidence) continue;
       lines.push("", "Sang: " + entry.songTitle,
         "Eierbekreftet: " + entry.referenceLabel + " (" + entry.axis + ")");
+      lines.push("NB: Score under 0,05 regnes kun som svake diagnostiske utslag, ikke bevis.");
+      lines.push("Sterkeste AudioSet-klasser totalt: " +
+        evidence.overall.map(x => x.label + " (" + x.score.toFixed(3) +
+          ", " + x.sections + "/" + evidence.sections + " deler)").join("; "));
+      for (const [index, section] of evidence.bySection.entries()) {
+        lines.push("Utdrag " + (index + 1) + ", topp 5: " +
+          section.map(x => x.label + " (" + x.score.toFixed(3) + ")").join("; "));
+      }
       for (const group of groups) {
         const tags = evidence[group.id].map(x =>
           x.label + " (score " + x.score.toFixed(3) + ", deler " +
           x.sections + "/" + evidence.sections + ")");
-        lines.push(group.label + ": " + (tags.join("; ") || "ingen blant topp 50"));
+        const credible = evidence[group.id].filter(x =>
+          isAstRepeatedDisplaySignal(x, evidence.sections));
+        lines.push(group.label + ", gjentatte signaler over visningsterskel: " +
+          (credible.map(x => x.label).join("; ") || "ingen"));
+        lines.push(group.label + ", alle funn: " + (tags.join("; ") || "ingen blant topp 50"));
       }
     }
     try {
@@ -165,16 +177,53 @@ export default function AstAudioTrial({ songs, references }: Props) {
     {!running && status && !error && <small role="status">{status}</small>}
     {result && <div className="admin-ast-results">
       <strong>Lydbeskrivelser fra {result.sections} deler av sangen</strong>
-      {groups.map(group => <div key={group.id} className="admin-ast-result-group">
-        <b>{group.label}</b>
-        {result[group.id].length ? <ul>
-          {result[group.id].map(tag => <li key={tag.label}>
-            {tag.label} – score {tag.score.toFixed(3)}, blant topp 50 i {tag.sections}/{result.sections} utdrag
-          </li>)}
-        </ul> : <small>Ingen etiketter fra denne gruppen blant de 50 høyest rangerte.</small>}
-      </div>)}
-      <small>Modellen kan finne flere lyder samtidig. Score er ikke dokumentert sikkerhet,
-        og fravær fra topp 50 utelukker ingen musikksjanger.</small>
+      {!result.genres.some(tag => isAstRepeatedDisplaySignal(tag, result.sections)) &&
+        <p role="status" className="admin-ast-weak-evidence">
+          Ingen gjentatte musikksjangersignaler over visningsgrensen ({AST_DIAGNOSTIC_SCORE_FLOOR.toFixed(2)}).
+          De lave verdiene kan ikke brukes til å bestemme sjangeren. Din bekreftede sjanger beholdes.
+        </p>}
+      <div className="admin-ast-result-group admin-ast-overall">
+        <b>Hva AST faktisk rangerer høyest – alle lydklasser</b>
+        <ol>
+          {result.overall.slice(0, 5).map(tag =>
+            <li key={tag.label}>{tag.label} – score {tag.score.toFixed(3)},
+              blant topp 50 i {tag.sections}/{result.sections} utdrag</li>)}
+        </ol>
+        <small>Disse kan være helt andre lydklasser enn musikksjanger. Visning er diagnostisk,
+          ikke en godkjenning eller bekreftelse av musikkstilen.</small>
+        <details>
+          <summary>Se hva AST hørte i hvert av de tre lydutdragene</summary>
+          {result.bySection.map((section, index) =>
+            <div key={index}>
+              <b>Utdrag {index + 1}</b>
+              <ol>{section.map(tag =>
+                <li key={tag.label}>{tag.label} – {tag.score.toFixed(3)}</li>)}</ol>
+            </div>)}
+        </details>
+      </div>
+      {groups.map(group => {
+        const allTags = result[group.id];
+        const repeatedSignals = allTags.filter(tag =>
+          isAstRepeatedDisplaySignal(tag, result.sections));
+        return <div key={group.id} className="admin-ast-result-group">
+          <b>{group.label}</b>
+          {repeatedSignals.length ? <ul>
+            {repeatedSignals.map(tag => <li key={tag.label}>
+              {tag.label} – score {tag.score.toFixed(3)}, registrert i {tag.sections}/{result.sections} utdrag
+            </li>)}
+          </ul> : <small>Ingen gjentatte signaler over {AST_DIAGNOSTIC_SCORE_FLOOR.toFixed(2)}
+            i minst to av lydutdragene. Dette utelukker ikke lyder eller sjangre.</small>}
+          {allTags.length > 0 && <details>
+            <summary>Vis svake og enkeltstående utslag ({allTags.length})</summary>
+            <ul>{allTags.map(tag => <li key={tag.label}>
+              {tag.label} – score {tag.score.toFixed(3)}, blant topp 50 i {tag.sections}/{result.sections} utdrag
+            </li>)}</ul>
+          </details>}
+        </div>;
+      })}
+      <small>0,05 er bare en visningsterskel for å redusere støy, ikke en validert
+        sikkerhetsgrense. AudioSet-score er ikke prosentvis sikkerhet, og fravær
+        fra topp 50 utelukker ingen musikksjanger. Ingen modellfunn endrer dine valg.</small>
     </div>}
     {Object.keys(results).length > 0 && <div className="admin-ast-export">
       <button type="button" className="admin-secondary" onClick={() => { void copyReport(); }}>
