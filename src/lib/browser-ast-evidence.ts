@@ -8,6 +8,18 @@ export const AST_MODEL_LICENSE = "BSD-3-Clause";
 
 export type AstScore = { label: string; score: number };
 export type AstSectionScores = AstScore[];
+export type AstTagEvidence = AstScore & { sections: number };
+
+/**
+ * Diagnostic presentation cutoff ONLY: NOT calibrated confidence, a probability
+ * of genre correctness or a basis for any automated decision.
+ * AudioSet's per-class scores can be tiny even for music recordings.
+ */
+export const AST_DIAGNOSTIC_SCORE_FLOOR = 0.05;
+export function isAstRepeatedDisplaySignal(tag: AstTagEvidence, totalSections: number) {
+  return totalSections > 0 && tag.score >= AST_DIAGNOSTIC_SCORE_FLOOR &&
+    tag.sections >= Math.min(2, totalSections);
+}
 
 const musicGenres = [
   "Pop music", "Rock music", "Heavy metal", "Punk rock", "Grunge",
@@ -37,38 +49,49 @@ export const AST_MUSIC_CATEGORIES = {
 };
 
 export function summarizeAstEvidence(sectionScores: readonly AstSectionScores[]) {
-  // AudioSet is multi-label. A score is *not* a calibrated genre probability;
-  // missing items outside the top-50 are unknown, not evidence of absence.
-  if (!sectionScores.length) return {
-    sections: 0, genres: [], instruments: [], vocals: [], observed: 0,
-  };
-  const labels = new Map<string, { total: number; count: number }>();
-  for (const section of sectionScores) {
+  // AudioSet is multi-label. A score is *not* a calibrated genre probability.
+  // An absent class outside top-50 is unknown, not evidence that the sound
+  // is absent. Keep full top suggestions to reveal what AST actually heard.
+  const validSections = sectionScores.map(section => {
     const seen = new Set<string>();
-    for (const item of section) {
-      if (!item || typeof item.label !== "string" ||
-          !Number.isFinite(item.score) || item.score < 0 || item.score > 1 ||
-          seen.has(item.label)) continue;
-      seen.add(item.label);
-      const old = labels.get(item.label) || { total: 0, count: 0 };
-      labels.set(item.label, { total: old.total + item.score, count: old.count + 1 });
-    }
+    return section
+      .filter(item => {
+        if (!item || typeof item.label !== "string" || !item.label.trim() ||
+            !Number.isFinite(item.score) || item.score < 0 || item.score > 1 ||
+            seen.has(item.label)) return false;
+        seen.add(item.label);
+        return true;
+      })
+      .sort((a, b) => b.score - a.score);
+  });
+  const labels = new Map<string, { total: number; count: number }>();
+  for (const section of validSections) for (const item of section) {
+    const old = labels.get(item.label) || { total: 0, count: 0 };
+    labels.set(item.label, { total: old.total + item.score, count: old.count + 1 });
   }
+  const toTag = (label: string): AstTagEvidence => ({
+    label,
+    // Mean across only sections where the tag was among the returned top-50.
+    score: labels.get(label)!.total / labels.get(label)!.count,
+    sections: labels.get(label)!.count,
+  });
   const bucket = (accepted: readonly string[]) => accepted
     .filter(label => labels.has(label))
-    .map(label => ({
-      label,
-      // Mean of observed (top-50) entries, not a probability.
-      score: labels.get(label)!.total / labels.get(label)!.count,
-      sections: labels.get(label)!.count,
-    }))
+    .map(toTag)
     .sort((a, b) => b.sections - a.sections || b.score - a.score)
     .slice(0, 7);
+  const overall = [...labels.keys()].map(toTag)
+    .sort((a, b) => b.score - a.score || b.sections - a.sections)
+    .slice(0, 8);
   return {
-    sections: sectionScores.length,
+    sections: validSections.length,
     genres: bucket(musicGenres),
     instruments: bucket(instruments),
     vocals: bucket(vocals),
+    // Diagnoses which sound classes dominate the classifier, even if they are
+    // not in our hand-curated music/instrument lists.
+    overall,
+    bySection: validSections.map(section => section.slice(0, 5)),
     observed: labels.size,
   };
 }
