@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CLAP_LABELS, CLAP_MODEL_LICENSE, interpretClapOutput } from "./browser-clap-labels";
-import { isFirstPartyMusicFile } from "./browser-clap-client";
+import { isFirstPartyMusicFile, representativeClapOffsets } from "./browser-clap-client";
 
 describe("locally computed CLAP audio trial guardrails", () => {
   it("uses distinct, static natural-language candidates without seeing owner labels", () => {
@@ -59,6 +59,20 @@ describe("locally computed CLAP audio trial guardrails", () => {
     const agreement = interpretClapOutput("genre", scores, [rock, chanson, rock]);
     expect(agreement.predictedLabel).toBe("rock");
     expect(agreement.sectionsAgree).toBe(2);
+  });
+
+  it("samples independent music regions away from long intro/outro", () => {
+    const rate = 48_000;
+    const offsets = representativeClapOffsets(180 * rate, 10 * rate);
+    expect(offsets).toEqual([25 * rate, 85 * rate, 145 * rate]);
+    expect(offsets[0]).toBeGreaterThan(0);
+    expect(offsets[2] + 10 * rate).toBeLessThan(180 * rate);
+    const short = representativeClapOffsets(30 * rate, 10 * rate);
+    expect(short).toEqual([0, 10 * rate, 20 * rate]);
+    for (const [i, offset] of offsets.entries()) {
+      if (i > 0) expect(offset).toBeGreaterThanOrEqual(offsets[i - 1] + 10 * rate);
+    }
+    expect(() => representativeClapOffsets(5 * rate, 2 * rate)).toThrow();
   });
 
   it("denies arbitrary audio hosts, signed remote inputs, and SSRF paths", () => {
