@@ -30,6 +30,7 @@ export default function AstAudioTrial({ songs, references }: Props) {
   const [percent, setPercent] = useState<number | null>(null);
   const [results, setResults] = useState<Record<string, Evidence>>({});
   const [copyMessage, setCopyMessage] = useState("");
+  const [allowDiagnosticRun, setAllowDiagnosticRun] = useState(false);
 
   useEffect(() => () => {
     controllerRef.current?.abort();
@@ -52,7 +53,7 @@ export default function AstAudioTrial({ songs, references }: Props) {
   }
 
   async function inspect() {
-    if (running || !selected) return;
+    if (running || !selected || !allowDiagnosticRun) return;
     const song = songs.find(item => item.id === selected.songId);
     if (!song?.audioUrl) { setError("Sangen mangler tilgjengelig MP3."); return; }
     const job = ++idRef.current;
@@ -148,12 +149,24 @@ export default function AstAudioTrial({ songs, references }: Props) {
   }
 
   return <section className="admin-ast-trial" aria-label="Uavhengig AST-lydkontroll">
-    <strong>Uavhengig lydkontroll – MIT AudioSet AST (eksperimentell)</strong>
+    <strong>AST – sjangertest avsluttet, kun valgfri lyddiagnostikk</strong>
     <p>AST kjenner igjen brede musikkategorier og instrumenter, men er <b>ikke</b> en presis
       sjangerklassifikator. Den laster ned omtrent 91 MB første gang og analyserer lokalt
       i nettleseren. Modell: {AST_MODEL_ID} ({AST_MODEL_LICENSE}).</p>
-    <p>Velg én sang. Ingen lyd sendes til en betalt AI-tjeneste. Resultatene endrer ikke
-      bekreftede sjangre, videomotiver, MP3 eller YouTube.</p>
+    <p role="status" className="admin-ast-weak-evidence">
+      AST ble prøvd på Two Roads (Power Rock). Modellen ga Music 0,800,
+      men ingen gjentatte sjangersignaler over den diagnostiske visningsgrensen.
+      Vi bruker derfor ikke AST til sjangerforslag eller valg av videomotiver.
+      Mer kjøring er ikke nødvendig for å bekrefte sangens sjanger.
+    </p>
+    <p>Modellen beholdes bare for frivillig feilsøking av instrumenter og lydklasser.
+      Den påvirker aldri sjanger, videomotiver, MP3 eller YouTube.</p>
+    <label className="admin-ast-diagnostic-optin">
+      <input type="checkbox" checked={allowDiagnosticRun}
+        onChange={event => setAllowDiagnosticRun(event.target.checked)}
+        disabled={running} />
+      Jeg vil likevel kjøre en frivillig AST-diagnose (modellnedlasting i nettleseren)
+    </label>
     <div className="admin-ast-actions">
       <select aria-label="Velg sang for uavhengig lydkontroll" disabled={running}
         value={selected?.songId || ""} onChange={event => {
@@ -163,7 +176,7 @@ export default function AstAudioTrial({ songs, references }: Props) {
           <option key={entry.songId} value={entry.songId}>{entry.songTitle}</option>)}
       </select>
       <button type="button" className="admin-secondary"
-        disabled={running || !selected} onClick={() => { void inspect(); }}>
+        disabled={running || !selected || !allowDiagnosticRun} onClick={() => { void inspect(); }}>
         {running ? "Undersøker lyden …" : result ? "Kjør AST på nytt" : "Undersøk lyden med AST"}
       </button>
     </div>
