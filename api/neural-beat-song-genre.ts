@@ -47,8 +47,11 @@ export default async function handler(request: any, response: any) {
       response.status(502).json({ error: "Ugyldig svar fra RealtyFlow." });
       return;
     }
+    // Log only the route outcome, never the song ID, user identity or genre.
+    console.info("[ReMasterGenreSave] Upstream status:", upstream.status);
     response.status(upstream.status).json(payload);
-  } catch {
+  } catch (error) {
+    console.warn("[ReMasterGenreSave] Upstream transport failed:", error instanceof Error ? error.name : "unknown");
     response.status(503).json({ error: "Kunne ikke kontakte RealtyFlow. Ingen sjangerendring er bekreftet." });
   }
 }
