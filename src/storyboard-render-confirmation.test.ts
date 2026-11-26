@@ -277,6 +277,11 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(source).toContain('option value="ast"');
     expect(source).toContain('<AstAudioTrial songs={songs} references={firstFiveAudio} />');
     expect(ast).toContain("Undersøk lyden med AST");
+    expect(ast).toContain("AST – sjangertest avsluttet");
+    expect(ast).toContain("checked={allowDiagnosticRun}");
+    expect(ast).toContain("disabled={running || !selected || !allowDiagnosticRun}");
+    expect(source).toContain("AST – avsluttet sjangertest / diagnostikk");
+    expect(ast).toContain("Vi bruker derfor ikke AST til sjangerforslag");
     expect(ast).toContain("prepareBrowserAstAudioSegments");
     expect(ast).toContain("worker.postMessage");
     expect(ast).toContain("workerRef.current?.terminate()");
