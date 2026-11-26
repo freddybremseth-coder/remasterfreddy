@@ -14,6 +14,7 @@ import { isValidSceneTiming } from "./lib/local-audio-scene-cues";
 import { planGenreReviewPilot, genreReviewPilotProgress } from "./lib/genre-review-pilot";
 import { audioBenchmarkSummary, firstFiveAudioCalibration } from "./lib/genre-classification-benchmark";
 import AudioModelTrial from "./AudioModelTrial";
+import AstAudioTrial from "./AstAudioTrial";
 import { YouTubeHealth } from "./lib/youtube-health";
 import "./admin-studio.css";
 import "./admin-upload.css";
@@ -66,7 +67,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const NEW_SONG_DRAFT = "__new_song__";
   const [activeSongId, setActiveSongId] = useState("");
   const [savedSongImages, setSavedSongImages] = useState<Record<string, string>>({});
-  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect" | "missingAudio" | "pilot" | "calibration">("all");
+  const [genreReviewFilter, setGenreReviewFilter] = useState<"all" | "unverified" | "suspect" | "missingAudio" | "pilot" | "calibration" | "ast">("all");
   const [genreDraft, setGenreDraft] = useState("");
   const [genreSaving, setGenreSaving] = useState(false);
   const [genreMessage, setGenreMessage] = useState("");
@@ -228,7 +229,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
   const unverifiedSongs = songs.filter(song => song.metadata?.genreSource !== "author");
   const missingAudioSongs = songs.filter(song => !song.audioUrl);
   const suspectSongs = unverifiedSongs.filter(song => /\b(edm|chillout|chill-out|chill beats|lo-fi|lofi|electronic|dance|house|techno|trance)\b/i.test(song.genre || ""));
-  const filteredGenreSongs = genreReviewFilter === "calibration" ? calibrationSongs : genreReviewFilter === "pilot" ? genrePilotSongs : genreReviewFilter === "suspect"
+  const filteredGenreSongs = (genreReviewFilter === "calibration" || genreReviewFilter === "ast") ? calibrationSongs : genreReviewFilter === "pilot" ? genrePilotSongs : genreReviewFilter === "suspect"
     ? suspectSongs : genreReviewFilter === "unverified" ? unverifiedSongs
       : genreReviewFilter === "missingAudio" ? missingAudioSongs : songs;
   const activeSong = songs.find(song => song.id === activeSongId);
@@ -731,7 +732,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
               const next = event.target.value as typeof genreReviewFilter;
               setGenreReviewFilter(next);
               setGenreError("");
-              const chosen = next === "calibration" ? calibrationSongs : next === "pilot" ? genrePilotSongs : next === "suspect" ? suspectSongs
+              const chosen = (next === "calibration" || next === "ast") ? calibrationSongs : next === "pilot" ? genrePilotSongs : next === "suspect" ? suspectSongs
                 : next === "unverified" ? unverifiedSongs
                 : next === "missingAudio" ? missingAudioSongs : songs;
               setActiveSongId(chosen[0]?.id || "");
@@ -744,12 +745,13 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             <option value="all">Alle sanger</option>
             <option value="pilot">Testgruppe for sjangeranalyse ({genrePilotProgress.reviewed}/{genrePilotProgress.total})</option>
             <option value="calibration">Første 5 til modelltest ({calibrationSongs.length})</option>
+            <option value="ast">Uavhengig lydkontroll AST ({calibrationSongs.length})</option>
             <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
             <option value="suspect">Sjekk elektronisk / Chillout / House ({suspectSongs.length})</option>
             <option value="missingAudio">Mangler registrert MP3 ({missingAudioSongs.length})</option>
           </select>
         </div>
-        {(genreReviewFilter === "calibration" || genreReviewFilter === "pilot") && (
+        {(genreReviewFilter === "calibration" || genreReviewFilter === "pilot" || genreReviewFilter === "ast") && (
         <div className="admin-genre-benchmark" role="region" aria-label="Testgrunnlag for musikkmodell">
           <strong>Testgrunnlag for ekte MP3-klassifisering</strong>
           <div className="admin-genre-benchmark-stats">
@@ -786,6 +788,9 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
         {genreReviewFilter === "calibration" && (
           <AudioModelTrial songs={songs} references={firstFiveAudio} />
         )}
+        {genreReviewFilter === "ast" && (
+          <AstAudioTrial songs={songs} references={firstFiveAudio} />
+        )}
         {genreReviewFilter === "pilot" && (
           <div className="admin-genre-pilot-progress" role="status">
             <strong>Testgruppe: {genrePilotProgress.reviewed} av {genrePilotProgress.total} sanger bekreftet</strong>
@@ -811,7 +816,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
       {activeSong && (
         <section className="pipeline-asset-field" aria-label="Kontroller og endre sjanger for eksisterende sang">
           <div className="admin-genre-review-progress">
-            <span>{genreReviewFilter === "calibration" ? "De fem første lydtestene" : genreReviewFilter === "pilot" ? "Testgruppe for sjangeranalyse" : genreReviewFilter === "suspect" ? "Mulig feil sjanger" :
+            <span>{genreReviewFilter === "ast" ? "Uavhengig lydkontroll AST" : genreReviewFilter === "calibration" ? "De fem første lydtestene" : genreReviewFilter === "pilot" ? "Testgruppe for sjangeranalyse" : genreReviewFilter === "suspect" ? "Mulig feil sjanger" :
               genreReviewFilter === "unverified" ? "Ubekreftet sjanger" :
               genreReviewFilter === "missingAudio" ? "Lydfil mangler" : "Sangarkiv"}</span>
             <span>{activeReviewPosition >= 0 ? activeReviewPosition + 1 : "–"} av {filteredGenreSongs.length}</span>
