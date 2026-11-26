@@ -269,6 +269,35 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(benchmark).toContain('status: "not-approved-for-automatic-genre-labels"');
   });
 
+  it("distinguishes MP3 without YouTube from actual production readiness", () => {
+    const source = readFileSync("src/AdminStudio.tsx", "utf8");
+    const api = readFileSync("src/lib/admin-api.ts", "utf8");
+    const css = readFileSync("src/admin-studio.css", "utf8");
+    expect(api).toContain("status?: string;");
+    expect(api).toContain("errorMessage?: string;");
+    expect(source).toContain("Publiseringskø og videoklargjøring");
+    expect(source).toContain("En MP3 alene betyr ikke at en video er klar.");
+    expect(source).toContain("Mangler lagrede bilder");
+    expect(source).toContain("Tidligere videofeil");
+    expect(source).toContain("Vis sanger uten YouTube");
+    expect(source).toContain("displayedVideoSongs.map((song) =>");
+    expect(source).toContain('id="remaster-video-assets"');
+    expect(source).toContain('href="#remaster-video-assets"');
+    expect(source).toContain("setActiveSongId(song.id)");
+    expect(css).toContain(".admin-video-queue-actions");
+  });
+
+  it("never passes stale unverified EDM labels to the OpenArt video-image link", () => {
+    const source = readFileSync("src/AdminStudio.tsx", "utf8");
+    const preview = readFileSync("src/lib/admin-api.ts", "utf8");
+    expect(source).toContain("ownerConfirmedVideoGenre(song)");
+    expect(source).toContain('genre: ownerConfirmedVideoGenre(song)');
+    expect(source).toContain("tidligere etikett – ikke bekreftet");
+    expect(source).toContain("song.metadata.authorSelectedGenre.trim()");
+    expect(preview).toContain('genre: confirmedGenre || undefined');
+    expect(source).not.toContain('genre: song.genre || ""');
+  });
+
   it("offers a second independent local AST audio model but never stores its tags as music genres", () => {
     const ast = readFileSync("src/AstAudioTrial.tsx", "utf8");
     const worker = readFileSync("src/workers/ast-audio.worker.ts", "utf8");
