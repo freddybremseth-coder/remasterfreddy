@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AdminSong } from "./lib/admin-api";
 import type { VerifiedAudioReference, IndependentAudioPrediction } from "./lib/genre-classification-benchmark";
-import { compareModelWithOwner } from "./lib/genre-classification-benchmark";
+import { summarizeAudioModelCalibration } from "./lib/genre-classification-benchmark";
 import { CLAP_MODEL_ID, CLAP_MODEL_LICENSE, interpretClapOutput } from "./lib/browser-clap-labels";
 import type { BrowserClapReply } from "./lib/browser-clap-client";
 import { prepareBrowserClapAudioSegments } from "./lib/browser-clap-client";
@@ -114,7 +114,7 @@ export default function AudioModelTrial({ songs, references }: Props) {
   const predictions: IndependentAudioPrediction[] = results.map(x => ({
     songId: x.entry.songId, axis: x.entry.axis, predictedLabel: x.result.predictedLabel,
   }));
-  const comparison = compareModelWithOwner(references, predictions);
+  const comparison = summarizeAudioModelCalibration(references, predictions);
   const report = formatClapTrialReport(references, results);
 
   async function copyReport() {
@@ -130,7 +130,7 @@ export default function AudioModelTrial({ songs, references }: Props) {
 
   return (
     <section className="admin-genre-clap" aria-label="Lokal lydmodelltest">
-      <strong>Prøv en ekte lydmodell – gratis i din egen nettleser</strong>
+      <strong>CLAP – eksperimentell lydanalyse, ikke godkjent for automatisk sjangermerking</strong>
       <p>Modell: <b>{CLAP_MODEL_ID}</b> ({CLAP_MODEL_LICENSE}).
         Første gang lastes omtrent 160 MB modellfiler ned fra Hugging Face.
         Lyd hentes fra din Supabase-bank og analyseres <b>lokalt i nettleseren</b>.
@@ -186,8 +186,23 @@ export default function AudioModelTrial({ songs, references }: Props) {
           Usikre analyser (avstår): {comparison.abstained}.
           Ikke testet: {comparison.notTested}.
           Feilaktige EDM-forslag på sjangeraksen: {comparison.wrongElectronic}.</small>
-        <small>Modellen er foreløpig kun en eksperimentell sammenligning.
-          Forslag er ikke bekreftede fakta og endrer aldri dine sjangre.</small>
+        <strong className="admin-genre-clap-not-approved">
+          Status: Ikke godkjent for automatisk sjangermerking eller valg av videomotiver
+        </strong>
+        <small>{comparison.allCalibrated
+          ? "Første femsangstest er gjennomført. Vi må undersøke en uavhengig og mer spesialisert modell før eventuell aktivering."
+          : "Femsangstesten er ikke fullført. Ingen av modellens resultater blir brukt i normal produksjon."}</small>
+        <div className="admin-genre-clap-axis-breakdown" aria-label="Treffsikkerhet per analysetype">
+          {comparison.perAxis.map(group => (
+            <div key={group.axis} className="admin-genre-clap-axis-row">
+              <strong>{axisName[group.axis]}</strong>
+              <span>{group.analyzed}/{group.total} testet · {group.correct} riktig ·
+                {" "}{group.wrong} feil · {group.abstained} usikker</span>
+            </div>
+          ))}
+        </div>
+        <small>Dette er en eksperimentell sammenligning. Score er ikke dokumentert sikkerhet,
+          og hverken sjanger, stemning eller stil oppdateres automatisk.</small>
       </div>
       {results.length > 0 && (
         <div className="admin-genre-clap-export">
