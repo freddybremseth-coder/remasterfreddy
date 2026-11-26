@@ -3,7 +3,7 @@
 import { CLAP_LABELS, CLAP_MODEL_ID } from "../lib/browser-clap-labels";
 import type { MusicLabelAxis } from "../lib/genre-classification-benchmark";
 
-interface Request { type: "classify"; id: number; axis: MusicLabelAxis; audio: Float32Array }
+interface Request { type: "classify"; id: number; axis: MusicLabelAxis; audioClips: Float32Array[] }
 type RawScore = { score: number; label: string };
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -47,30 +47,40 @@ async function loadClassifier(id: number) {
 scope.onmessage = async (event: MessageEvent<Request>) => {
   const request = event.data;
   if (!request || request.type !== "classify") return;
-  const { id, axis, audio } = request;
+  const { id, axis, audioClips } = request;
   if (!Number.isSafeInteger(id) || currentJob !== null) {
     failed(id, "En lydanalyse kjører allerede.");
     return;
   }
   if (!Object.prototype.hasOwnProperty.call(CLAP_LABELS, axis) ||
-      !(audio instanceof Float32Array) ||
-      audio.length < 48_000 * 2 || audio.length > 48_000 * 10) {
+      !Array.isArray(audioClips) || audioClips.length !== 3 ||
+      audioClips.some(audio => !(audio instanceof Float32Array) ||
+        audio.length < 48_000 * 2 || audio.length > 48_000 * 10)) {
     failed(id, "Ugyldig eller for langt lydutdrag for en lokal test.");
     return;
   }
   currentJob = id;
   try {
     const classifier = await loadClassifier(id);
-    status(id, "Analyserer lyden lokalt i nettleseren …");
     const prompts = CLAP_LABELS[axis].map(label => label.prompt);
-    const output = await classifier(audio, prompts);
-    if (!Array.isArray(output) || !output.every(x =>
-      typeof x.label === "string" && typeof x.score === "number")) {
-      throw new Error("Lydmodellen returnerte ikke gyldige resultater.");
+    const sums = new Map(prompts.map(prompt => [prompt, 0]));
+    const clipWinners: string[] = [];
+    for (let section = 0; section < audioClips.length; section++) {
+      status(id, "Analyserer del " + (section + 1) + " av 3 lokalt i nettleseren …");
+      const output = await classifier(audioClips[section], prompts);
+      if (!Array.isArray(output) || output.length !== prompts.length ||
+          output.some(x => !prompts.includes(x.label) || !Number.isFinite(x.score) ||
+            x.score < 0 || x.score > 1)) {
+        throw new Error("Lydmodellen returnerte ikke gyldige resultater.");
+      }
+      const top = output.slice().sort((a, b) => b.score - a.score)[0];
+      clipWinners.push(top.label);
+      for (const candidate of output) sums.set(candidate.label, sums.get(candidate.label)! + candidate.score);
     }
     scope.postMessage({
       type: "result", id, axis,
-      scores: output.map(x => ({ label: x.label, score: x.score })),
+      clipWinners,
+      scores: prompts.map(label => ({ label, score: sums.get(label)! / audioClips.length })),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ukjent feil i lokal modell.";
