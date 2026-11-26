@@ -532,11 +532,17 @@ export interface StoryboardPreview {
 
 /** Text-only; never calls the video renderer or AI image provider. */
 export async function previewSongStoryboard(song: AdminSong, options: PipelineOptions): Promise<StoryboardPreview> {
+  // A legacy database genre may still say EDM despite this being a rock
+  // song. Preview only the exact owner-confirmed selection; the storyboard
+  // must never turn old AI text labels into visual or musical "facts".
+  const confirmedGenre = song.metadata?.genreSource === "author" &&
+    typeof song.metadata.authorSelectedGenre === "string"
+    ? song.metadata.authorSelectedGenre.trim() : "";
   const response = await adminFetch("/api/neural-beat-storyboard-preview", {
     method: "POST",
     body: JSON.stringify({
       title: song.title,
-      genre: song.genre || undefined,
+      genre: confirmedGenre || undefined,
       visualTheme: options.visualTheme?.trim() || undefined,
       songLyrics: options.songLyrics?.trim() || undefined,
     }),
