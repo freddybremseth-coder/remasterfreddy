@@ -2,7 +2,7 @@
 
 ## Status
 
-The private, owner-authenticated Studio contains verified labels for the recorded songs and a deterministic five-song calibration list. **No audio classifier is running; no paid prediction, audio transfer or publishing is authorized by this document.** The app's current MP3 signal analysis measures loudness/rhythm, not genre.
+The private, owner-authenticated Studio contains verified labels for the recorded songs and a deterministic five-song calibration list. An optional, explicitly clicked **browser-local CLAP experiment** is now available. It is separate from the existing MP3 loudness/rhythm analyzer. **No paid provider, automatic publishing or automatic genre update is enabled.** The browser model has not yet passed a live end-to-end user test.
 
 At inspection time: 25 author-confirmed song labels, 22 with accessible MP3; the cohort changes as more songs are corrected. The benchmark dynamically recalculates.
 
@@ -31,7 +31,7 @@ The implementation provides `verifiedAudioReferences`, `audioBenchmarkSummary`, 
 ## Commercial license decision
 
 - The MTG/Essentia classifiers shown on Replicate are **non-commercially licensed** without separate agreement; they are **not enabled** in this commercial product. Verify current licensing directly with MTG before any use.
-- **LAION CLAP HTSAT-unfused** is offered under **Apache-2.0** at https://huggingface.co/laion/clap-htsat-unfused and is a possible *candidate*, **not a deployed or accuracy-validated model**. It is a large model (~600 MB of weights), requiring a separate suitably provisioned model worker rather than assuming it will run inside the Vercel web function. Hosting/runtime cost, security, provider data retention, model instructions and downstream rights must all be checked.
+- **LAION CLAP HTSAT-unfused** is offered under **Apache-2.0** at https://huggingface.co/laion/clap-htsat-unfused. A quantized ONNX browser export, https://huggingface.co/Xenova/clap-htsat-unfused, is used for a manually initiated trial. The browser downloads roughly 160 MB model weights plus runtime and runs a 10-second first-party audio excerpt locally in a Web Worker. No external inference worker or paid API is involved. Real-world download, inference memory and prediction accuracy are not yet verified. Model weights are served by Hugging Face and library code by a pinned jsDelivr version; audio comes only from the first-party Supabase storage.
 - The existing Replicate token is not proof that an appropriate commercially licensed audio classifier is deployed. Do not automatically send MP3 files to Replicate, MTG, Hugging Face or other external providers.
 
 ## Security / operations
@@ -41,8 +41,8 @@ The implementation provides `verifiedAudioReferences`, `audioBenchmarkSummary`, 
 - Use only a temporary server-side excerpt or first-party signed asset URL with narrow TTL; avoid logging song audio URLs and secrets.
 - Model suggestions must be stored separately from `songs.genre` and `songs.ai_metadata.authorSelectedGenre` with run ID, model version, axis, timestamp and error status.
 - Trigger only via an explicit owner action, capped by a strict per-run quantity and budget. No cron, GitHub Actions, Gemini image generation or automatic YouTube publishing.
-- Before enabling a provider, document an actual end-to-end run on a single song and its unit charge.
+- Before enabling any PAID provider, document an actual end-to-end run on a single song and its unit charge. The browser-only model has zero paid inference charges, but requires network bandwidth, sufficient browser memory and an actual end-to-end test.
 
 ## Exit criteria
 
-A genuine five-song inference run with documented license and cost, raw model outputs, no cross-song metadata leakage, no unexpected file/YouTube mutation and an independently reproducible evaluation. Until then label the Studio test as **not run**, even though the benchmark UI is READY.
+A genuine five-song browser inference run with documented license, raw outputs, no cross-song metadata leakage, no unexpected song/YouTube mutation, and reproducible evaluation. The model test is **available on click, not automatically run**. A READY Vercel build and passing unit tests do not establish that model loading and inference work on the user’s browser.
