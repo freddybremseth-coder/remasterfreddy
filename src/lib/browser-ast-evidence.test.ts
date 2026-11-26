@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AST_MODEL_ID, AST_MODEL_LICENSE, AST_MUSIC_CATEGORIES, summarizeAstEvidence } from "./browser-ast-evidence";
+import { AST_DIAGNOSTIC_SCORE_FLOOR, AST_MODEL_ID, AST_MODEL_LICENSE, AST_MUSIC_CATEGORIES, isAstRepeatedDisplaySignal, summarizeAstEvidence } from "./browser-ast-evidence";
 
 describe("AST independent music characteristics without automatic genres", () => {
   it("uses the documented, commercially permitted AudioSet model and exact music labels", () => {
@@ -31,9 +31,33 @@ describe("AST independent music characteristics without automatic genres", () =>
     expect(evidence.genres.some(x => x.label === "Random noise")).toBe(false);
   });
 
+  it("exposes overall AudioSet output and hides tiny repeated genre scores as weak diagnostics", () => {
+    const evidence = summarizeAstEvidence([
+      [{ label: "Pop music", score: .006 }, { label: "Singing", score: .032 },
+        { label: "Music", score: .82 }, { label: "Speech", score: .31 }],
+      [{ label: "Pop music", score: .006 }, { label: "Singing", score: .02 },
+        { label: "Music", score: .91 }, { label: "Speech", score: .27 }],
+      [{ label: "Pop music", score: .006 }, { label: "Music", score: .87 },
+        { label: "Speech", score: .24 }],
+    ]);
+    expect(AST_DIAGNOSTIC_SCORE_FLOOR).toBe(.05);
+    expect(evidence.genres[0].label).toBe("Pop music");
+    expect(evidence.genres[0].sections).toBe(3);
+    expect(isAstRepeatedDisplaySignal(evidence.genres[0], evidence.sections)).toBe(false);
+    expect(isAstRepeatedDisplaySignal(evidence.vocals[0], evidence.sections)).toBe(false);
+    expect(evidence.overall[0].label).toBe("Music");
+    expect(evidence.overall[0].score).toBeCloseTo(.8666666, 4);
+    expect(evidence.bySection).toHaveLength(3);
+    expect(evidence.bySection[0][0].label).toBe("Music");
+    expect(evidence.bySection[0][1].label).toBe("Speech");
+    expect(evidence.bySection[0][2].label).toBe("Singing");
+    expect(isAstRepeatedDisplaySignal({ label: "Rock music", score: .08, sections: 2 }, 3)).toBe(true);
+    expect(isAstRepeatedDisplaySignal({ label: "Rock music", score: .8, sections: 1 }, 3)).toBe(false);
+  });
+
   it("rejects malformed or duplicate evidence rather than falsely inferring a genre", () => {
     const empty = summarizeAstEvidence([]);
-    expect(empty).toEqual({ sections: 0, genres: [], instruments: [], vocals: [], observed: 0 });
+    expect(empty).toEqual({ sections: 0, genres: [], instruments: [], vocals: [], overall: [], bySection: [], observed: 0 });
     const data = summarizeAstEvidence([[{ label: "Rock music", score: .8 },
       { label: "Rock music", score: .7 }, { label: "Electronic music", score: NaN },
       { label: "Electric guitar", score: 2 }]]);
