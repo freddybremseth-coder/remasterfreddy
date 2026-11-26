@@ -66,3 +66,19 @@ Decision: **CLAP is rejected as the sole automatic genre decision-maker for Re-m
 ## Go / no-go gate
 
 A separate genre model may only **suggest** labels when a technically verified, independently evaluated and license-appropriate deployment exists. The five calibration cases cannot greenlight the automated path regardless of score. User-confirmed genre metadata always takes precedence. Visual selection requires a separate content/theme decision; no model may inject neon, yacht or DJ imagery based solely on a broad genre guess.
+
+
+## AudioSet AST follow-up: Two Roads (owner report, 2026-11-26)
+
+A separate owner-triggered browser trial of `onnx-community/ast-finetuned-audioset-10-10-0.4593-ONNX` completed three 16-kHz excerpts of **Two Roads**, whose owner-confirmed genre is **power-rock**. The report supplied by the owner showed:
+
+- `Music`: average observed score 0.800, in 3/3 excerpts. This verifies recognition of an audio recording as music, not its genre.
+- `Singing`: 0.032 in 2/3 excerpts; `Electronic music`: 0.014 in 2/3.
+- Broad category entries `Pop music` 0.006 (3/3), `Country` 0.003 (3/3), `Rock and roll` 0.001 (3/3).
+- `Guitar`: 0.001 in 2/3 excerpts; no repeated music-genre evidence above the app's *display-only* 0.05 threshold.
+
+The top five of each excerpt were recorded in the user-supplied report. Their broad labels differ across sections and do not substantiate any particular subgenre.
+
+**Decision:** AST is **unsuitable as an automatic music-genre selector** on the evidence available. Do not equate Music 0.800 with proof of rock or pop; absence of a rock label is also not disproof of the owner's classification. Keep AST behind an explicit diagnostic opt-in, not in normal auto-genre or video planning. It has not been evaluated on a larger independent set and is not being described as generally inaccurate for all sound recognition tasks. The existing verified `power-rock` owner label stays unchanged.
+
+Next work should protect confirmed owner genre and approved video theme in the video pipeline; only revisit classifiers with commercially usable licensing, suitable label coverage and independent evaluation. Repeated trials of this AST checkpoint are not necessary.
