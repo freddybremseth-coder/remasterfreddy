@@ -112,6 +112,47 @@ export function splitAudioCalibration(songs: readonly AdminSong[]) {
   return { calibration, holdout };
 }
 
+/**
+ * This is calibration feedback, not production model approval.
+ * Different audio axes cannot be pooled into one "genre accuracy" percentage.
+ * No 5-song trial can approve auto-labeling regardless of its apparent score.
+ */
+export function summarizeAudioModelCalibration(
+  references: readonly VerifiedAudioReference[],
+  predictions: readonly IndependentAudioPrediction[],
+) {
+  const compared = compareModelWithOwner(references, predictions);
+  const perAxis = (["genre", "mood", "style"] as const).map(axis => {
+    const samples = references.filter(reference => reference.axis === axis);
+    const results = predictions.filter(prediction => prediction.axis === axis &&
+      samples.some(sample => sample.songId === prediction.songId));
+    const unique = new Map(results.map(result => [result.songId, result]));
+    const tested = samples.filter(sample => unique.has(sample.songId));
+    const suggested = tested.filter(sample => Boolean(unique.get(sample.songId)?.predictedLabel));
+    const correct = suggested.filter(sample => unique.get(sample.songId)?.predictedLabel?.toLowerCase() ===
+      sample.referenceLabel.toLowerCase());
+    return {
+      axis,
+      total: samples.length,
+      analyzed: tested.length,
+      suggested: suggested.length,
+      correct: correct.length,
+      wrong: suggested.length - correct.length,
+      abstained: tested.length - suggested.length,
+      untested: samples.length - tested.length,
+      accuracyAmongSuggestions: suggested.length ? correct.length / suggested.length : null,
+    };
+  });
+  return {
+    ...compared,
+    perAxis,
+    allCalibrated: references.length > 0 && compared.analyzed === references.length,
+    status: "not-approved-for-automatic-genre-labels" as const,
+    // Requires independent held-out evaluation and explicit owner approval.
+    autoLabelingAllowed: false,
+  };
+}
+
 /** Pure evaluator for future licensed, audio-only model predictions. */
 export interface IndependentAudioPrediction {
   songId: string;
