@@ -831,3 +831,29 @@
   .admin-genre-clap-export { flex-direction: column; align-items: stretch; }
   .admin-genre-clap-export > button { width: 100%; }
 }
+
+/* Do not treat a five-song calibration as approval to auto-tag or choose video art. */
+.admin-genre-clap-not-approved {
+  display: block;
+  line-height: 1.4;
+  color: #fbbf24;
+  font-size: .9rem;
+  padding: 8px 0 2px;
+}
+.admin-genre-clap-axis-breakdown { display: grid; gap: 7px; padding: 6px 0; }
+.admin-genre-clap-axis-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 10px;
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: 7px;
+  font-size: 13px;
+}
+.admin-genre-clap-axis-row strong { text-transform: capitalize; }
+.admin-genre-clap-axis-row span { font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .admin-genre-clap-axis-row { flex-direction: column; align-items: flex-start; }
+}
