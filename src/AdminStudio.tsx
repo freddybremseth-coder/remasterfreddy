@@ -745,7 +745,7 @@ export default function AdminStudio({ assetRefreshToken, onOpenImageBank }: Admi
             <option value="all">Alle sanger</option>
             <option value="pilot">Testgruppe for sjangeranalyse ({genrePilotProgress.reviewed}/{genrePilotProgress.total})</option>
             <option value="calibration">Første 5 til modelltest ({calibrationSongs.length})</option>
-            <option value="ast">Uavhengig lydkontroll AST ({calibrationSongs.length})</option>
+            <option value="ast">AST – avsluttet sjangertest / diagnostikk ({calibrationSongs.length})</option>
             <option value="unverified">Ubekreftet sjanger ({unverifiedSongs.length})</option>
             <option value="suspect">Sjekk elektronisk / Chillout / House ({suspectSongs.length})</option>
             <option value="missingAudio">Mangler registrert MP3 ({missingAudioSongs.length})</option>
