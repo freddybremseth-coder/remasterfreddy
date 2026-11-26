@@ -123,7 +123,15 @@ describe("storyboard required and explicit confirmation before video", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-song-genre.ts", "utf8");
     expect(source).toContain("Kontroller sjanger –");
-    expect(source).toContain("Lagre korrigert sjanger");
+    expect(source).toContain("Lagre og bekreft sjanger");
+    expect(source).toContain("Fjern tidligere sjangeretikett");
+    expect(source).toContain('!genreDraft || !needsGenreUpdate');
+    expect(source).toContain("genreError && <p role=");
+    expect(source).toContain("Kontrollerer lagringen mot RealtyFlow-databasen");
+    expect(client).toContain("const refreshed = (await loadSongs()).find");
+    expect(client).toContain('metadata?.genreSource === "author"');
+    expect(client).toContain("metadata?.authorSelectedGenre === genre");
+    expect(client).toContain("RealtyFlow bekreftet ikke at den nye sjangeren er lagret");
     expect(source).toContain("Ubekreftet sjanger (");
     expect(source).toContain("Sjekk elektronisk / Chillout / House (");
     expect(source).toContain("electronic|dance|house|techno|trance");
