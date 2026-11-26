@@ -930,3 +930,14 @@
   font-size: 13px;
 }
 .admin-ast-diagnostic-optin input { margin-top: 3px; flex: 0 0 auto; }
+
+/* Readiness is distinct from merely having a stored MP3. */
+.admin-video-assets-anchor { scroll-margin-top: 16px; }
+.admin-video-queue-notice { font-size: .86rem; line-height: 1.5; opacity: .85; }
+.admin-video-queue-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-video-prepare-link { display: inline-flex; align-items: center; text-decoration: none; }
+.admin-video-prepare-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .admin-video-queue-actions { width: 100%; }
+  .admin-video-queue-actions > button { flex: 1 1 auto; }
+}
