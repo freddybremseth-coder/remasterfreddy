@@ -5,6 +5,7 @@ import { compareModelWithOwner } from "./lib/genre-classification-benchmark";
 import { CLAP_MODEL_ID, CLAP_MODEL_LICENSE, interpretClapOutput } from "./lib/browser-clap-labels";
 import type { BrowserClapReply } from "./lib/browser-clap-client";
 import { prepareBrowserClapAudioSegments } from "./lib/browser-clap-client";
+import { formatClapTrialReport } from "./lib/clap-trial-report";
 
 type Result = ReturnType<typeof interpretClapOutput>;
 type Run = { entry: VerifiedAudioReference; result: Result };
@@ -29,6 +30,8 @@ export default function AudioModelTrial({ songs, references }: Props) {
   const [percent, setPercent] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [results, setResults] = useState<Run[]>([]);
+  const [showReport, setShowReport] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => () => {
     abortRef.current?.abort();
@@ -91,6 +94,7 @@ export default function AudioModelTrial({ songs, references }: Props) {
           setResults(previous => [...previous.filter(x => x.entry.songId !== entry.songId),
             { entry, result: interpreted }]);
           setStatus("Lokal lydanalyse fullført. Resultatet er ikke lagret.");
+          setCopyMessage("");
           setRunning(null);
           setPercent(null);
         }
@@ -111,6 +115,18 @@ export default function AudioModelTrial({ songs, references }: Props) {
     songId: x.entry.songId, axis: x.entry.axis, predictedLabel: x.result.predictedLabel,
   }));
   const comparison = compareModelWithOwner(references, predictions);
+  const report = formatClapTrialReport(references, results);
+
+  async function copyReport() {
+    if (!results.length) return;
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopyMessage("Testrapporten er kopiert. Du kan lime den inn i ChatGPT for gjennomgang.");
+    } catch {
+      setShowReport(true);
+      setCopyMessage("Kopiering er blokkert i nettleseren. Marker teksten nedenfor og kopier den manuelt.");
+    }
+  }
 
   return (
     <section className="admin-genre-clap" aria-label="Lokal lydmodelltest">
@@ -173,6 +189,23 @@ export default function AudioModelTrial({ songs, references }: Props) {
         <small>Modellen er foreløpig kun en eksperimentell sammenligning.
           Forslag er ikke bekreftede fakta og endrer aldri dine sjangre.</small>
       </div>
+      {results.length > 0 && (
+        <div className="admin-genre-clap-export">
+          <button type="button" className="admin-secondary" onClick={() => { void copyReport(); }}>
+            Kopier testrapport til ChatGPT
+          </button>
+          <button type="button" className="admin-secondary"
+            onClick={() => setShowReport(value => !value)}>
+            {showReport ? "Skjul rapport" : "Vis rapport" }
+          </button>
+          {copyMessage && <small role="status">{copyMessage}</small>}
+          {showReport && <textarea aria-label="Kopierbar lokal testrapport"
+            readOnly rows={12} value={report} onChange={() => {}} />}
+          <small>Rapporten inneholder sangtitler, dine etiketter og lokale modellforslag,
+            men ingen MP3-filer, MP3-adresser eller innloggingsopplysninger.
+            Ingen rapport sendes automatisk.</small>
+        </div>
+      )}
       <small>Modellforslagene finnes bare på denne siden frem til den lukkes.
         Ingen sanger, bilder eller YouTube-data oppdateres.</small>
     </section>
