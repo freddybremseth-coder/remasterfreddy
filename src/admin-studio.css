@@ -890,3 +890,30 @@
   .admin-ast-actions select, .admin-ast-actions button { width: 100%; }
   .admin-ast-export > button { width: 100%; }
 }
+
+/* AST diagnostics make weak AudioSet scores explicit, not false genre evidence. */
+.admin-ast-weak-evidence {
+  margin: 0;
+  padding: 11px 12px;
+  background: rgba(245, 158, 11, .09);
+  border-left: 3px solid rgba(245, 158, 11, .75);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.admin-ast-overall ol,
+.admin-ast-result-group details ol { padding-left: 20px; margin: 8px 0; }
+.admin-ast-result-group details { margin-top: 12px; }
+.admin-ast-result-group summary {
+  cursor: pointer;
+  padding: 7px 0;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin-ast-result-group summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.admin-ast-result-group details > div { margin: 9px 0; padding: 8px 0 0; }
+.admin-ast-overall small { display: block; font-size: 12px; line-height: 1.5; }
