@@ -767,3 +767,40 @@
   .admin-genre-benchmark { padding: 11px; }
   .admin-genre-benchmark-stats { grid-template-columns: 1fr; }
 }
+
+/* Explicitly-clicked, browser-only CLAP model sandbox. No background runs. */
+.admin-genre-clap {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  margin: 12px 0;
+  border: 1px solid rgba(148, 163, 184, .45);
+  background: rgba(148, 163, 184, .075);
+  border-radius: 12px;
+}
+.admin-genre-clap > strong { font-size: 1rem; }
+.admin-genre-clap p, .admin-genre-clap small { line-height: 1.5; }
+.admin-genre-clap p { margin: 0; font-size: 13px; }
+.admin-genre-clap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.admin-genre-clap-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, .28);
+}
+.admin-genre-clap-list > li > div:first-child { flex: 1 1 240px; min-width: 0; display: grid; gap: 4px; }
+.admin-genre-clap-list > li > button { flex: 0 0 auto; }
+.admin-genre-clap-list small { display: block; opacity: .85; overflow-wrap: anywhere; }
+.admin-genre-clap-result { display: grid; flex: 1 0 100%; gap: 4px; font-size: 13px; overflow-wrap: anywhere; }
+.admin-genre-clap-status { display: grid; justify-items: start; gap: 9px; font-size: 13px; }
+.admin-genre-clap-status progress { width: min(100%, 550px); height: 10px; }
+.admin-genre-clap-summary { display: grid; gap: 5px; padding: 10px; border-radius: 8px; background: rgba(148,163,184,.12); }
+@media (max-width: 600px) {
+  .admin-genre-clap { padding: 11px; }
+  .admin-genre-clap-list > li { flex-direction: column; align-items: stretch; }
+  .admin-genre-clap-list > li > div:first-child { flex: initial; }
+  .admin-genre-clap-list > li > button { width: 100%; }
+}
