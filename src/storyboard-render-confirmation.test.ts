@@ -7,7 +7,7 @@ describe("storyboard required and explicit confirmation before video", () => {
   it("passes a distinct song title, genre and art direction to optional OpenArt only on click", () => {
     expect(source).toContain('provider: "openart"');
     expect(source).toContain('song: song.title');
-    expect(source).toContain('genre: song.genre || ""');
+    expect(source).toContain('genre: ownerConfirmedVideoGenre(song)');
     expect(source).toContain('theme: pipelineOptions.visualTheme?.trim() || ""');
     expect(source).toContain('OpenArt-bilder');
     expect(source).toContain('target="_blank"');
