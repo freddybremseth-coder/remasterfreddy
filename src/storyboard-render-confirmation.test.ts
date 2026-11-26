@@ -255,6 +255,18 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(trial).not.toContain("correctSongGenre(");
   });
 
+  it("never approves CLAP for automatic genre labels from five calibration examples", () => {
+    const trial = readFileSync("src/AudioModelTrial.tsx", "utf8");
+    const benchmark = readFileSync("src/lib/genre-classification-benchmark.ts", "utf8");
+    expect(trial).toContain("Status: Ikke godkjent for automatisk sjangermerking");
+    expect(trial).toContain("comparison.perAxis.map(group =>");
+    expect(trial).toContain("group.wrong");
+    expect(trial).toContain("group.abstained");
+    expect(trial).not.toContain("correctSongGenre(");
+    expect(benchmark).toContain('autoLabelingAllowed: false');
+    expect(benchmark).toContain('status: "not-approved-for-automatic-genre-labels"');
+  });
+
   it("offers real MP3 acoustic analysis without ever auto-assigning EDM/Chillout or publishing", () => {
     const client = readFileSync("src/lib/admin-api.ts", "utf8");
     const proxy = readFileSync("api/neural-beat-audio-analysis.ts", "utf8");
