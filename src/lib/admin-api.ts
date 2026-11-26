@@ -1,4 +1,5 @@
 import { getAdminSession } from "./supabase";
+import { matchesPersistedGenre } from "./genre-save-verification";
 
 export interface AdminSong {
   id: string;
@@ -194,14 +195,7 @@ export async function correctSongGenre(recordId: string, genre: string | null): 
   if (!refreshed) {
     throw new Error("RealtyFlow bekreftet ikke at sangen finnes etter lagring. Oppdater oversikten og prøv igjen.");
   }
-  const metadata = refreshed.metadata;
-  const persisted =
-    genre === null
-      ? !refreshed.genre && metadata?.genreSource !== "author"
-      : refreshed.genre === genre &&
-        metadata?.genreSource === "author" &&
-        metadata?.authorSelectedGenre === genre;
-  if (!persisted) {
+  if (!matchesPersistedGenre(refreshed, genre)) {
     throw new Error("RealtyFlow bekreftet ikke at den nye sjangeren er lagret i databasen. Ingen endring er godkjent.");
   }
   return refreshed;
