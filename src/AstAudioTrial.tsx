@@ -89,7 +89,8 @@ export default function AstAudioTrial({ songs, references }: Props) {
           setRunning(false);
           setPercent(null);
         } else if (event.data.type === "result") {
-          setResults(old => ({ ...old, [song.id]: summarizeAstEvidence(event.data.sections) }));
+          const sections = event.data.sections;
+          setResults(old => ({ ...old, [song.id]: summarizeAstEvidence(sections) }));
           setStatus("Uavhengig lydkontroll fullført. Ingen sjanger ble oppdatert.");
           setRunning(false);
           setPercent(null);
