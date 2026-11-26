@@ -226,7 +226,7 @@ describe("storyboard required and explicit confirmation before video", () => {
     expect(trial).toContain("new Worker(new URL(");
     expect(trial).toContain("new AbortController()");
     expect(trial).toContain("workerRef.current?.terminate()");
-    expect(trial).toContain("compareModelWithOwner");
+    expect(trial).toContain("summarizeAudioModelCalibration");
     expect(trial).not.toContain("correctSongGenre(");
     expect(trial).not.toContain("startSongPipeline(");
     expect(trial).not.toContain("publishStoredFullVideo(");
